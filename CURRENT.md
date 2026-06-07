@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1-T09
+Task:         P1-T10
 Phase:        Phase 1
 Spec:         docs/phases/phase-1-naive-classic-rag.md
 Taskboard:    docs/phases/phase-1-taskboard.md
@@ -17,9 +17,9 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_sentence_transformer_embedder.py --tb=short -q`: pass, 11 passed in 8.82s
-- `uv run pytest --tb=short -q`: pass, 109 passed in 8.81s
-- `uv run python - <<'PY' ... SentenceTransformerEmbedder(local_files_only=True) ... PY`: pass, model name is `sentence-transformers/all-MiniLM-L6-v2`, dimension is 384, sample embedding shape is `(1, 384)`
+- `uv run pytest tests/test_index_writer.py --tb=short -q`: pass, 23 passed in 0.08s
+- `uv run pytest --tb=short -q`: pass, 132 passed in 3.33s
+- manual artifact readback: pass, wrote `manifest.json`, `chunks.jsonl`, and `embeddings.npz`; manifest count, float32 embedding matrix, and chunk ID order verified
 
 ## Blocker
 
@@ -31,34 +31,40 @@ Updated By:   codex
 
 ### Task Summary
 
-Added SentenceTransformerEmbedder to embeddings.py. The model runs locally
-after a one-time weight download. Tests skip cleanly when the model is not
-cached, per agent-guidelines.
+Added `tiny_rag_lab/index_writer.py` with a single public function `write_index`
+that persists a built index to disk as three files: `manifest.json`,
+`chunks.jsonl`, and `embeddings.npz`.
 
 ### Files Changed
 
-- `tiny_rag_lab/embeddings.py`: added SentenceTransformerEmbedder with `local_files_only` param; updated module docstring
-- `tests/test_sentence_transformer_embedder.py`: 11 tests; fixture uses `local_files_only=True` to skip rather than download on fresh machines
+- `tiny_rag_lab/index_writer.py`: new module — `write_index`, three private helpers
+- `tests/test_index_writer.py`: 23 tests covering manifest fields, JSONL roundtrip, NPZ shape/dtype/values, shape mismatch error, empty corpus
 
 ### Design Decisions
 
-- **Deferred import**: `from sentence_transformers import SentenceTransformer` is inside `__init__` so importing `embeddings.py` never fails even without weights — the error surfaces only when instantiating the real embedder.
-- **`dim` property**: reads from the loaded model so it adapts to any model, not just all-MiniLM-L6-v2. Uses `get_embedding_dimension()` (current API) with fallback to `get_sentence_embedding_dimension()` (deprecated) to survive across library versions.
-- **`normalize_embeddings=True`**: produces L2-unit vectors consistent with FakeEmbedder; cosine similarity becomes a simple dot product.
-- **`show_progress_bar=False`**: suppresses the tqdm bar during `rag index` runs.
-- **Semantic retrieval test**: embeds a query, a related sentence, and an unrelated sentence, asserts related scores higher — confirms the model is actually encoding semantic meaning, not just returning random unit vectors.
+- **`write_index` signature**: takes `docs`, `chunks`, `embeddings`, and named
+  keyword args for all index metadata. Keeps the function pure — no Embedder
+  instance required, just the backend name/model/dim strings already known by
+  the caller.
+- **Shape guard**: raises `ValueError` immediately if `embeddings.shape !=
+  (len(chunks), embedding_dim)`, not a silent corrupt write.
+- **`index_dir.mkdir(parents=True, exist_ok=True)`**: caller does not need to
+  pre-create the directory tree.
+- **`chunks.jsonl` excludes embeddings**: per spec. Vectors live only in
+  `embeddings.npz`; the JSONL is human-readable and importable without NumPy.
+- **`created_at` is UTC ISO-8601** with timezone info (uses `datetime.now(timezone.utc)`).
+- **`embeddings.npz` stores `chunk_ids`** as a parallel string array so the
+  loader can reconstruct the mapping without reading JSONL first.
 
 ### Tests Run
 
-- `uv run pytest tests/test_sentence_transformer_embedder.py --tb=short -q`: 11 passed (model cached locally; fresh machine skips without downloading)
-- `uv run pytest --tb=short -q`: 109 passed
+- `uv run pytest tests/test_index_writer.py --tb=short -q`: 23 passed
+- `uv run pytest --tb=short -q`: 132 passed
 
 ### Known Gaps
 
-- On a fresh machine with no cached model, all fixture-dependent tests skip.
-  The two non-fixture tests (test_is_embedder_subclass, test_default_model_name)
-  always run regardless.
+- T11 (index loader) is the natural next step to verify round-trip fidelity.
 
 ### Questions For Next Agent
 
-- T10 (index writer) depends on T04, T07, T08 — all done. Can start.
+- T11 (index loader) and T12 (cosine retrieval) are unblocked once T10 is done.
