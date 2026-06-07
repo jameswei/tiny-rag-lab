@@ -21,8 +21,9 @@ env/
 *.swo
 
 # Generated corpus and index artifacts — never commit these
-corpus/
-.tiny-rag/
+# Leading slash anchors to repo root so tests/fixtures/corpus/ is not excluded
+/corpus/
+/.tiny-rag/
 
 # macOS
 .DS_Store
