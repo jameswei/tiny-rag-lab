@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1-T10
+Task:         P1-T11
 Phase:        Phase 1
 Spec:         docs/phases/phase-1-naive-classic-rag.md
 Taskboard:    docs/phases/phase-1-taskboard.md
@@ -17,9 +17,9 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_index_writer.py --tb=short -q`: pass, 23 passed in 0.08s
-- `uv run pytest --tb=short -q`: pass, 132 passed in 3.33s
-- manual artifact readback: pass, wrote `manifest.json`, `chunks.jsonl`, and `embeddings.npz`; manifest count, float32 embedding matrix, and chunk ID order verified
+- `uv run pytest tests/test_index_loader.py --tb=short -q`: pass, 21 passed in 0.09s
+- `uv run pytest --tb=short -q`: pass, 153 passed in 3.57s
+- manual round-trip/corruption check: pass, loaded manifest/chunk IDs/embedding shape and raised `ValueError` on corrupted embedding row count
 
 ## Blocker
 
@@ -31,40 +31,31 @@ Updated By:   codex
 
 ### Task Summary
 
-Added `tiny_rag_lab/index_writer.py` with a single public function `write_index`
-that persists a built index to disk as three files: `manifest.json`,
-`chunks.jsonl`, and `embeddings.npz`.
+Added `tiny_rag_lab/index_loader.py` with `load_index(index_dir)` that reads
+the three files written by `write_index` and returns a `LoadedIndex` dataclass.
+Validates chunk ID agreement between `chunks.jsonl` and `embeddings.npz`.
 
 ### Files Changed
 
-- `tiny_rag_lab/index_writer.py`: new module — `write_index`, three private helpers
-- `tests/test_index_writer.py`: 23 tests covering manifest fields, JSONL roundtrip, NPZ shape/dtype/values, shape mismatch error, empty corpus
+- `tiny_rag_lab/index_loader.py`: new module — `LoadedIndex` dataclass, `load_index`, `_load_chunks`
+- `tests/test_index_loader.py`: 21 tests covering roundtrip fidelity, chunk IDs, embeddings shape/dtype/values, missing file errors, chunk_id mismatch error, empty index
 
 ### Design Decisions
 
-- **`write_index` signature**: takes `docs`, `chunks`, `embeddings`, and named
-  keyword args for all index metadata. Keeps the function pure — no Embedder
-  instance required, just the backend name/model/dim strings already known by
-  the caller.
-- **Shape guard**: raises `ValueError` immediately if `embeddings.shape !=
-  (len(chunks), embedding_dim)`, not a silent corrupt write.
-- **`index_dir.mkdir(parents=True, exist_ok=True)`**: caller does not need to
-  pre-create the directory tree.
-- **`chunks.jsonl` excludes embeddings**: per spec. Vectors live only in
-  `embeddings.npz`; the JSONL is human-readable and importable without NumPy.
-- **`created_at` is UTC ISO-8601** with timezone info (uses `datetime.now(timezone.utc)`).
-- **`embeddings.npz` stores `chunk_ids`** as a parallel string array so the
-  loader can reconstruct the mapping without reading JSONL first.
+- **`LoadedIndex` dataclass**: groups manifest, chunks, embeddings, and chunk_ids together so callers don't receive a tuple of loosely related values.
+- **chunk_ids validation**: compares the list from `chunks.jsonl` against the array in `embeddings.npz` and raises `ValueError` on any divergence — catches corrupt or mismatched writes early.
+- **`allow_pickle=True` on np.load**: required for loading string arrays (`chunk_ids`) from `.npz`; safe here because we control the write path.
+- **Tests use `write_index` as the fixture**: tests the loader against real writer output rather than hand-crafted bytes, ensuring the round-trip is always consistent.
 
 ### Tests Run
 
-- `uv run pytest tests/test_index_writer.py --tb=short -q`: 23 passed
-- `uv run pytest --tb=short -q`: 132 passed
+- `uv run pytest tests/test_index_loader.py --tb=short -q`: 21 passed
+- `uv run pytest --tb=short -q`: 153 passed
 
 ### Known Gaps
 
-- T11 (index loader) is the natural next step to verify round-trip fidelity.
+- none
 
 ### Questions For Next Agent
 
-- T11 (index loader) and T12 (cosine retrieval) are unblocked once T10 is done.
+- T12 (cosine retrieval) depends on T08 and T11 — both done. Can start.
