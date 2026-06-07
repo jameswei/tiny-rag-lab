@@ -33,7 +33,7 @@ Frameworks such as LangChain, LlamaIndex, Ragas, and vector databases can be use
 
 ## First Learning Target: Classic RAG
 
-The initial project should implement classic single-query RAG end to end:
+The early project should make the classic single-query RAG lifecycle visible:
 
 1. Load documents from a local corpus.
 2. Extract and normalize text.
@@ -50,16 +50,21 @@ The initial project should implement classic single-query RAG end to end:
 13. Evaluate retrieval and answer quality.
 14. Inspect failures with enough detail to explain what went wrong.
 
-## Suggested Initial Corpus
+Phase 1 implements the first naive end-to-end slice. Evaluation, richer
+observability, and failure analysis are deferred to later dedicated phases.
 
-Start with documents where the owner already knows the truth:
+## Initial Corpus Direction
 
-- `tiny-duo-infer` README and docs
-- `tiny-duo-infer` phase specs and handoffs
-- personal engineering notes
-- selected technical articles or PDFs once the basics work
+Start with a real, open documentation QA corpus rather than only personal
+notes. The Phase 1 spec selects:
 
-A familiar corpus makes evaluation and failure analysis much more meaningful.
+- primary corpus: IBM `watsonxDocsQA`, prepared into local Markdown files
+- stretch corpus: WixQA, after the primary corpus path works
+
+Personal or project documents can still be useful as optional ad hoc corpora,
+but they are not the default Phase 1 corpus. Public documentation QA datasets
+make the lab more reproducible and closer to common customer-support RAG
+scenarios.
 
 ## Target User
 

@@ -1,6 +1,7 @@
 # tiny-rag-lab Roadmap
 
-This roadmap is a proposal, not an active implementation contract. Future agents should refine it into phase specs and taskboards before coding.
+This roadmap is directional. Active implementation contracts live under
+`docs/phases/`.
 
 ## Phase 0: Project Definition
 
@@ -15,7 +16,7 @@ Expected outputs:
 - evaluation dataset format
 - first phase spec and taskboard
 
-Status: proposal only.
+Status: Phase 1 has a review-ready spec and taskboard under `docs/phases/`.
 
 ## Phase 1: Naive Classic RAG
 
@@ -23,6 +24,7 @@ Goal: implement the simplest complete RAG path end to end.
 
 Capabilities:
 
+- prepare IBM `watsonxDocsQA` into local Markdown files
 - load Markdown and plain text files from a local corpus
 - split text into deterministic chunks
 - preserve source metadata such as path, title, and character offsets
