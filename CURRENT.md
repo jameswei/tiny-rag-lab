@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1-T05, P1-T06
+Task:         P1-T07, P1-T08
 Phase:        Phase 1
 Spec:         docs/phases/phase-1-naive-classic-rag.md
 Taskboard:    docs/phases/phase-1-taskboard.md
@@ -17,9 +17,9 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_documents.py --tb=short -q`: pass, 24 passed in 0.01s
-- `uv run pytest --tb=short -q`: pass, 65 passed in 0.04s
-- manual document/normalization smoke check: pass, nested `doc_id` is `subdir/nested.md`, title extraction and normalization behave as expected
+- `uv run pytest tests/test_chunking.py tests/test_embeddings.py --tb=short -q`: pass, 33 passed in 0.06s
+- `uv run pytest --tb=short -q`: pass, 98 passed in 0.09s
+- manual boundary check: pass, lengths 799/800/1480 no longer emit redundant contained tail chunks
 
 ## Blocker
 
@@ -31,39 +31,48 @@ Updated By:   codex
 
 ### Task Summary
 
-Implemented document loading (T05) and text normalization (T06) together
-in tiny_rag_lab/documents.py. Normalization is called inside load_document
-so Document.normalized_text is always populated. Added four test fixture
-files (three at root, one in a subdirectory) to test recursive loading and
-doc_id path computation.
+T07: deterministic fixed-size character chunker in chunking.py. The slice
+invariant (normalized_text[char_start:char_end] == chunk.text) is the
+central correctness property and is asserted in four separate tests.
+
+T08: Embedder ABC + FakeEmbedder in embeddings.py. FakeEmbedder uses a
+SHA-256-seeded NumPy RNG to produce deterministic float32 unit vectors of
+any dimension — no model downloads required.
 
 ### Files Changed
 
-- `tiny_rag_lab/documents.py`: normalize_text, _extract_title, load_document, load_documents
-- `tests/test_documents.py`: 24 tests covering both tasks
-- `tests/fixtures/corpus/with_h1.md`: fixture with H1 title
-- `tests/fixtures/corpus/no_h1.md`: fixture without H1 (filename fallback)
-- `tests/fixtures/corpus/plain.txt`: plain text fixture
-- `tests/fixtures/corpus/subdir/nested.md`: nested fixture for recursive load test
-- (also removes `tests/fixtures/corpus/.gitkeep` — directory now has real content)
+- `tiny_rag_lab/chunking.py`: chunk_document, chunk_documents
+- `tiny_rag_lab/embeddings.py`: Embedder (ABC), FakeEmbedder
+- `tests/test_chunking.py`: 20 tests — slice invariant, overlap, stable IDs, metadata, validation errors
+- `tests/test_embeddings.py`: 12 tests — shape/dtype, determinism, unit vectors, fixture retrieval
 
 ### Design Decisions
 
-- **Both tasks in documents.py**: normalization has no independent module in the file layout; it belongs in documents.py as the natural home for text preparation. T07 (chunker) will import normalize_text from here.
-- **normalize_text is pure**: takes a string, returns a string — no I/O, easy to test and reuse in chunking.py if needed.
-- **raw_hash computed from raw_text before normalization**: the hash identifies the source file content, not the processed form. This is consistent with the spec and with change detection (if raw_text changes, the hash changes).
-- **load_documents sorted by path**: deterministic order makes tests stable and index builds reproducible.
-- **.gitkeep not excluded by suffix filter**: `_SUPPORTED_SUFFIXES = {".md", ".txt"}` naturally skips `.gitkeep` with no special case.
+- **step = chunk_size - chunk_overlap**: window advances by this amount each
+  iteration; validated to be > 0 (overlap < chunk_size).
+- **Whitespace-only chunks skipped**: spec requirement; preserves meaningful
+  retrieval units.
+- **metadata dict is shared across chunks from the same doc**: all chunks
+  from a doc carry the same title/path/format/raw_hash. Immutable in practice.
+- **FakeEmbedder dim=8 default**: small enough for fast tests, large enough
+  to show correct shapes. Callers can override.
+- **Empty list returns (0, dim) shape**: `np.empty((0, self.dim))` avoids
+  shape inconsistency that `np.array([])` would produce.
+- **T07 is review-sensitive** per taskboard; slice invariant and chunk ID
+  stability are the properties Codex should verify.
 
 ### Tests Run
 
-- `uv run pytest tests/test_documents.py --tb=short -q`: 24 passed
-- `uv run pytest --tb=short -q`: 65 passed (full suite)
+- `uv run pytest --tb=short -q`: 98 passed (0 failures, 0 skipped)
+- Two test bugs caught and fixed during development:
+  - `test_text_exactly_chunk_size_gives_one_chunk` needed `chunk_overlap=0`
+    (default 120 produces a second tail chunk for 800-char text)
+  - `test_embed_empty_list` required empty-list guard in FakeEmbedder.embed
 
 ### Known Gaps
 
-- None. T07 (chunker) depends on T04 and T06 and can now start.
-- T08 (embedding interface) depends only on T04 and can also start.
+- None. T09 (sentence-transformers embedder) depends on T08 and can start.
+  T10 (index writer) depends on T04, T07, T08 and can start.
 
 ### Questions For Next Agent
 
