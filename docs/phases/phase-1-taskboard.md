@@ -38,8 +38,8 @@ with that spec. It becomes active only after owner acceptance.
 | P1-T02 | M1.1 | watsonxDocsQA preparation script | P1-T00 | done | claude | local dataset converts to Markdown, manifest, QA JSONL | reviewed by codex; `uv run pytest --tb=short -q`: 41 passed; default dataset/schema and doc/QA ID linkage verified; no findings |
 | P1-T03 | M1.1 | Corpus git-ignore rules | P1-T00 | done | claude | generated corpora and index dirs ignored | reviewed by codex; `.gitignore` excludes `corpus/` and `.tiny-rag/`; no findings |
 | P1-T04 | M1.2 | Core data contracts | P1-T00 | done | claude | dataclasses serialize cleanly | reviewed by codex; `uv run pytest --tb=short -q`: 33 passed; dataclass contracts and serialization tests pass; no findings |
-| P1-T05 | M1.2 | Document loader | P1-T04 | todo | unassigned | `.md` and `.txt` load with title/hash | Markdown H1 title fallback to filename |
-| P1-T06 | M1.2 | Text normalization | P1-T04 | todo | unassigned | normalization tests pass | Line endings, trailing spaces, blank-line collapse |
+| P1-T05 | M1.2 | Document loader | P1-T04 | done | claude | `.md` and `.txt` load with title/hash | reviewed by codex; `uv run pytest tests/test_documents.py --tb=short -q`: 24 passed; doc IDs, titles, formats, hashes verified; no findings |
+| P1-T06 | M1.2 | Text normalization | P1-T04 | done | claude | normalization tests pass | reviewed by codex; `uv run pytest --tb=short -q`: 65 passed; line endings, trailing whitespace, and blank-line collapse verified; no findings |
 | P1-T07 | M1.3 | Character chunker | P1-T04, P1-T06 | todo | unassigned | offset and stable-ID tests pass | Preserve slice invariant into normalized text |
 | P1-T08 | M1.4 | Embedding interface and fake embedder | P1-T04 | todo | unassigned | deterministic fixture retrieval possible | Tests must not require model downloads |
 | P1-T09 | M1.4 | Local sentence-transformers embedder | P1-T08 | todo | unassigned | real embedder can embed sample text | Use `sentence-transformers/all-MiniLM-L6-v2` |

@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1-T02, P1-T03, P1-T04
+Task:         P1-T05, P1-T06
 Phase:        Phase 1
 Spec:         docs/phases/phase-1-naive-classic-rag.md
 Taskboard:    docs/phases/phase-1-taskboard.md
@@ -17,9 +17,9 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest --tb=short -q`: pass, 41 passed in 0.03s
-- `uv run python scripts/prepare_watsonx_docsqa.py --help`: pass, default dataset is `ibm-research/watsonxDocsQA`
-- synthetic conversion smoke check: pass, manifest `doc_id` and QA `gold_doc_ids` both resolve to `docs/abcdef123.md`, and the Markdown file exists
+- `uv run pytest tests/test_documents.py --tb=short -q`: pass, 24 passed in 0.01s
+- `uv run pytest --tb=short -q`: pass, 65 passed in 0.04s
+- manual document/normalization smoke check: pass, nested `doc_id` is `subdir/nested.md`, title extraction and normalization behave as expected
 
 ## Blocker
 
@@ -31,34 +31,40 @@ Updated By:   codex
 
 ### Task Summary
 
-Implemented T03 (gitignore), T04 (data contracts), and T02 (corpus prep
-script) together. All three are independent of each other.
+Implemented document loading (T05) and text normalization (T06) together
+in tiny_rag_lab/documents.py. Normalization is called inside load_document
+so Document.normalized_text is always populated. Added four test fixture
+files (three at root, one in a subdirectory) to test recursive loading and
+doc_id path computation.
 
 ### Files Changed
 
-- `.gitignore`: added `corpus/` and `.tiny-rag/` to keep generated artifacts out of git (T03)
-- `tiny_rag_lab/models.py`: Document, Chunk, RetrievalResult, RagTrace dataclasses + make_chunk_id (T04)
-- `scripts/prepare_watsonx_docsqa.py`: corpus preparation script with Hub download + local conversion + --inspect mode (T02)
-- `tests/test_models.py`: 14 tests — chunk_id determinism, slice invariant, serialization for all 4 types (T04)
-- `tests/test_prepare_watsonx_docsqa.py`: 15 tests — conversion functions, I/O helpers, all using synthetic rows with no network access (T02)
+- `tiny_rag_lab/documents.py`: normalize_text, _extract_title, load_document, load_documents
+- `tests/test_documents.py`: 24 tests covering both tasks
+- `tests/fixtures/corpus/with_h1.md`: fixture with H1 title
+- `tests/fixtures/corpus/no_h1.md`: fixture without H1 (filename fallback)
+- `tests/fixtures/corpus/plain.txt`: plain text fixture
+- `tests/fixtures/corpus/subdir/nested.md`: nested fixture for recursive load test
+- (also removes `tests/fixtures/corpus/.gitkeep` — directory now has real content)
 
 ### Design Decisions
 
-- **models.py as a single contracts file**: all 4 dataclasses live together so the full data shape of the pipeline is visible in one place. Downstream modules (documents.py, chunking.py, etc.) will import from models.py, avoiding circular imports.
-- **make_chunk_id in models.py**: the chunk ID formula is part of the Chunk contract, so it belongs alongside Chunk rather than in chunking.py.
-- **Dataset schema mapping**: the prep script targets the real `ibm-research/watsonxDocsQA` fields. Corpus rows use `doc_id`, `title`, `md_document`/`document`, and `url`; QA rows use `question_id`, `question`, `correct_answer`, and `ground_truths_contexts_ids`.
-- **Prepared IDs**: manifest `doc_id` and `qa.jsonl` `gold_doc_ids` both use the same corpus-relative prepared path, preserving later evaluation linkage.
-- **scripts/ import in tests**: `sys.path.insert` is used to import from scripts/ since scripts are not part of the installable package. This is intentional — scripts are one-off tools, not library code.
+- **Both tasks in documents.py**: normalization has no independent module in the file layout; it belongs in documents.py as the natural home for text preparation. T07 (chunker) will import normalize_text from here.
+- **normalize_text is pure**: takes a string, returns a string — no I/O, easy to test and reuse in chunking.py if needed.
+- **raw_hash computed from raw_text before normalization**: the hash identifies the source file content, not the processed form. This is consistent with the spec and with change detection (if raw_text changes, the hash changes).
+- **load_documents sorted by path**: deterministic order makes tests stable and index builds reproducible.
+- **.gitkeep not excluded by suffix filter**: `_SUPPORTED_SUFFIXES = {".md", ".txt"}` naturally skips `.gitkeep` with no special case.
 
 ### Tests Run
 
-- `uv run pytest --tb=short -q`: 41 passed
-- No network access required
+- `uv run pytest tests/test_documents.py --tb=short -q`: 24 passed
+- `uv run pytest --tb=short -q`: 65 passed (full suite)
 
 ### Known Gaps
 
-- T02 acceptance "local dataset converts to Markdown, manifest, QA JSONL" requires running the script against the actual dataset (or a local copy). That can't be tested in CI without credentials/network. The conversion logic is tested with synthetic fixtures.
+- None. T07 (chunker) depends on T04 and T06 and can now start.
+- T08 (embedding interface) depends only on T04 and can also start.
 
 ### Questions For Next Agent
 
-- T05 (document loader) and T06 (text normalization) can now start — both depend on T04.
+- None.
