@@ -11,6 +11,9 @@ dependencies = [
     "openai",
 ]
 
+[project.scripts]
+rag = "tiny_rag_lab.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
