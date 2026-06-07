@@ -33,7 +33,7 @@ with that spec. It becomes active only after owner acceptance.
 
 | ID | Milestone | Task | Depends On | Status | Owner | Acceptance | Notes |
 |---|---|---|---|---|---|---|---|
-| P1-T00 | M1.0 | Project scaffolding | none | todo | unassigned | `uv sync`, import works, pytest runs | Python package, `pyproject.toml`, dev deps, initial test harness |
+| P1-T00 | M1.0 | Project scaffolding | none | done | claude | `uv sync`, import works, pytest runs | reviewed by codex; `uv run pytest --tb=short -q`: 1 passed; import and dependency smoke checks pass; no findings |
 | P1-T01 | M1.0 | CLI entry point | P1-T00 | todo | unassigned | `rag --help` works | Use `argparse`; no RAG behavior required yet |
 | P1-T02 | M1.1 | watsonxDocsQA preparation script | P1-T00 | todo | unassigned | local dataset converts to Markdown, manifest, QA JSONL | Script lives under `scripts/`; download path optional |
 | P1-T03 | M1.1 | Corpus git-ignore rules | P1-T00 | todo | unassigned | generated corpora and index dirs ignored | Commit scripts and fixtures only |

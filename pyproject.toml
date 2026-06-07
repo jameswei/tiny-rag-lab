@@ -1,0 +1,21 @@
+[project]
+name = "tiny-rag-lab"
+version = "0.1.0"
+description = "A learning-first RAG engine and laboratory"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "sentence-transformers",
+    "datasets",
+    "openai",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
