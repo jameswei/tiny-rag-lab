@@ -35,9 +35,9 @@ with that spec. It becomes active only after owner acceptance.
 |---|---|---|---|---|---|---|---|
 | P1-T00 | M1.0 | Project scaffolding | none | done | claude | `uv sync`, import works, pytest runs | reviewed by codex; `uv run pytest --tb=short -q`: 1 passed; import and dependency smoke checks pass; no findings |
 | P1-T01 | M1.0 | CLI entry point | P1-T00 | done | claude | `rag --help` works | reviewed by codex; `uv run pytest --tb=short -q`: 8 passed; `rag --help` and subcommand help pass; no findings |
-| P1-T02 | M1.1 | watsonxDocsQA preparation script | P1-T00 | todo | unassigned | local dataset converts to Markdown, manifest, QA JSONL | Script lives under `scripts/`; download path optional |
-| P1-T03 | M1.1 | Corpus git-ignore rules | P1-T00 | todo | unassigned | generated corpora and index dirs ignored | Commit scripts and fixtures only |
-| P1-T04 | M1.2 | Core data contracts | P1-T00 | todo | unassigned | dataclasses serialize cleanly | `Document`, `Chunk`, `RetrievalResult`, `RagTrace` |
+| P1-T02 | M1.1 | watsonxDocsQA preparation script | P1-T00 | done | claude | local dataset converts to Markdown, manifest, QA JSONL | reviewed by codex; `uv run pytest --tb=short -q`: 41 passed; default dataset/schema and doc/QA ID linkage verified; no findings |
+| P1-T03 | M1.1 | Corpus git-ignore rules | P1-T00 | done | claude | generated corpora and index dirs ignored | reviewed by codex; `.gitignore` excludes `corpus/` and `.tiny-rag/`; no findings |
+| P1-T04 | M1.2 | Core data contracts | P1-T00 | done | claude | dataclasses serialize cleanly | reviewed by codex; `uv run pytest --tb=short -q`: 33 passed; dataclass contracts and serialization tests pass; no findings |
 | P1-T05 | M1.2 | Document loader | P1-T04 | todo | unassigned | `.md` and `.txt` load with title/hash | Markdown H1 title fallback to filename |
 | P1-T06 | M1.2 | Text normalization | P1-T04 | todo | unassigned | normalization tests pass | Line endings, trailing spaces, blank-line collapse |
 | P1-T07 | M1.3 | Character chunker | P1-T04, P1-T06 | todo | unassigned | offset and stable-ID tests pass | Preserve slice invariant into normalized text |
