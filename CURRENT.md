@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1-T13, P1-T14
+Task:         P1-T15
 Phase:        Phase 1
 Spec:         docs/phases/phase-1-naive-classic-rag.md
 Taskboard:    docs/phases/phase-1-taskboard.md
@@ -17,11 +17,8 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_cmd_index_retrieve.py --tb=short -q`: pass, 17 passed in 0.13s
-- `uv run pytest tests/test_cli.py --tb=short -q`: pass, 7 passed in 0.01s
-- `uv run pytest --tb=short -q`: pass, 189 passed in 4.78s
-- `uv run rag index --help`: pass
-- `uv run rag retrieve --help`: pass
+- `uv run pytest tests/test_prompting.py --tb=short -q`: pass, 24 passed in 0.01s
+- `uv run pytest --tb=short -q`: pass, 213 passed in 3.41s
 
 ## Blocker
 
@@ -33,42 +30,41 @@ Updated By:   codex
 
 ### Task Summary
 
-Implemented `cmd_index` (T13) and `cmd_retrieve` (T14) in `tiny_rag_lab/cli.py`,
-replacing the `NotImplementedError` stubs. Both use `_make_embedder()` — a
-thin factory helper — so tests can patch it with `FakeEmbedder` without
-changing the CLI interface or adding any `--embedder` flag.
+Added `tiny_rag_lab/prompting.py` with `assemble_prompt` and `format_source_table`.
+The prompt template and context block template are module-level strings —
+visible and auditable per spec.
 
 ### Files Changed
 
-- `tiny_rag_lab/cli.py`: implemented `cmd_index`, `cmd_retrieve`, added `_make_embedder` helper
-- `tests/test_cmd_index_retrieve.py`: 17 tests for T13 and T14
+- `tiny_rag_lab/prompting.py`: new module — `PROMPT_TEMPLATE`, `CONTEXT_BLOCK_TEMPLATE`, `assemble_prompt`, `format_source_table`, `_format_context_block`
+- `tests/test_prompting.py`: 24 tests covering required instructions, context block fields, rank order, empty results, and source table output
 
 ### Design Decisions
 
-- **`_make_embedder(model_name)`**: a module-level factory function rather than
-  a constructor call inline. Tests patch this with `unittest.mock.patch` to
-  inject `FakeEmbedder`; the real CLI path goes through
-  `SentenceTransformerEmbedder` unchanged. No `--embedder` CLI flag needed.
-- **`getattr(embedder, "model_name", backend)`**: `FakeEmbedder` has no
-  `model_name`; fallback to `type(embedder).__name__` so `cmd_index` prints
-  sensibly for any embedder. Same fallback is stored in the manifest.
-- **Manifest `embedding_model`**: `cmd_retrieve` reads the model name back from
-  the manifest and recreates the same embedder, keeping index and query
-  embeddings from the same model.
-- **Preview truncation at 200 chars**: spec says "chunk preview"; 200 chars
-  captures the gist without flooding the terminal.
+- **Templates as module-level strings**: spec says "project-owned visible template".
+  Both `PROMPT_TEMPLATE` and `CONTEXT_BLOCK_TEMPLATE` are named constants,
+  not buried inside functions, so a learner can read and modify the exact
+  prompt text without digging through logic.
+- **`assemble_prompt(question, results)`**: takes `list[RetrievalResult]` directly
+  so it composes naturally after `retrieve()`. No intermediate format conversion.
+- **Empty results → valid prompt**: produces a prompt with no `[Source: ...]`
+  blocks. The instruction "if context is insufficient, say so" still applies
+  and the model can respond accordingly.
+- **`format_source_table`**: separate from `assemble_prompt` so the CLI can
+  print it after the answer without it being part of the LLM context.
+- **Citation format**: `[Source: {chunk_id}]` exactly as in the spec. The same
+  marker appears in context blocks so the model can pick it up and repeat it.
 
 ### Tests Run
 
-- `uv run pytest tests/test_cmd_index_retrieve.py --tb=short -q`: 17 passed
-- `uv run pytest --tb=short -q`: 189 passed
+- `uv run pytest tests/test_prompting.py --tb=short -q`: 24 passed
+- `uv run pytest --tb=short -q`: 213 passed
 
 ### Known Gaps
 
-- Comprehensive CLI tests with tiny fixture corpus and fake backends are in T20.
-  These tests cover the core path; T20 will add edge cases and the `ask` command.
+- none
 
 ### Questions For Next Agent
 
-- T15 (prompt assembly) is next; it depends only on T12 (done).
-- T16 (generation interface) follows T15.
+- T16 (generation interface and fake generator) depends on T15 — now unblocked.
+- T18 (`rag ask`) is the first task that wires all three planes together.
