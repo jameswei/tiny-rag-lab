@@ -1,4 +1,6 @@
 import argparse
+import re
+import time
 from pathlib import Path
 
 
@@ -12,6 +14,23 @@ def _make_embedder(model_name: str | None = None):
     if model_name is None:
         return SentenceTransformerEmbedder()
     return SentenceTransformerEmbedder(model_name)
+
+
+def _make_generator(args):
+    """Create an OpenAIGenerator from CLI args or environment variables.
+
+    Isolated so tests can patch it with FakeGenerator.
+    Priority: CLI flag > environment variable > SDK default.
+    """
+    import os
+    from tiny_rag_lab.generation import OpenAIGenerator
+    api_key = getattr(args, "api_key", None) or os.environ.get("OPENAI_API_KEY")
+    base_url = getattr(args, "base_url", None) or os.environ.get("OPENAI_BASE_URL")
+    model = getattr(args, "model", None) or os.environ.get("OPENAI_MODEL")
+    return OpenAIGenerator(model=model, api_key=api_key, base_url=base_url)
+
+
+_CITATION_RE = re.compile(r"\[Source: ([^\]]+)\]")
 
 
 def cmd_index(args):
@@ -92,7 +111,58 @@ def cmd_retrieve(args):
 
 
 def cmd_ask(args):
-    raise NotImplementedError("rag ask: not yet implemented (P1-T18)")
+    from tiny_rag_lab.index_loader import load_index
+    from tiny_rag_lab.models import RagTrace
+    from tiny_rag_lab.prompting import assemble_prompt, format_source_table
+    from tiny_rag_lab.retrieval import retrieve_by_vector
+
+    index = load_index(Path(args.index_dir))
+    model_name = index.manifest.get("embedding_model")
+    embedder = _make_embedder(model_name)
+    generator = _make_generator(args)
+
+    # Stage: embed query
+    t0 = time.perf_counter()
+    query_vec = embedder.embed([args.query])[0]
+    t_embed = time.perf_counter() - t0
+
+    # Stage: retrieve
+    t1 = time.perf_counter()
+    results = retrieve_by_vector(query_vec, index, top_k=args.top_k)
+    t_retrieve = time.perf_counter() - t1
+
+    # Assemble prompt and generate
+    prompt = assemble_prompt(args.query, results)
+
+    t2 = time.perf_counter()
+    answer = generator.generate(prompt)
+    t_generate = time.perf_counter() - t2
+
+    citations = _CITATION_RE.findall(answer)
+
+    trace = RagTrace(
+        query=args.query,
+        retrieved_chunks=results,
+        prompt=prompt,
+        answer=answer,
+        citations=citations,
+        latency_by_stage={
+            "embed": t_embed,
+            "retrieve": t_retrieve,
+            "generate": t_generate,
+        },
+    )
+
+    print(trace.answer)
+    print()
+    print(format_source_table(results))
+    print()
+    print(
+        f"Timings:"
+        f"  embed={trace.latency_by_stage['embed']:.3f}s"
+        f"  retrieve={trace.latency_by_stage['retrieve']:.3f}s"
+        f"  generate={trace.latency_by_stage['generate']:.3f}s"
+    )
 
 
 def build_parser():
@@ -155,6 +225,18 @@ def build_parser():
     p_ask.add_argument(
         "--top-k", type=int, default=5, metavar="INT",
         help="number of chunks to retrieve (default: 5)",
+    )
+    p_ask.add_argument(
+        "--model", default=None, metavar="NAME",
+        help="generation model name (default: env OPENAI_MODEL or gpt-4o-mini)",
+    )
+    p_ask.add_argument(
+        "--api-key", default=None, metavar="KEY",
+        help="OpenAI API key (default: env OPENAI_API_KEY)",
+    )
+    p_ask.add_argument(
+        "--base-url", default=None, metavar="URL",
+        help="OpenAI-compatible base URL (default: env OPENAI_BASE_URL)",
     )
     p_ask.set_defaults(func=cmd_ask)
 

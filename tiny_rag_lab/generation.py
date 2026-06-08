@@ -1,9 +1,8 @@
-"""Generation interface and fake generator for T16.
+"""Generation interface, fake generator (T16), and real OpenAI backend (T17).
 
 Generator is the single interface the ask pipeline depends on.
 FakeGenerator is self-contained and deterministic — safe for all tests.
-
-T17 adds the real OpenAI-compatible generator.
+OpenAIGenerator calls any OpenAI-compatible chat completions endpoint.
 """
 from __future__ import annotations
 
@@ -48,3 +47,42 @@ class FakeGenerator(Generator):
             )
         cited = " ".join(f"[Source: {m}]" for m in markers)
         return f"Based on the provided context: {cited}"
+
+
+class OpenAIGenerator(Generator):
+    """Real generation backend using any OpenAI-compatible chat API (T17).
+
+    Credentials and endpoint are injected at construction time so the same
+    class works with OpenAI, Azure OpenAI, Ollama, or any other compatible
+    service. Tests mock the underlying client — no real credentials needed.
+
+    Configuration priority (highest first):
+      1. Constructor arguments
+      2. Standard environment variables read by the openai SDK:
+         OPENAI_API_KEY, OPENAI_BASE_URL
+    """
+
+    DEFAULT_MODEL = "gpt-4o-mini"
+
+    def __init__(
+        self,
+        model: str | None = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
+    ) -> None:
+        from openai import OpenAI  # deferred import — fails gracefully if not installed
+
+        self.model = model or self.DEFAULT_MODEL
+        kwargs: dict = {}
+        if api_key:
+            kwargs["api_key"] = api_key
+        if base_url:
+            kwargs["base_url"] = base_url
+        self._client = OpenAI(**kwargs)
+
+    def generate(self, prompt: str) -> str:
+        response = self._client.chat.completions.create(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content
