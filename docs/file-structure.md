@@ -23,9 +23,9 @@ docs/roadmap.md                    proposed phase sequence
 docs/architecture.md               conceptual RAG planes and interfaces
 ```
 
-## Expected Implementation Layout
+## Implementation Layout
 
-Phase 1 has not started yet, but the expected layout is:
+Phase 1 implementation files:
 
 ```text
 tiny_rag_lab/
@@ -34,16 +34,18 @@ tiny_rag_lab/
   documents.py
   chunking.py
   embeddings.py
-  index.py
+  index_loader.py
+  index_writer.py
+  models.py
   retrieval.py
   prompting.py
   generation.py
-  tracing.py
 scripts/
   prepare_watsonx_docsqa.py
 tests/
   fixtures/
     corpus/
+  test_*.py
 ```
 
 Generated data should stay out of version control:

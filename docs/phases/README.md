@@ -6,14 +6,15 @@ historical context.
 
 ## Current Phase
 
-Phase 1 is review-ready but not active for implementation until the owner
-accepts both documents:
+No implementation phase is currently active.
+
+Phase 1 is complete:
 
 - Spec: `docs/phases/phase-1-naive-classic-rag.md`
 - Taskboard: `docs/phases/phase-1-taskboard.md`
 
-Per `AGENTS.md`, agents should not claim or start implementation work until the
-owner confirms Phase 1 is active.
+Per `AGENTS.md`, agents should not claim or start new implementation work until
+the next phase scope is confirmed and a phase spec/taskboard exists.
 
 ## Agent Reading Rule
 
@@ -30,13 +31,14 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 ## Completed Phases
 
-None yet.
+| Phase | Focus | Completion |
+|---|---|---|
+| Phase 1 | Naive classic RAG | Complete; see `docs/phases/phase-1-taskboard.md` |
 
 ## Candidate And Deferred Phases
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 1 | Naive classic RAG | Review-ready |
 | Phase 1.5 | Retrieval mechanics: BM25, hybrid retrieval, inspection | Directional |
 | Phase 1.6 | Evaluation harness | Directional |
 | Phase 1.7 | Observability and debugging | Directional |

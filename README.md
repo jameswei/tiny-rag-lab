@@ -10,15 +10,15 @@ evaluation, and failure inspection.
 
 ## Current Status
 
-Phase 1 is underway: **Naive Classic RAG**.
+Phase 1 is complete: **Naive Classic RAG**.
 
-The active Phase 1 contract is:
+The completed Phase 1 contract is:
 
 - [Phase index](docs/phases/README.md)
 - [Phase 1 spec](docs/phases/phase-1-naive-classic-rag.md)
 - [Phase 1 taskboard](docs/phases/phase-1-taskboard.md)
 
-## Phase 1 Target
+## Phase 1 Result
 
 Phase 1 delivers a minimal but complete CLI-first RAG baseline:
 
@@ -40,9 +40,9 @@ Key decisions:
 - no vector database in Phase 1
 - no LangChain/LlamaIndex/Haystack wrapper in Phase 1
 
-## CLI Shape
+## CLI
 
-The intended Phase 1 commands are:
+The Phase 1 commands are:
 
 ```bash
 rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-overlap 120

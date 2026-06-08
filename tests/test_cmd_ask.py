@@ -3,6 +3,7 @@
 Patches both _make_embedder and _make_generator with fake backends so no
 model download or API credentials are needed.
 """
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -100,13 +101,16 @@ def test_ask_output_contains_source_markers(ask_setup, capsys):
 
 
 def test_ask_respects_top_k(ask_setup, capsys):
-    # top_k=1 means only 1 source marker in the fake answer
+    # top_k=1 means one source marker in the answer and one row in the source table.
     args = _ask_args("sample document", ask_setup, top_k=1)
     with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
          patch("tiny_rag_lab.cli._make_generator", side_effect=_fake_generator_factory()):
         cmd_ask(args)
     out = capsys.readouterr().out
-    assert "[Source:" in out
+    answer_section, rest = out.split("\n\nSources:", maxsplit=1)
+    source_table, _timings = rest.split("\n\nTimings:", maxsplit=1)
+    assert len(re.findall(r"\[Source:", answer_section)) == 1
+    assert len(re.findall(r"\[Source:", source_table)) == 1
 
 
 # ---------------------------------------------------------------------------

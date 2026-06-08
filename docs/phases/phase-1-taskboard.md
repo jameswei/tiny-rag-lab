@@ -52,9 +52,9 @@ with that spec. It becomes active only after owner acceptance.
 | P1-T16 | M1.7 | Generation interface and fake generator | P1-T15 | done | claude | fake answer includes source marker | reviewed by codex; `uv run pytest tests/test_generation.py --tb=short -q`: 9 passed; generator interface, deterministic fake output, empty-context response, and source marker echoing verified; no findings |
 | P1-T17 | M1.7 | OpenAI-compatible generator | P1-T16 | done | claude | provider smoke path is configurable | reviewed by codex; `uv run pytest tests/test_openai_generator.py tests/test_cmd_ask.py --tb=short -q`: 18 passed; OpenAI-compatible client wiring, model/API/base URL config, and mocked no-network tests verified; no findings |
 | P1-T18 | M1.7 | `rag ask` | P1-T14, P1-T15, P1-T16 | done | claude | CLI prints answer, citations, source table | reviewed by codex; `uv run pytest tests/test_openai_generator.py tests/test_cmd_ask.py --tb=short -q`: 18 passed; fake-backed ask path, source markers/table, `top_k`, parser flags, and timings verified; no findings |
-| P1-T19 | M1.8 | Persistence round-trip test | P1-T10, P1-T11, P1-T12 | todo | unassigned | loaded index preserves expected retrieval | Required acceptance criterion |
-| P1-T20 | M1.8 | CLI test coverage | P1-T13, P1-T14, P1-T18 | todo | unassigned | index/retrieve/ask CLI tests pass | Use tiny fixture corpus and fake backends |
-| P1-T21 | Phase close | Handoff and verification | P1-T00-P1-T20 | todo | unassigned | handoff complete, required tests recorded | Reviewer must verify before marking done |
+| P1-T19 | M1.8 | Persistence round-trip test | P1-T10, P1-T11, P1-T12 | done | codex | loaded index preserves expected retrieval | implemented and verified by codex; `uv run pytest tests/test_persistence_roundtrip.py --tb=short -q`: 1 passed; fixture-corpus save/load/retrieve path preserves expected top chunk |
+| P1-T20 | M1.8 | CLI test coverage | P1-T13, P1-T14, P1-T18 | done | codex | index/retrieve/ask CLI tests pass | implemented and verified by codex; `uv run pytest tests/test_cmd_index_retrieve.py tests/test_cmd_ask.py --tb=short -q`: 27 passed; index/retrieve/ask fake-backend CLI coverage and strict ask `top_k` source count verified |
+| P1-T21 | Phase close | Handoff and verification | P1-T00-P1-T20 | done | codex | handoff complete, required tests recorded | implemented and verified by codex; `uv run pytest --tb=short -q`: 241 passed; all `rag --help` paths pass; README, phase index, file map, and CURRENT handoff updated |
 
 ## Review-Sensitive Tasks
 

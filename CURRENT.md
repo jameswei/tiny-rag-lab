@@ -1,11 +1,11 @@
 # Current Task
 
-Task:         P1-T17, P1-T18
+Task:         P1-T21
 Phase:        Phase 1
 Spec:         docs/phases/phase-1-naive-classic-rag.md
 Taskboard:    docs/phases/phase-1-taskboard.md
-Owner:        claude
-Status:       review
+Owner:        codex
+Status:       done
 Review Result: signed_off
 Reviewer:     codex
 Last Updated: 2026-06-08
@@ -17,11 +17,11 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_openai_generator.py tests/test_cmd_ask.py --tb=short -q`: pass, 18 passed in 0.08s
-- `uv run pytest --tb=short -q`: pass, 240 passed in 3.51s
-- `uv run python -c "import openai; print(openai.__version__)"`: pass, 2.41.0
+- `uv run pytest --tb=short -q`: pass, 241 passed in 3.63s
+- `uv run rag --help`: pass
+- `uv run rag index --help`: pass
+- `uv run rag retrieve --help`: pass
 - `uv run rag ask --help`: pass
-- manual fake-backed `cmd_index` + `cmd_ask`: pass, printed answer, source table, and timings
 
 ## Blocker
 
@@ -33,48 +33,36 @@ Updated By:   codex
 
 ### Task Summary
 
-**T17**: Added `OpenAIGenerator` to `tiny_rag_lab/generation.py`. Calls any
-OpenAI-compatible chat completions endpoint. Credentials and endpoint are
-injected at construction time via constructor args (priority) or SDK env vars.
-`from openai import OpenAI` is deferred so the module imports cleanly.
-
-**T18**: Implemented `cmd_ask` in `tiny_rag_lab/cli.py`. Runs the full pipeline
-(embed → retrieve → assemble_prompt → generate), builds a `RagTrace`, and
-prints answer + source table + stage timings. Added `--model`, `--api-key`,
-`--base-url` flags to the `ask` subparser.
+Closed Phase 1 after verifying all required tasks `P1-T00` through `P1-T20`
+were complete and the full test suite passed. Updated phase-level docs so
+agents see Phase 1 as complete and no implementation phase as currently active.
 
 ### Files Changed
 
-- `tiny_rag_lab/generation.py`: added `OpenAIGenerator` class
-- `tiny_rag_lab/cli.py`: implemented `cmd_ask`, added `_make_generator`, added `--model`/`--api-key`/`--base-url` flags to `ask` subparser
-- `tests/test_openai_generator.py`: 8 tests — interface contract, API call correctness, constructor credential forwarding (all mocked)
-- `tests/test_cmd_ask.py`: 10 tests — answer/source-table/timings output, source markers, top_k, new parser flags
+- `README.md`: current status now says Phase 1 is complete
+- `docs/phases/README.md`: Phase 1 moved to completed phases; no active phase
+- `docs/file-structure.md`: implementation layout updated from expected to actual
+- `docs/phases/phase-1-taskboard.md`: `P1-T21` marked done
 
 ### Design Decisions
 
-- **`_make_generator(args)`**: same pattern as `_make_embedder` — factory tests
-  can patch without touching the CLI interface or adding a `--fake` flag.
-- **`_CITATION_RE` at module level**: shared regex for extracting `[Source: id]`
-  from the answer to populate `RagTrace.citations`. Defined once in `cli.py`.
-- **Separate embed/retrieve timing**: `embed_query` and `retrieve_by_vector`
-  are called separately so each stage's latency is measured independently and
-  stored in `RagTrace.latency_by_stage`.
-- **`OpenAIGenerator` passes only non-None kwargs**: `api_key` and `base_url`
-  are only forwarded if provided, letting the SDK read its own env vars when
-  not set. This keeps the `openai.OpenAI()` call minimal.
+- **No active phase after closeout**: Phase 1 is complete, but Phase 1.5 remains
+  directional until it has its own accepted spec and taskboard.
+- **No production-code changes for T21**: phase close only updates docs and
+  records final verification.
 
 ### Tests Run
 
-- `uv run pytest tests/test_openai_generator.py tests/test_cmd_ask.py --tb=short -q`: 18 passed
-- `uv run pytest --tb=short -q`: 240 passed
+- `uv run pytest --tb=short -q`: 241 passed
+- `uv run rag --help`: pass
+- `uv run rag index --help`: pass
+- `uv run rag retrieve --help`: pass
+- `uv run rag ask --help`: pass
 
 ### Known Gaps
 
-- T17 has no integration test hitting a real provider (tests are fully mocked).
-  That is intentional per spec: "Tests must not depend on provider credentials."
+- none
 
 ### Questions For Next Agent
 
-- T19 (persistence round-trip test) and T20 (CLI test coverage) are both
-  unblocked. T19 depends on T10/T11/T12 (all done). T20 depends on T13/T14/T18
-  (all done). Either can go next.
+- Before starting Phase 1.5, create and accept a dedicated spec and taskboard.
