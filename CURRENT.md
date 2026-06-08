@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1-T12
+Task:         P1-T13, P1-T14
 Phase:        Phase 1
 Spec:         docs/phases/phase-1-naive-classic-rag.md
 Taskboard:    docs/phases/phase-1-taskboard.md
@@ -8,7 +8,7 @@ Owner:        claude
 Status:       review
 Review Result: signed_off
 Reviewer:     codex
-Last Updated: 2026-06-07
+Last Updated: 2026-06-08
 Updated By:   codex
 
 ## Findings From Last Review
@@ -17,9 +17,11 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_retrieval.py --tb=short -q`: pass, 19 passed in 0.06s
-- `uv run pytest --tb=short -q`: pass, 172 passed in 3.38s
-- manual edge-case check: `top_k=0` returns `[]`; `top_k=-1` raises `ValueError`
+- `uv run pytest tests/test_cmd_index_retrieve.py --tb=short -q`: pass, 17 passed in 0.13s
+- `uv run pytest tests/test_cli.py --tb=short -q`: pass, 7 passed in 0.01s
+- `uv run pytest --tb=short -q`: pass, 189 passed in 4.78s
+- `uv run rag index --help`: pass
+- `uv run rag retrieve --help`: pass
 
 ## Blocker
 
@@ -31,43 +33,42 @@ Updated By:   codex
 
 ### Task Summary
 
-Added `tiny_rag_lab/retrieval.py` with two public functions: `retrieve_by_vector`
-(core ranking logic with known vectors) and `retrieve` (embeds query then
-delegates). Both return `list[RetrievalResult]` ranked highest-first.
+Implemented `cmd_index` (T13) and `cmd_retrieve` (T14) in `tiny_rag_lab/cli.py`,
+replacing the `NotImplementedError` stubs. Both use `_make_embedder()` — a
+thin factory helper — so tests can patch it with `FakeEmbedder` without
+changing the CLI interface or adding any `--embedder` flag.
 
 ### Files Changed
 
-- `tiny_rag_lab/retrieval.py`: new module — `retrieve`, `retrieve_by_vector`, `DEFAULT_TOP_K`
-- `tests/test_retrieval.py`: 19 tests using known vectors for deterministic ranking and `top_k` validation
+- `tiny_rag_lab/cli.py`: implemented `cmd_index`, `cmd_retrieve`, added `_make_embedder` helper
+- `tests/test_cmd_index_retrieve.py`: 17 tests for T13 and T14
 
 ### Design Decisions
 
-- **Two-function split**: `retrieve_by_vector` accepts a pre-computed vector so
-  tests can verify exact rankings with known vectors without needing an embedder.
-  `retrieve` embeds a text string and delegates — the CLI will call `retrieve`.
-- **Zero query vector → empty list**: no meaningful similarity ranking is possible
-  so returning empty is preferable to returning arbitrary results.
-- **Zero-norm index rows → score 0.0**: divide by 1.0 (safe_norms trick) keeps
-  the division safe; the zero mask then explicitly sets those scores to 0.0 so
-  the result is deterministic regardless of the unit vector direction.
-- **Re-normalization of inputs**: both query and index vectors are normalized
-  inside `retrieve_by_vector` so callers may pass raw or pre-normalized vectors
-  with identical results. Confirmed by `test_unnormalized_query_gives_same_ranking`.
-- **`np.argsort` over `np.argpartition`**: O(n log n) but simpler and correct
-  for Phase 1 corpus sizes. Can switch to argpartition later if needed.
-- **Scores in [-1, 1]**: cosine similarity of L2-unit vectors. Verified by
-  `test_scores_in_valid_range` over 20 random unit vectors.
+- **`_make_embedder(model_name)`**: a module-level factory function rather than
+  a constructor call inline. Tests patch this with `unittest.mock.patch` to
+  inject `FakeEmbedder`; the real CLI path goes through
+  `SentenceTransformerEmbedder` unchanged. No `--embedder` CLI flag needed.
+- **`getattr(embedder, "model_name", backend)`**: `FakeEmbedder` has no
+  `model_name`; fallback to `type(embedder).__name__` so `cmd_index` prints
+  sensibly for any embedder. Same fallback is stored in the manifest.
+- **Manifest `embedding_model`**: `cmd_retrieve` reads the model name back from
+  the manifest and recreates the same embedder, keeping index and query
+  embeddings from the same model.
+- **Preview truncation at 200 chars**: spec says "chunk preview"; 200 chars
+  captures the gist without flooding the terminal.
 
 ### Tests Run
 
-- `uv run pytest tests/test_retrieval.py --tb=short -q`: 19 passed
-- `uv run pytest --tb=short -q`: 172 passed
+- `uv run pytest tests/test_cmd_index_retrieve.py --tb=short -q`: 17 passed
+- `uv run pytest --tb=short -q`: 189 passed
 
 ### Known Gaps
 
-- none
+- Comprehensive CLI tests with tiny fixture corpus and fake backends are in T20.
+  These tests cover the core path; T20 will add edge cases and the `ask` command.
 
 ### Questions For Next Agent
 
-- T13 (`rag index` CLI) and T14 (`rag retrieve` CLI) are next in M1.6.
-- T15 (prompt assembly) depends on T12 — now unblocked.
+- T15 (prompt assembly) is next; it depends only on T12 (done).
+- T16 (generation interface) follows T15.
