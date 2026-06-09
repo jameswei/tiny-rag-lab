@@ -39,8 +39,8 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
+| Phase 1.6 | Evaluation harness | Spec and taskboard written; pending review and owner acceptance |
 | Phase 1.5 | Retrieval mechanics: BM25, hybrid retrieval, inspection | Directional |
-| Phase 1.6 | Evaluation harness | Directional |
 | Phase 1.7 | Observability and debugging | Directional |
 | Phase 1.8 | RAG failure lab | Directional |
 | Later | Agentic RAG | Deferred |
