@@ -92,3 +92,79 @@ def load_eval_samples(path: Path) -> list[EvalSample]:
                 gold_doc_ids=list(gold_doc_ids),
             ))
     return samples
+
+
+# ---------------------------------------------------------------------------
+# Retrieval metric functions (T03)
+#
+# All four functions receive already-sliced lists — the caller passes only the
+# top-k slice, not the full ranked list. k is therefore implicit in the length
+# of retrieved_doc_ids.
+# ---------------------------------------------------------------------------
+
+def hit_at_k(retrieved_doc_ids: list[str], gold_doc_ids: list[str]) -> bool:
+    """True if at least one retrieved doc is in the gold set."""
+    return any(d in gold_doc_ids for d in retrieved_doc_ids)
+
+
+def reciprocal_rank(retrieved_doc_ids: list[str], gold_doc_ids: list[str]) -> float:
+    """1 / rank_of_first_hit; 0.0 if no retrieved doc is in the gold set.
+
+    Rank is 1-indexed: the first position yields RR=1.0, second yields 0.5.
+    """
+    for i, doc_id in enumerate(retrieved_doc_ids, start=1):
+        if doc_id in gold_doc_ids:
+            return 1.0 / i
+    return 0.0
+
+
+def context_precision_at_k(
+    retrieved_doc_ids: list[str], gold_doc_ids: list[str]
+) -> float:
+    """Fraction of retrieved docs that are in the gold set.
+
+    Returns 0.0 when retrieved_doc_ids is empty.
+    Note: each retrieved position is counted independently, so a doc that
+    appears twice in the top-k contributes two hits to the numerator.
+    """
+    if not retrieved_doc_ids:
+        return 0.0
+    hits = sum(1 for d in retrieved_doc_ids if d in gold_doc_ids)
+    return hits / len(retrieved_doc_ids)
+
+
+def context_recall_at_k(
+    retrieved_doc_ids: list[str], gold_doc_ids: list[str]
+) -> float:
+    """Fraction of gold docs covered by the retrieved set.
+
+    Returns 0.0 when gold_doc_ids is empty.
+    """
+    if not gold_doc_ids:
+        return 0.0
+    covered = len(set(retrieved_doc_ids) & set(gold_doc_ids))
+    return covered / len(gold_doc_ids)
+
+
+# ---------------------------------------------------------------------------
+# Report formatter (T05)
+# ---------------------------------------------------------------------------
+
+_SEPARATOR = "─" * 36
+
+
+def format_eval_report(report: EvalReport) -> str:
+    """Return a plain-text summary of retrieval evaluation metrics.
+
+    No ANSI escape codes. Values are rounded to 3 decimal places.
+    """
+    header = f"Evaluation report  (n={report.n_questions}, top_k={report.top_k})"
+    lines = [
+        header,
+        _SEPARATOR,
+        f"Hit Rate @ {report.top_k:<6}:  {report.hit_rate:.3f}",
+        f"MRR               :  {report.mrr:.3f}",
+        f"Context Precision :  {report.mean_context_precision:.3f}",
+        f"Context Recall    :  {report.mean_context_recall:.3f}",
+    ]
+    return "\n".join(lines)

@@ -1,14 +1,23 @@
 """Tests for tiny_rag_lab/eval.py — dataclasses, metric functions, formatter.
 
 T01: dataclass tests (marked with 'dataclass' in name)
-T03: metric function tests (marked with 'metric' in name)  — added in T03
-T05: formatter tests (marked with 'format' in name)        — added in T05
+T03: metric function tests (marked with 'metric' in name)
+T05: formatter tests (marked with 'format' in name)
 """
 import dataclasses
 
 import pytest
 
-from tiny_rag_lab.eval import EvalReport, EvalResult, EvalSample
+from tiny_rag_lab.eval import (
+    EvalReport,
+    EvalResult,
+    EvalSample,
+    context_precision_at_k,
+    context_recall_at_k,
+    format_eval_report,
+    hit_at_k,
+    reciprocal_rank,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -161,3 +170,158 @@ def test_evalreport_dataclass_per_question_stores_evalresult():
     report = EvalReport(n_questions=1, top_k=5, per_question=[result])
     assert len(report.per_question) == 1
     assert report.per_question[0].question_id == "q1"
+
+
+# ---------------------------------------------------------------------------
+# T03 — hit_at_k
+# ---------------------------------------------------------------------------
+
+def test_metric_hit_at_k_true_when_gold_in_retrieved():
+    assert hit_at_k(["a", "b"], ["b"]) is True
+
+
+def test_metric_hit_at_k_false_when_no_gold_in_retrieved():
+    assert hit_at_k(["a", "b"], ["c"]) is False
+
+
+def test_metric_hit_at_k_false_for_empty_retrieved():
+    assert hit_at_k([], ["a"]) is False
+
+
+def test_metric_hit_at_k_true_for_first_position():
+    assert hit_at_k(["a", "b"], ["a"]) is True
+
+
+def test_metric_hit_at_k_multiple_gold_docs():
+    assert hit_at_k(["x", "a"], ["a", "b"]) is True
+
+
+# ---------------------------------------------------------------------------
+# T03 — reciprocal_rank
+# ---------------------------------------------------------------------------
+
+def test_metric_reciprocal_rank_first_position():
+    assert reciprocal_rank(["a", "b", "c"], ["a"]) == 1.0
+
+
+def test_metric_reciprocal_rank_second_position():
+    assert reciprocal_rank(["a", "b", "c"], ["b"]) == pytest.approx(0.5)
+
+
+def test_metric_reciprocal_rank_third_position():
+    assert reciprocal_rank(["a", "b", "c"], ["c"]) == pytest.approx(1 / 3)
+
+
+def test_metric_reciprocal_rank_no_hit():
+    assert reciprocal_rank(["a", "b"], ["c"]) == 0.0
+
+
+def test_metric_reciprocal_rank_empty_retrieved():
+    assert reciprocal_rank([], ["a"]) == 0.0
+
+
+def test_metric_reciprocal_rank_uses_first_hit():
+    # gold has two docs; first hit is at position 2
+    assert reciprocal_rank(["x", "a", "b"], ["a", "b"]) == pytest.approx(0.5)
+
+
+# ---------------------------------------------------------------------------
+# T03 — context_precision_at_k
+# ---------------------------------------------------------------------------
+
+def test_metric_context_precision_all_relevant():
+    assert context_precision_at_k(["a", "b"], ["a", "b", "c"]) == pytest.approx(1.0)
+
+
+def test_metric_context_precision_half_relevant():
+    assert context_precision_at_k(["a", "b"], ["a"]) == pytest.approx(0.5)
+
+
+def test_metric_context_precision_none_relevant():
+    assert context_precision_at_k(["a", "b"], ["c"]) == pytest.approx(0.0)
+
+
+def test_metric_context_precision_empty_retrieved():
+    assert context_precision_at_k([], ["a"]) == 0.0
+
+
+def test_metric_context_precision_counts_duplicate_positions():
+    # same doc at two positions: 2 hits out of 3
+    assert context_precision_at_k(["a", "a", "b"], ["a"]) == pytest.approx(2 / 3)
+
+
+# ---------------------------------------------------------------------------
+# T03 — context_recall_at_k
+# ---------------------------------------------------------------------------
+
+def test_metric_context_recall_all_gold_covered():
+    assert context_recall_at_k(["a", "b"], ["a", "b"]) == pytest.approx(1.0)
+
+
+def test_metric_context_recall_half_gold_covered():
+    assert context_recall_at_k(["a", "b"], ["a", "c"]) == pytest.approx(0.5)
+
+
+def test_metric_context_recall_none_covered():
+    assert context_recall_at_k(["x", "y"], ["a", "b"]) == pytest.approx(0.0)
+
+
+def test_metric_context_recall_empty_gold():
+    assert context_recall_at_k(["a"], []) == 0.0
+
+
+def test_metric_context_recall_deduplicates_retrieved():
+    # "a" appears twice in retrieved but counts as one unique coverage
+    assert context_recall_at_k(["a", "a"], ["a", "b"]) == pytest.approx(0.5)
+
+
+# ---------------------------------------------------------------------------
+# T05 — format_eval_report
+# ---------------------------------------------------------------------------
+
+def _make_report(**kwargs):
+    defaults = dict(n_questions=10, top_k=5, hit_rate=0.723, mrr=0.581,
+                    mean_context_precision=0.312, mean_context_recall=0.651)
+    defaults.update(kwargs)
+    return EvalReport(**defaults)
+
+
+def test_format_eval_report_contains_hit_rate_label():
+    assert "Hit Rate" in format_eval_report(_make_report())
+
+
+def test_format_eval_report_contains_mrr_label():
+    assert "MRR" in format_eval_report(_make_report())
+
+
+def test_format_eval_report_contains_context_precision_label():
+    assert "Context Precision" in format_eval_report(_make_report())
+
+
+def test_format_eval_report_contains_context_recall_label():
+    assert "Context Recall" in format_eval_report(_make_report())
+
+
+def test_format_eval_report_contains_n_questions():
+    out = format_eval_report(_make_report(n_questions=42))
+    assert "42" in out
+
+
+def test_format_eval_report_contains_top_k():
+    out = format_eval_report(_make_report(top_k=7))
+    assert "7" in out
+
+
+def test_format_eval_report_values_rounded_to_3_decimal_places():
+    out = format_eval_report(_make_report(hit_rate=0.7234567))
+    assert "0.723" in out
+
+
+def test_format_eval_report_no_ansi_escape_codes():
+    out = format_eval_report(_make_report())
+    assert "\033[" not in out
+    assert "\x1b[" not in out
+
+
+def test_format_eval_report_returns_string():
+    assert isinstance(format_eval_report(_make_report()), str)
