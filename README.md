@@ -10,13 +10,16 @@ evaluation, and failure inspection.
 
 ## Current Status
 
-Phase 1 is complete: **Naive Classic RAG**.
+Phase 1 and Phase 1.6 are complete.
 
-The completed Phase 1 contract is:
+- **Phase 1 — Naive Classic RAG**: full pipeline from corpus to grounded answers with citations
+- **Phase 1.6 — Evaluation Harness**: retrieval quality metrics (`rag eval`) against a prepared QA set
+
+Completed phase contracts:
 
 - [Phase index](docs/phases/README.md)
-- [Phase 1 spec](docs/phases/phase-1-naive-classic-rag.md)
-- [Phase 1 taskboard](docs/phases/phase-1-taskboard.md)
+- [Phase 1 spec](docs/phases/phase-1-naive-classic-rag.md) · [taskboard](docs/phases/phase-1-taskboard.md)
+- [Phase 1.6 spec](docs/phases/phase-1.6-evaluation-harness.md) · [taskboard](docs/phases/phase-1.6-taskboard.md)
 
 ## Phase 1 Result
 
@@ -40,23 +43,34 @@ Key decisions:
 - no vector database in Phase 1
 - no LangChain/LlamaIndex/Haystack wrapper in Phase 1
 
-## CLI
+## Phase 1.6 Result
 
-The Phase 1 commands are:
+Phase 1.6 adds a `rag eval` command that measures retrieval quality against the
+prepared `qa.jsonl` evaluation set. Four deterministic metrics are reported:
+hit rate @ k, MRR, context precision, and context recall.
+
+```text
+qa.jsonl + index -> embed questions -> retrieve top-k -> compare to gold docs
+-> hit rate, MRR, context precision, context recall
+```
+
+## CLI
 
 ```bash
 rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-overlap 120
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5
 rag ask "question text" --index-dir .tiny-rag/index --top-k 5
+rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5
 ```
 
-Current help is available with:
+Help is available for each command:
 
 ```bash
 uv run rag --help
 uv run rag index --help
 uv run rag retrieve --help
 uv run rag ask --help
+uv run rag eval --help
 ```
 
 ## Development

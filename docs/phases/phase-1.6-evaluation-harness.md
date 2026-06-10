@@ -119,7 +119,7 @@ list. Functions operate on whatever list they receive.
 
 ## Eval Dataset Format
 
-`qa.jsonl` was prepared in Phase 1 (T02) by
+`qa.jsonl` was prepared in `P1-T02` by
 `scripts/prepare_watsonx_docsqa.py`. Each line is a JSON object:
 
 ```json

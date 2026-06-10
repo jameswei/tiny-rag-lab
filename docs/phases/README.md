@@ -6,7 +6,9 @@ historical context.
 
 ## Current Phase
 
-**Phase 1.6 — Evaluation Harness** is active.
+No implementation phase is currently active.
+
+Phase 1.6 is complete:
 
 - Spec: `docs/phases/phase-1.6-evaluation-harness.md`
 - Taskboard: `docs/phases/phase-1.6-taskboard.md`
@@ -15,6 +17,9 @@ Phase 1 is complete:
 
 - Spec: `docs/phases/phase-1-naive-classic-rag.md`
 - Taskboard: `docs/phases/phase-1-taskboard.md`
+
+Per `AGENTS.md`, agents should not claim or start new implementation work until
+the next phase scope is confirmed and a phase spec/taskboard exists.
 
 ## Agent Reading Rule
 
@@ -33,13 +38,13 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
+| Phase 1.6 | Evaluation harness | Complete; see `docs/phases/phase-1.6-taskboard.md` |
 | Phase 1 | Naive classic RAG | Complete; see `docs/phases/phase-1-taskboard.md` |
 
 ## Candidate And Deferred Phases
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 1.6 | Evaluation harness | Active; see `docs/phases/phase-1.6-taskboard.md` |
 | Phase 1.5 | Retrieval mechanics: BM25, hybrid retrieval, inspection | Directional |
 | Phase 1.7 | Observability and debugging | Directional |
 | Phase 1.8 | RAG failure lab | Directional |

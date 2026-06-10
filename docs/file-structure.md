@@ -25,7 +25,7 @@ docs/architecture.md               conceptual RAG planes and interfaces
 
 ## Implementation Layout
 
-Phase 1 implementation files:
+Phase 1 + 1.6 implementation files:
 
 ```text
 tiny_rag_lab/
@@ -34,6 +34,7 @@ tiny_rag_lab/
   documents.py
   chunking.py
   embeddings.py
+  eval.py              (Phase 1.6: EvalSample/Result/Report, metrics, runner, formatter)
   index_loader.py
   index_writer.py
   models.py
@@ -45,6 +46,7 @@ scripts/
 tests/
   fixtures/
     corpus/
+    eval/              (Phase 1.6: qa.jsonl fixture)
   test_*.py
 ```
 
