@@ -9,6 +9,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tiny_rag_lab.embeddings import Embedder
+    from tiny_rag_lab.index_loader import LoadedIndex
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +154,61 @@ def context_recall_at_k(
 # ---------------------------------------------------------------------------
 # Report formatter (T05)
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Eval runner (T04)
+# ---------------------------------------------------------------------------
+
+def run_retrieval_eval(
+    samples: list[EvalSample],
+    index: LoadedIndex,
+    embedder: Embedder,
+    top_k: int,
+) -> EvalReport:
+    """Run retrieval for every sample and return an aggregate EvalReport.
+
+    For each sample the query is embedded, top_k chunks are retrieved, and
+    the four retrieval metrics are computed against the sample's gold_doc_ids.
+    Aggregate metrics are arithmetic means over all per-question results.
+    """
+    from tiny_rag_lab.retrieval import retrieve_by_vector
+
+    if not samples:
+        return EvalReport(n_questions=0, top_k=top_k)
+
+    per_question: list[EvalResult] = []
+    for sample in samples:
+        query_vec = embedder.embed([sample.question])[0]
+        results = retrieve_by_vector(query_vec, index, top_k=top_k)
+        retrieved_doc_ids = [r.chunk.doc_id for r in results]
+
+        hit = hit_at_k(retrieved_doc_ids, sample.gold_doc_ids)
+        rr = reciprocal_rank(retrieved_doc_ids, sample.gold_doc_ids)
+        cp = context_precision_at_k(retrieved_doc_ids, sample.gold_doc_ids)
+        cr = context_recall_at_k(retrieved_doc_ids, sample.gold_doc_ids)
+
+        per_question.append(EvalResult(
+            question_id=sample.question_id,
+            question=sample.question,
+            gold_doc_ids=sample.gold_doc_ids,
+            retrieved_doc_ids=retrieved_doc_ids,
+            hit=hit,
+            reciprocal_rank=rr,
+            context_precision=cp,
+            context_recall=cr,
+        ))
+
+    n = len(per_question)
+    return EvalReport(
+        n_questions=n,
+        top_k=top_k,
+        hit_rate=sum(r.hit for r in per_question) / n,
+        mrr=sum(r.reciprocal_rank for r in per_question) / n,
+        mean_context_precision=sum(r.context_precision for r in per_question) / n,
+        mean_context_recall=sum(r.context_recall for r in per_question) / n,
+        per_question=per_question,
+    )
+
 
 _SEPARATOR = "─" * 36
 

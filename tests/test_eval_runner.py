@@ -1,14 +1,18 @@
 """Tests for tiny_rag_lab/eval.py — loader and runner.
 
 T02: loader tests (marked with 'load' in name)
-T04: runner tests                               — added in T04
+T04: runner tests
 """
 import json
 from pathlib import Path
 
 import pytest
 
-from tiny_rag_lab.eval import EvalSample, load_eval_samples
+from tiny_rag_lab.chunking import chunk_documents
+from tiny_rag_lab.documents import load_documents
+from tiny_rag_lab.embeddings import FakeEmbedder
+from tiny_rag_lab.eval import EvalReport, EvalResult, EvalSample, load_eval_samples, run_retrieval_eval
+from tiny_rag_lab.index_loader import LoadedIndex
 
 FIXTURE_QA = Path(__file__).parent / "fixtures" / "eval" / "qa.jsonl"
 
@@ -119,3 +123,133 @@ def test_load_eval_samples_skips_non_dict_json_rows(tmp_path):
     )
     samples = load_eval_samples(qa)
     assert len(samples) == 1
+
+
+# ---------------------------------------------------------------------------
+# T04 — run_retrieval_eval helpers
+# ---------------------------------------------------------------------------
+
+FIXTURE_CORPUS = Path(__file__).parent / "fixtures" / "corpus"
+FIXTURE_QA = Path(__file__).parent / "fixtures" / "eval" / "qa.jsonl"
+
+
+def _build_index(dim: int = 8) -> LoadedIndex:
+    """Build an in-memory LoadedIndex from the fixture corpus using FakeEmbedder."""
+    docs = load_documents(FIXTURE_CORPUS)
+    chunks = chunk_documents(docs, chunk_size=500, chunk_overlap=50)
+    embedder = FakeEmbedder(dim=dim)
+    embeddings = embedder.embed([c.text for c in chunks])
+    return LoadedIndex(
+        manifest={},
+        chunks=chunks,
+        embeddings=embeddings,
+        chunk_ids=[c.chunk_id for c in chunks],
+    )
+
+
+# ---------------------------------------------------------------------------
+# T04 — run_retrieval_eval
+# ---------------------------------------------------------------------------
+
+def test_runner_returns_eval_report():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    assert isinstance(report, EvalReport)
+
+
+def test_runner_n_questions_matches_sample_count():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    assert report.n_questions == 3
+
+
+def test_runner_per_question_has_one_result_per_sample():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    assert len(report.per_question) == 3
+
+
+def test_runner_per_question_results_are_eval_result():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    for r in report.per_question:
+        assert isinstance(r, EvalResult)
+
+
+def test_runner_top_k_stored_in_report():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=7)
+    assert report.top_k == 7
+
+
+def test_runner_hit_rate_is_mean_of_per_question_hits():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    expected = sum(r.hit for r in report.per_question) / len(report.per_question)
+    assert report.hit_rate == pytest.approx(expected)
+
+
+def test_runner_mrr_is_mean_of_per_question_rr():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    expected = sum(r.reciprocal_rank for r in report.per_question) / len(report.per_question)
+    assert report.mrr == pytest.approx(expected)
+
+
+def test_runner_mean_context_precision_is_arithmetic_mean():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    expected = sum(r.context_precision for r in report.per_question) / len(report.per_question)
+    assert report.mean_context_precision == pytest.approx(expected)
+
+
+def test_runner_mean_context_recall_is_arithmetic_mean():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    expected = sum(r.context_recall for r in report.per_question) / len(report.per_question)
+    assert report.mean_context_recall == pytest.approx(expected)
+
+
+def test_runner_per_question_question_ids_match_samples():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    assert [r.question_id for r in report.per_question] == [s.question_id for s in samples]
+
+
+def test_runner_retrieved_doc_ids_length_at_most_top_k():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    top_k = 2
+    report = run_retrieval_eval(samples, index, embedder, top_k=top_k)
+    for r in report.per_question:
+        assert len(r.retrieved_doc_ids) <= top_k
+
+
+def test_runner_empty_samples_returns_empty_report():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    report = run_retrieval_eval([], index, embedder, top_k=5)
+    assert report.n_questions == 0
+    assert report.per_question == []
+    assert report.hit_rate == 0.0
