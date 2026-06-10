@@ -1,6 +1,6 @@
 # Phase 1.5 Spec: Retrieval Mechanics
 
-**Status:** Active — scope reviewed and signed off by Codex on 2026-06-10
+**Status:** Complete — closed by Codex on 2026-06-11
 **Authors:** Claude Code + owner decisions
 **Based on:** `docs/proposal.md`, `docs/roadmap.md`, `docs/architecture.md`
 **Taskboard:** `docs/phases/phase-1.5-taskboard.md`

@@ -10,15 +10,17 @@ evaluation, and failure inspection.
 
 ## Current Status
 
-Phase 1 and Phase 1.6 are complete.
+Phase 1, Phase 1.5, and Phase 1.6 are complete.
 
 - **Phase 1 — Naive Classic RAG**: full pipeline from corpus to grounded answers with citations
+- **Phase 1.5 — Retrieval Mechanics**: BM25 keyword retrieval, hybrid retrieval, and retriever comparison flags
 - **Phase 1.6 — Evaluation Harness**: retrieval quality metrics (`rag eval`) against a prepared QA set
 
 Completed phase contracts:
 
 - [Phase index](docs/phases/README.md)
 - [Phase 1 spec](docs/phases/phase-1-naive-classic-rag.md) · [taskboard](docs/phases/phase-1-taskboard.md)
+- [Phase 1.5 spec](docs/phases/phase-1.5-retrieval-mechanics.md) · [taskboard](docs/phases/phase-1.5-taskboard.md)
 - [Phase 1.6 spec](docs/phases/phase-1.6-evaluation-harness.md) · [taskboard](docs/phases/phase-1.6-taskboard.md)
 
 ## Phase 1 Result
@@ -43,6 +45,16 @@ Key decisions:
 - no vector database in Phase 1
 - no LangChain/LlamaIndex/Haystack wrapper in Phase 1
 
+## Phase 1.5 Result
+
+Phase 1.5 adds inspectable retrieval strategies to compare dense vector search,
+BM25 keyword search, and hybrid retrieval with Reciprocal Rank Fusion.
+
+```text
+query + index -> dense retrieval | BM25 retrieval -> optional RRF fusion
+-> ranked chunks and eval reports tagged with retriever=dense|bm25|hybrid
+```
+
 ## Phase 1.6 Result
 
 Phase 1.6 adds a `rag eval` command that measures retrieval quality against the
@@ -58,9 +70,13 @@ qa.jsonl + index -> embed questions -> retrieve top-k -> compare to gold docs
 
 ```bash
 rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-overlap 120
-rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5
+rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever dense
+rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever bm25
+rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
 rag ask "question text" --index-dir .tiny-rag/index --top-k 5
-rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5
+rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever dense
+rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever bm25
+rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
 ```
 
 Help is available for each command:

@@ -25,16 +25,18 @@ docs/architecture.md               conceptual RAG planes and interfaces
 
 ## Implementation Layout
 
-Phase 1 + 1.6 implementation files:
+Phase 1, 1.5, and 1.6 implementation files:
 
 ```text
 tiny_rag_lab/
   __init__.py
+  bm25.py             (Phase 1.5: BM25Retriever and visible tokenization)
   cli.py
   documents.py
   chunking.py
   embeddings.py
-  eval.py              (Phase 1.6: EvalSample/Result/Report, metrics, runner, formatter)
+  eval.py              (Phase 1.6 + 1.5: metrics and retriever-aware eval runner)
+  hybrid.py           (Phase 1.5: RRF and dense+BM25 retrieval)
   index_loader.py
   index_writer.py
   models.py

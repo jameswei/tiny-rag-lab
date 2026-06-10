@@ -6,7 +6,9 @@ historical context.
 
 ## Current Phase
 
-**Phase 1.5 is active.**
+No implementation phase is currently active.
+
+Phase 1.5 is complete:
 
 - Spec: `docs/phases/phase-1.5-retrieval-mechanics.md`
 - Taskboard: `docs/phases/phase-1.5-taskboard.md`
@@ -40,6 +42,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
+| Phase 1.5 | Retrieval mechanics | Complete; see `docs/phases/phase-1.5-taskboard.md` |
 | Phase 1.6 | Evaluation harness | Complete; see `docs/phases/phase-1.6-taskboard.md` |
 | Phase 1 | Naive classic RAG | Complete; see `docs/phases/phase-1-taskboard.md` |
 

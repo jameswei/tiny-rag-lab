@@ -16,7 +16,8 @@ Expected outputs:
 - evaluation dataset format
 - first phase spec and taskboard
 
-Status: Phase 1 has a review-ready spec and taskboard under `docs/phases/`.
+Status: Phase 1, Phase 1.5, and Phase 1.6 are complete under
+`docs/phases/`. No implementation phase is currently active.
 
 ## Phase 1: Naive Classic RAG
 

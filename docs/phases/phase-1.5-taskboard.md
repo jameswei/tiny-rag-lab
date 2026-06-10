@@ -6,7 +6,7 @@ status in one lightweight table.
 The implementation contract is
 `docs/phases/phase-1.5-retrieval-mechanics.md`. This taskboard must stay aligned
 with that spec. The phase scope proposal was reviewed and signed off by Codex on
-2026-06-10, and Phase 1.5 is active in `docs/phases/README.md`.
+2026-06-10. Phase 1.5 was closed by Codex on 2026-06-11.
 
 ## Status Values
 
@@ -37,7 +37,7 @@ with that spec. The phase scope proposal was reviewed and signed off by Codex on
 | P1.5-T02 | M1.5.1 | `reciprocal_rank_fusion()` + `retrieve_hybrid()` in `hybrid.py` | P1.5-T01 | done | claude | dual-top-1 chunk scores highest after fusion; hybrid returns top_k items; ranks 1-indexed contiguous; `uv run pytest tests/test_hybrid.py --tb=short -q`: N passed | reviewed by codex; `uv run pytest tests/test_hybrid.py tests/test_cmd_index_retrieve.py --tb=short -q`: 36 passed; signed off |
 | P1.5-T03 | M1.5.2 | `--retriever` flag for `rag retrieve` | P1.5-T01, P1.5-T02 | done | claude | `--help` shows flag; bm25 and hybrid modes return results with fake-backed index; invalid value exits non-zero; `uv run pytest tests/test_cmd_index_retrieve.py --tb=short -q`: N passed | reviewed by codex; `uv run pytest tests/test_cmd_index_retrieve.py tests/test_hybrid.py --tb=short -q`: 36 passed; signed off |
 | P1.5-T04 | M1.5.2 | `EvalReport.retriever` field + `--retriever` flag for `rag eval` | P1.5-T01, P1.5-T02 | done | claude | `EvalReport` has `retriever` field; `run_retrieval_eval()` accepts retriever param; `rag eval --retriever bm25` and `--retriever hybrid` print valid reports with retriever name; `uv run pytest tests/test_cmd_eval.py tests/test_eval_runner.py --tb=short -q`: N passed | reviewed by codex; `uv run pytest tests/test_eval_runner.py tests/test_cmd_eval.py tests/test_eval_metrics.py --tb=short -q`: 95 passed; signed off |
-| P1.5-T05 | M1.5.3 | Phase close | P1.5-T01–T04 | todo | unassigned | All P1.5-T01–T04 rows show `done` with reviewer sign-off; `docs/phases/README.md` updated; `uv run pytest --tb=short -q`: 319+ passed; all three `rag eval --retriever` modes exit 0 | |
+| P1.5-T05 | M1.5.3 | Phase close | P1.5-T01–T04 | done | codex | All P1.5-T01–T04 rows show `done` with reviewer sign-off; `docs/phases/README.md` updated; `uv run pytest --tb=short -q`: 319+ passed; all three `rag eval --retriever` modes exit 0 | closed by codex; `uv run pytest --tb=short -q`: 371 passed; `rag eval --retriever dense`, `bm25`, and `hybrid` exited 0 on fixture index |
 
 ## Review-Sensitive Tasks
 
