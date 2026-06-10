@@ -5,7 +5,7 @@ schema. No network access, no HuggingFace downloads.
 
 Real corpus split fields: doc_id, title, md_document, document, url
 Real QA split fields:     question_id, question, correct_answer,
-                          ground_truths_contexts_ids (list[str])
+                          correct_answer_document_ids (string or list[str])
 """
 
 import json
@@ -58,19 +58,19 @@ QA_ROWS = [
         "question_id": "q-001",
         "question": "What is watsonx.ai?",
         "correct_answer": "IBM's AI and data platform.",
-        "ground_truths_contexts_ids": ["doc-001"],
+        "correct_answer_document_ids": "doc-001",
     },
     {
         "question_id": "q-002",
         "question": "Who makes watsonx.ai?",
         "correct_answer": "IBM.",
-        "ground_truths_contexts_ids": ["doc-001"],
+        "correct_answer_document_ids": "doc-001",
     },
     {
         "question_id": "q-003",
         "question": "What is watsonx.data?",
         "correct_answer": "A data store for AI workloads.",
-        "ground_truths_contexts_ids": ["doc-002"],
+        "correct_answer_document_ids": "doc-002",
     },
 ]
 
@@ -156,6 +156,48 @@ def test_extract_qa_pairs_gold_doc_ids_translated():
     # gold_doc_ids must use prepared_id (same as manifest doc_id), not original dataset id
     assert pairs[0]["gold_doc_ids"] == [id_map["doc-001"]]
     assert pairs[2]["gold_doc_ids"] == [id_map["doc-002"]]
+
+
+def test_extract_qa_pairs_supports_legacy_gold_field():
+    _, id_map = extract_documents(CORPUS_ROWS)
+    rows = [
+        {
+            "question_id": "q-old",
+            "question": "Legacy schema?",
+            "correct_answer": "Yes.",
+            "ground_truths_contexts_ids": ["doc-001"],
+        }
+    ]
+    pairs = extract_qa_pairs(rows, id_map)
+    assert pairs[0]["gold_doc_ids"] == [id_map["doc-001"]]
+
+
+def test_extract_qa_pairs_splits_comma_separated_gold_ids():
+    _, id_map = extract_documents(CORPUS_ROWS)
+    rows = [
+        {
+            "question_id": "q-multi",
+            "question": "Which docs?",
+            "correct_answer": "Both.",
+            "correct_answer_document_ids": "doc-001, doc-002",
+        }
+    ]
+    pairs = extract_qa_pairs(rows, id_map)
+    assert pairs[0]["gold_doc_ids"] == [id_map["doc-001"], id_map["doc-002"]]
+
+
+def test_extract_qa_pairs_handles_scalar_gold_id():
+    _, id_map = extract_documents(CORPUS_ROWS)
+    rows = [
+        {
+            "question_id": "q-scalar",
+            "question": "Scalar schema?",
+            "correct_answer": "Yes.",
+            "correct_answer_document_ids": 123,
+        }
+    ]
+    pairs = extract_qa_pairs(rows, id_map)
+    assert pairs[0]["gold_doc_ids"] == ["123"]
 
 
 def test_extract_qa_pairs_gold_ids_match_manifest():

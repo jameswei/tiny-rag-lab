@@ -7,7 +7,8 @@ Corpus split schema (fields this script reads):
   doc_id, title, md_document (preferred), document (fallback), url
 
 QA split schema (fields this script reads):
-  question_id, question, correct_answer, ground_truths_contexts_ids
+  question_id, question, correct_answer, correct_answer_document_ids
+  (older/cache variants may expose ground_truths_contexts_ids)
 
 Produces:
   <output-dir>/
@@ -59,7 +60,10 @@ _CORPUS_URL_FIELD = "url"
 _QA_ID_FIELD = "question_id"
 _QA_QUESTION_FIELD = "question"
 _QA_ANSWER_FIELD = "correct_answer"
-_QA_GOLD_IDS_FIELD = "ground_truths_contexts_ids"  # list[str]
+_QA_GOLD_ID_FIELDS = (
+    "correct_answer_document_ids",  # current cached Parquet schema
+    "ground_truths_contexts_ids",   # earlier schema name used in Phase 1 tests
+)
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +96,41 @@ def _is_corpus_row(row: dict) -> bool:
 def _is_qa_row(row: dict) -> bool:
     """True if the row looks like a QA pair (has a question field)."""
     return bool(row.get(_QA_QUESTION_FIELD, ""))
+
+
+def _cached_snapshot_path(dataset_name: str, cache_dir: str | None) -> Path | None:
+    """Return a local hub snapshot path for dataset_name when cache_dir has one."""
+    if not cache_dir or "/" not in dataset_name:
+        return None
+
+    owner, name = dataset_name.split("/", 1)
+    repo_dir = Path(cache_dir) / "hub" / f"datasets--{owner}--{name}"
+    ref_path = repo_dir / "refs" / "main"
+    if not ref_path.exists():
+        return None
+
+    revision = ref_path.read_text(encoding="utf-8").strip()
+    snapshot = repo_dir / "snapshots" / revision
+    return snapshot if snapshot.exists() else None
+
+
+def _extract_gold_ids(row: dict) -> list[str]:
+    """Return raw gold document IDs from the first supported QA schema field."""
+    for field in _QA_GOLD_ID_FIELDS:
+        raw_gold = row.get(field)
+        if raw_gold:
+            break
+    else:
+        return []
+
+    if isinstance(raw_gold, str):
+        return [gid.strip() for gid in raw_gold.split(",") if gid.strip()]
+    try:
+        iterator = iter(raw_gold)
+    except TypeError:
+        gid = str(raw_gold).strip()
+        return [gid] if gid else []
+    return [str(gid).strip() for gid in iterator if str(gid).strip()]
 
 
 # ---------------------------------------------------------------------------
@@ -161,13 +200,8 @@ def extract_qa_pairs(
         if not question:
             continue
 
-        raw_gold = row.get(_QA_GOLD_IDS_FIELD, [])
-        if isinstance(raw_gold, str):
-            raw_gold = [raw_gold]
-
         gold_doc_ids = []
-        for gid in raw_gold:
-            gid = str(gid).strip()
+        for gid in _extract_gold_ids(row):
             if gid in id_map:
                 gold_doc_ids.append(id_map[gid])
             else:
@@ -265,11 +299,19 @@ def load_dataset_splits(dataset_name: str, cache_dir: str | None) -> tuple[list[
     except ImportError:
         sys.exit("Error: 'datasets' package not found. Run: uv sync")
 
-    print(f"Loading '{dataset_name}' from HuggingFace Hub...")
+    dataset_path = _cached_snapshot_path(dataset_name, cache_dir) or dataset_name
+    print(f"Loading '{dataset_path}' from HuggingFace Hub/cache...")
     kwargs: dict = {}
-    if cache_dir:
+    if cache_dir and dataset_path == dataset_name:
         kwargs["cache_dir"] = cache_dir
-    ds = load_dataset(dataset_name, **kwargs)
+    try:
+        ds = load_dataset(str(dataset_path), **kwargs)
+    except ValueError as exc:
+        if "Config name is missing" not in str(exc):
+            raise
+        corpus_ds = load_dataset(str(dataset_path), "corpus", **kwargs)
+        qa_ds = load_dataset(str(dataset_path), "question_answers", **kwargs)
+        ds = {"corpus": corpus_ds["train"], **{f"question_answers/{k}": v for k, v in qa_ds.items()}}
 
     corpus_rows: list[dict] = []
     qa_rows: list[dict] = []
@@ -292,7 +334,16 @@ def inspect_dataset(dataset_name: str, cache_dir: str | None) -> None:
     except ImportError:
         sys.exit("Error: 'datasets' package not found. Run: uv sync")
 
-    ds = load_dataset(dataset_name, **({"cache_dir": cache_dir} if cache_dir else {}))
+    dataset_path = _cached_snapshot_path(dataset_name, cache_dir) or dataset_name
+    kwargs = {"cache_dir": cache_dir} if cache_dir and dataset_path == dataset_name else {}
+    try:
+        ds = load_dataset(str(dataset_path), **kwargs)
+    except ValueError as exc:
+        if "Config name is missing" not in str(exc):
+            raise
+        corpus_ds = load_dataset(str(dataset_path), "corpus", **kwargs)
+        qa_ds = load_dataset(str(dataset_path), "question_answers", **kwargs)
+        ds = {"corpus": corpus_ds["train"], **{f"question_answers/{k}": v for k, v in qa_ds.items()}}
     print(f"\nDataset: {dataset_name}")
     print(f"Splits:  {list(ds.keys())}")
     for split_name, split in ds.items():
