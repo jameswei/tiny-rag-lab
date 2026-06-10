@@ -39,12 +39,13 @@ def _index_args(corpus, index_dir, chunk_size=200, chunk_overlap=20):
     ])
 
 
-def _retrieve_args(query, index_dir, top_k=3):
+def _retrieve_args(query, index_dir, top_k=3, retriever="dense"):
     parser = build_parser()
     return parser.parse_args([
         "retrieve", query,
         "--index-dir", str(index_dir),
         "--top-k", str(top_k),
+        "--retriever", retriever,
     ])
 
 
@@ -207,3 +208,49 @@ def test_retrieve_no_results_message(tmp_path, capsys):
         cmd_retrieve(args_ret)
     out = capsys.readouterr().out
     assert "No results" in out
+
+
+# ---------------------------------------------------------------------------
+# T03 — --retriever flag
+# ---------------------------------------------------------------------------
+
+def test_retrieve_help_shows_retriever_flag(capsys):
+    parser = build_parser()
+    try:
+        parser.parse_args(["retrieve", "--help"])
+    except SystemExit:
+        pass
+    out = capsys.readouterr().out
+    assert "--retriever" in out
+
+
+def test_retrieve_bm25_returns_ranked_results(retrieve_setup, capsys):
+    args = _retrieve_args("sample document", retrieve_setup, top_k=2, retriever="bm25")
+    # Patch _make_embedder to raise — BM25 path must never call it.
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=RuntimeError("embedder must not be loaded for bm25")):
+        cmd_retrieve(args)
+    out = capsys.readouterr().out
+    assert "Rank 1" in out
+    assert "chunk_id=" in out
+
+
+def test_retrieve_hybrid_returns_ranked_results(retrieve_setup, capsys):
+    args = _retrieve_args("sample document", retrieve_setup, top_k=2, retriever="hybrid")
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+        cmd_retrieve(args)
+    out = capsys.readouterr().out
+    assert "Rank 1" in out
+    assert "chunk_id=" in out
+
+
+def test_retrieve_invalid_retriever_exits_nonzero():
+    parser = build_parser()
+    with pytest.raises(SystemExit) as exc_info:
+        parser.parse_args(["retrieve", "query", "--retriever", "foo"])
+    assert exc_info.value.code != 0
+
+
+def test_retrieve_default_retriever_is_dense():
+    parser = build_parser()
+    args = parser.parse_args(["retrieve", "query"])
+    assert args.retriever == "dense"

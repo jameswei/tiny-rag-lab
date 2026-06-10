@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1.5-T01
+Task:         P1.5-T03
 Phase:        Phase 1.5 — Retrieval Mechanics
 Spec:         docs/phases/phase-1.5-retrieval-mechanics.md
 Taskboard:    docs/phases/phase-1.5-taskboard.md
@@ -17,7 +17,7 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_bm25.py tests/test_retrieval.py --tb=short -q`: 32 passed
+- `uv run pytest tests/test_cmd_index_retrieve.py tests/test_hybrid.py --tb=short -q`: 36 passed
 
 ## Blocker
 
@@ -25,4 +25,4 @@ Updated By:   codex
 
 ## Notes
 
-- P1.5-T01 signed off by Codex. The BM25 retriever matches the Phase 1.5 contract for visible tokenization, raw BM25 scores, empty corpus/query handling, top-k clipping, negative `top_k` validation, and all-empty-token corpus handling.
+- P1.5-T03 signed off by Codex. The retrieve CLI exposes `--retriever {dense,bm25,hybrid}`, defaults to dense, rejects invalid values, returns ranked output for BM25 and hybrid on the non-empty fixture index, and the BM25 path is tested to avoid embedder loading.

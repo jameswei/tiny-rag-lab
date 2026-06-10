@@ -83,14 +83,25 @@ def cmd_index(args):
 
 
 def cmd_retrieve(args):
+    from tiny_rag_lab.bm25 import BM25Retriever
+    from tiny_rag_lab.hybrid import retrieve_hybrid
     from tiny_rag_lab.index_loader import load_index
     from tiny_rag_lab.retrieval import retrieve
 
     index = load_index(Path(args.index_dir))
-    model_name = index.manifest.get("embedding_model")
-    embedder = _make_embedder(model_name)
+    retriever = getattr(args, "retriever", "dense")
 
-    results = retrieve(args.query, index, embedder, top_k=args.top_k)
+    if retriever == "bm25":
+        embedder = None
+        results = BM25Retriever(index.chunks).retrieve(args.query, top_k=args.top_k)
+    elif retriever == "hybrid":
+        model_name = index.manifest.get("embedding_model")
+        embedder = _make_embedder(model_name)
+        results = retrieve_hybrid(args.query, index, embedder, top_k=args.top_k)
+    else:
+        model_name = index.manifest.get("embedding_model")
+        embedder = _make_embedder(model_name)
+        results = retrieve(args.query, index, embedder, top_k=args.top_k)
 
     if not results:
         print("No results found.")
@@ -224,6 +235,10 @@ def build_parser():
     p_retrieve.add_argument(
         "--top-k", type=int, default=5, metavar="INT",
         help="number of chunks to retrieve (default: 5)",
+    )
+    p_retrieve.add_argument(
+        "--retriever", choices=["dense", "bm25", "hybrid"], default="dense",
+        help="retrieval strategy (default: dense)",
     )
     p_retrieve.set_defaults(func=cmd_retrieve)
 
