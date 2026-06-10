@@ -1,14 +1,14 @@
 # Current Task
 
-Task:         P1-T21
-Phase:        Phase 1
-Spec:         docs/phases/phase-1-naive-classic-rag.md
-Taskboard:    docs/phases/phase-1-taskboard.md
-Owner:        codex
+Task:         P1.6-T01, P1.6-T02
+Phase:        Phase 1.6
+Spec:         docs/phases/phase-1.6-evaluation-harness.md
+Taskboard:    docs/phases/phase-1.6-taskboard.md
+Owner:        claude
 Status:       done
 Review Result: signed_off
 Reviewer:     codex
-Last Updated: 2026-06-08
+Last Updated: 2026-06-10
 Updated By:   codex
 
 ## Findings From Last Review
@@ -17,11 +17,11 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest --tb=short -q`: pass, 241 passed in 3.63s
-- `uv run rag --help`: pass
-- `uv run rag index --help`: pass
-- `uv run rag retrieve --help`: pass
-- `uv run rag ask --help`: pass
+- `uv run pytest tests/test_eval_metrics.py -k dataclass --tb=short -q`: pass, 13 passed
+- `uv run pytest tests/test_eval_runner.py -k load --tb=short -q`: pass, 12 passed
+- `uv run pytest --tb=short -q`: pass, 266 passed (no regressions)
+- `uv run python -c "from pathlib import Path; from tiny_rag_lab.eval import load_eval_samples; p=Path('/tmp/tiny-rag-malformed-fields.jsonl'); p.write_text('{\"question_id\":\"q1\",\"question\":\"Q?\",\"answer\":\"A\",\"gold_doc_ids\":42}\n'); print(load_eval_samples(p))"`:
+  pass, returns `[]`
 
 ## Blocker
 
@@ -29,40 +29,54 @@ Updated By:   codex
 
 ## Notes
 
+Reviewed by codex; T01/T02 accepted. Dataclass defaults, loader skip behavior,
+fixture coverage, and no-regression suite pass.
+
+All blocking findings from Codex's reviews have been fixed:
+- `EvalSample.gold_doc_ids` and `EvalResult.gold_doc_ids`/`retrieved_doc_ids` now use `field(default_factory=list)`
+- `load_eval_samples()` skips non-dict JSON rows (e.g. `[]`)
+- `load_eval_samples()` skips rows where `gold_doc_ids` is not a list (e.g. `42`)
+
 ## Handoff
 
 ### Task Summary
 
-Closed Phase 1 after verifying all required tasks `P1-T00` through `P1-T20`
-were complete and the full test suite passed. Updated phase-level docs so
-agents see Phase 1 as complete and no implementation phase as currently active.
+T01: defined `EvalSample`, `EvalResult`, `EvalReport` dataclasses in
+`tiny_rag_lab/eval.py`. List fields default to `[]` via `field(default_factory=list)`.
+Float fields default to `0.0`, bool to `False`.
+
+T02: implemented `load_eval_samples(path) -> list[EvalSample]` in the same
+module. Created `tests/fixtures/eval/qa.jsonl` with 3 records referencing the
+existing fixture corpus doc_ids (`with_h1.md`, `plain.txt`, `subdir/nested.md`).
+Loader skips rows with empty question, empty gold_doc_ids, blank lines, invalid
+JSON, and non-dict JSON values.
 
 ### Files Changed
 
-- `README.md`: current status now says Phase 1 is complete
-- `docs/phases/README.md`: Phase 1 moved to completed phases; no active phase
-- `docs/file-structure.md`: implementation layout updated from expected to actual
-- `docs/phases/phase-1-taskboard.md`: `P1-T21` marked done
+- `tiny_rag_lab/eval.py`: new — EvalSample, EvalResult, EvalReport dataclasses + load_eval_samples()
+- `tests/fixtures/eval/qa.jsonl`: new — 3-record eval fixture
+- `tests/test_eval_metrics.py`: new — T01 dataclass tests (13 tests)
+- `tests/test_eval_runner.py`: new — T02 loader tests (11 tests)
 
 ### Design Decisions
 
-- **No active phase after closeout**: Phase 1 is complete, but Phase 1.5 remains
-  directional until it has its own accepted spec and taskboard.
-- **No production-code changes for T21**: phase close only updates docs and
-  records final verification.
+- `gold_doc_ids` on `EvalSample` defaults to `[]` (matches T01 acceptance criteria); the loader already skips empty-gold rows so this is safe
+- `load_eval_samples` does not raise on any malformed row — silent skip on invalid JSON, non-dict JSON, empty question, empty gold_doc_ids
 
 ### Tests Run
 
-- `uv run pytest --tb=short -q`: 241 passed
-- `uv run rag --help`: pass
-- `uv run rag index --help`: pass
-- `uv run rag retrieve --help`: pass
-- `uv run rag ask --help`: pass
+- `uv run pytest tests/test_eval_metrics.py -k dataclass --tb=short -q`: 13 passed
+- `uv run pytest tests/test_eval_runner.py -k load --tb=short -q`: 11 passed
+- `uv run pytest --tb=short -q`: 265 passed
 
 ### Known Gaps
 
 - none
 
+### Learning Notes
+
+- `field(default_factory=list)` is required for mutable defaults in dataclasses — using `gold_doc_ids: list[str] = []` would share the same list object across all instances (Python gotcha)
+
 ### Questions For Next Agent
 
-- Before starting Phase 1.5, create and accept a dedicated spec and taskboard.
+- T03 (metric functions) and T05 (formatter) are unblocked and can proceed in parallel with or after T02 sign-off

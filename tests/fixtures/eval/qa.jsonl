@@ -1,0 +1,3 @@
+{"question_id": "q001", "question": "What topics does the sample document cover?", "answer": "It covers several topics useful for retrieval testing.", "gold_doc_ids": ["with_h1.md"]}
+{"question_id": "q002", "question": "What does the plain text document say about its title?", "answer": "The title should be the filename stem.", "gold_doc_ids": ["plain.txt"]}
+{"question_id": "q003", "question": "Where does the nested document live?", "answer": "It lives in a subdirectory.", "gold_doc_ids": ["subdir/nested.md"]}
