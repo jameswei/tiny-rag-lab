@@ -6,7 +6,12 @@ historical context.
 
 ## Current Phase
 
-No implementation phase is currently active.
+**Phase 1.5 is active.**
+
+- Spec: `docs/phases/phase-1.5-retrieval-mechanics.md`
+- Taskboard: `docs/phases/phase-1.5-taskboard.md`
+
+Phase 1.5 scope proposal was reviewed and signed off by Codex on 2026-06-10.
 
 Phase 1.6 is complete:
 
@@ -17,9 +22,6 @@ Phase 1 is complete:
 
 - Spec: `docs/phases/phase-1-naive-classic-rag.md`
 - Taskboard: `docs/phases/phase-1-taskboard.md`
-
-Per `AGENTS.md`, agents should not claim or start new implementation work until
-the next phase scope is confirmed and a phase spec/taskboard exists.
 
 ## Agent Reading Rule
 
@@ -45,10 +47,10 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 1.5 | Retrieval mechanics: BM25, hybrid retrieval, inspection | Directional |
 | Phase 1.7 | Observability and debugging | Directional |
 | Phase 1.8 | RAG failure lab | Directional |
 | Later | Agentic RAG | Deferred |
 
-Directional phases must not be treated as active implementation contracts until
-dedicated specs and taskboards are created.
+Candidate and directional phases must not be treated as active implementation
+contracts until their scope proposal is reviewed, signed off, and named under
+`Current Phase`.

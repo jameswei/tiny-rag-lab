@@ -26,6 +26,22 @@ If documents and code disagree, agents should not silently choose one. The
 agent should call out the conflict and either update the stale document as part
 of the task or ask for clarification if the correct direction is unclear.
 
+## Phase Lifecycle
+
+Phase specs and taskboards move through three states:
+
+1. Candidate proposal: the spec and taskboard exist for review, but agents must
+   not claim implementation tasks from them.
+2. Scope signed off: a reviewer has approved the phase scope and task breakdown.
+   Any required owner acceptance is recorded before activation.
+3. Active phase: `docs/phases/README.md` names the phase under "Current Phase".
+   Only then may agents claim taskboard rows and begin implementation.
+
+`docs/phases/README.md` is the activation switch. A phase spec marked
+`Review-ready` is not active by itself, even if a taskboard exists. When a
+candidate proposal is still under review, the phase index should list it under
+candidate phases, not under "Current Phase".
+
 ## Role Definitions
 
 Each agent should operate in one clear role for a task. A single agent may fill
@@ -115,27 +131,29 @@ Use this flow for normal implementation tasks:
 0. If `CURRENT.md` exists, read it first for live task state and any open review
    findings. Then read the phase spec and taskboard for full context.
    `CURRENT.md` is a fast pointer, not a replacement for the spec and taskboard.
-1. Read the relevant proposal, phase spec, taskboard, architecture docs, and
+1. Confirm `docs/phases/README.md` names an active phase. If it does not, stop
+   before implementation and work only on phase proposal/review docs.
+2. Read the relevant proposal, phase spec, taskboard, architecture docs, and
    existing code.
-2. Confirm the task belongs to the current phase.
-3. Claim the task in the taskboard by setting `Status` to `in_progress` and
+3. Confirm the task belongs to the current phase.
+4. Claim the task in the taskboard by setting `Status` to `in_progress` and
    `Owner` to the agent/person name.
-4. Create or update `CURRENT.md` from `docs/current-task-template.md`.
-5. Make the smallest change that satisfies the task.
-6. Keep code educational and explicit.
-7. Update docs if the change affects behavior, public interfaces, architecture,
+5. Create or update `CURRENT.md` from `docs/current-task-template.md`.
+6. Make the smallest change that satisfies the task.
+7. Keep code educational and explicit.
+8. Update docs if the change affects behavior, public interfaces, architecture,
    or phase scope.
-8. Run relevant tests.
-9. Produce a handoff note. Update `CURRENT.md` status to `review`.
-10. Reviewer checks the change against the role-specific checklist. Reviewer
+9. Run relevant tests.
+10. Produce a handoff note. Update `CURRENT.md` status to `review`.
+11. Reviewer checks the change against the role-specific checklist. Reviewer
     writes findings directly to `CURRENT.md` under "Findings From Last Review",
     tagged `[Blocking]`, `[Non-blocking]`, `[Nit]`, or `[Question]`. Reviewer
     sets `Review Result` to `changes_requested` or `signed_off` and updates
     `Last Updated` / `Updated By`.
-11. Test verifier records test results under "Tests Reviewed".
-12. A non-owner agent records sign-off in both `CURRENT.md` and the taskboard
+12. Test verifier records test results under "Tests Reviewed".
+13. A non-owner agent records sign-off in both `CURRENT.md` and the taskboard
     `Notes` before the task is marked `done`.
-13. After a task is committed, the agent who committed resets `CURRENT.md` for
+14. After a task is committed, the agent who committed resets `CURRENT.md` for
     the next task. If no next task exists and the phase is fully closed, delete
     `CURRENT.md`; the taskboard is the permanent record.
 

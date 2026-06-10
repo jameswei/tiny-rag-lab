@@ -14,7 +14,8 @@ If `docs/phases/README.md` names an active phase, also read that phase's spec
 and taskboard before changing code.
 
 If no phase is active, do not claim or start implementation work until the next
-phase scope is confirmed and a phase spec/taskboard exists.
+phase scope proposal has been reviewed, signed off, and activated in
+`docs/phases/README.md`.
 
 Read `docs/proposal.md`, `docs/roadmap.md`, and `docs/architecture.md` when a
 task changes architecture, roadmap, public interfaces, or phase scope.
