@@ -253,3 +253,70 @@ def test_runner_empty_samples_returns_empty_report():
     assert report.n_questions == 0
     assert report.per_question == []
     assert report.hit_rate == 0.0
+
+
+# ---------------------------------------------------------------------------
+# T04 (Phase 1.5) — retriever field and multi-strategy paths
+# ---------------------------------------------------------------------------
+
+def test_runner_retriever_field_defaults_to_dense():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    assert report.retriever == "dense"
+
+
+def test_runner_retriever_field_stored_in_report():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3, retriever="dense")
+    assert report.retriever == "dense"
+
+
+def test_runner_bm25_path_works_with_none_embedder():
+    index = _build_index()
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, None, top_k=3, retriever="bm25")
+    assert isinstance(report, EvalReport)
+    assert report.retriever == "bm25"
+    assert report.n_questions == 3
+
+
+def test_runner_hybrid_path_returns_report():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3, retriever="hybrid")
+    assert report.retriever == "hybrid"
+    assert report.n_questions == 3
+
+
+def test_runner_dense_with_none_embedder_raises():
+    index = _build_index()
+    samples = load_eval_samples(FIXTURE_QA)
+    with pytest.raises(ValueError, match="embedder"):
+        run_retrieval_eval(samples, index, None, top_k=3, retriever="dense")
+
+
+def test_runner_hybrid_with_none_embedder_raises():
+    index = _build_index()
+    samples = load_eval_samples(FIXTURE_QA)
+    with pytest.raises(ValueError, match="embedder"):
+        run_retrieval_eval(samples, index, None, top_k=3, retriever="hybrid")
+
+
+def test_runner_empty_samples_bm25_returns_empty_report():
+    index = _build_index()
+    report = run_retrieval_eval([], index, None, top_k=5, retriever="bm25")
+    assert report.n_questions == 0
+    assert report.retriever == "bm25"
+
+
+def test_runner_invalid_retriever_raises():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    with pytest.raises(ValueError, match="retriever"):
+        run_retrieval_eval(samples, index, embedder, top_k=3, retriever="bogus")

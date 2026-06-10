@@ -325,3 +325,13 @@ def test_format_eval_report_no_ansi_escape_codes():
 
 def test_format_eval_report_returns_string():
     assert isinstance(format_eval_report(_make_report()), str)
+
+
+def test_format_eval_report_contains_retriever_name():
+    out = format_eval_report(_make_report(retriever="bm25"))
+    assert "retriever=bm25" in out
+
+
+def test_format_eval_report_retriever_defaults_to_dense():
+    out = format_eval_report(_make_report())
+    assert "retriever=dense" in out

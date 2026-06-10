@@ -183,11 +183,16 @@ def cmd_eval(args):
     from tiny_rag_lab.index_loader import load_index
 
     index = load_index(Path(args.index_dir))
-    model_name = index.manifest.get("embedding_model")
-    embedder = _make_embedder(model_name)
+    retriever = getattr(args, "retriever", "dense")
+
+    if retriever == "bm25":
+        embedder = None
+    else:
+        model_name = index.manifest.get("embedding_model")
+        embedder = _make_embedder(model_name)
 
     samples = load_eval_samples(Path(args.qa_file))
-    report = run_retrieval_eval(samples, index, embedder, top_k=args.top_k)
+    report = run_retrieval_eval(samples, index, embedder, top_k=args.top_k, retriever=retriever)
     print(format_eval_report(report))
 
 
@@ -286,6 +291,10 @@ def build_parser():
     p_eval.add_argument(
         "--top-k", type=int, default=5, metavar="INT",
         help="number of chunks to retrieve per question (default: 5)",
+    )
+    p_eval.add_argument(
+        "--retriever", choices=["dense", "bm25", "hybrid"], default="dense",
+        help="retrieval strategy (default: dense)",
     )
     p_eval.set_defaults(func=cmd_eval)
 

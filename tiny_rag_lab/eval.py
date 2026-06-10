@@ -55,6 +55,7 @@ class EvalReport:
 
     n_questions: int
     top_k: int
+    retriever: str = "dense"  # "dense" | "bm25" | "hybrid"
     hit_rate: float = 0.0
     mrr: float = 0.0
     mean_context_precision: float = 0.0
@@ -162,24 +163,48 @@ def context_recall_at_k(
 def run_retrieval_eval(
     samples: list[EvalSample],
     index: LoadedIndex,
-    embedder: Embedder,
+    embedder: Embedder | None,
     top_k: int,
+    retriever: str = "dense",
 ) -> EvalReport:
     """Run retrieval for every sample and return an aggregate EvalReport.
 
-    For each sample the query is embedded, top_k chunks are retrieved, and
-    the four retrieval metrics are computed against the sample's gold_doc_ids.
-    Aggregate metrics are arithmetic means over all per-question results.
+    Branches on retriever: "dense" uses cosine similarity, "bm25" uses BM25Okapi,
+    "hybrid" fuses both via RRF. Strategy-specific objects are built once before
+    the per-sample loop so BM25 indexes the corpus only once.
+
+    Raises ValueError if retriever is "dense" or "hybrid" and embedder is None.
     """
+    from tiny_rag_lab.bm25 import BM25Retriever
+    from tiny_rag_lab.hybrid import retrieve_hybrid
     from tiny_rag_lab.retrieval import retrieve_by_vector
 
+    _VALID_RETRIEVERS = {"dense", "bm25", "hybrid"}
+    if retriever not in _VALID_RETRIEVERS:
+        raise ValueError(f"retriever must be one of {sorted(_VALID_RETRIEVERS)}, got {retriever!r}")
+
+    if retriever in ("dense", "hybrid") and embedder is None:
+        raise ValueError(f"embedder must not be None for retriever={retriever!r}")
+
     if not samples:
-        return EvalReport(n_questions=0, top_k=top_k)
+        return EvalReport(n_questions=0, top_k=top_k, retriever=retriever)
+
+    # Build strategy-specific objects once before the loop.
+    bm25_retriever = BM25Retriever(index.chunks) if retriever in ("bm25", "hybrid") else None
 
     per_question: list[EvalResult] = []
     for sample in samples:
-        query_vec = embedder.embed([sample.question])[0]
-        results = retrieve_by_vector(query_vec, index, top_k=top_k)
+        if retriever == "bm25":
+            results = bm25_retriever.retrieve(sample.question, top_k=top_k)
+        elif retriever == "hybrid":
+            results = retrieve_hybrid(
+                sample.question, index, embedder, top_k=top_k,
+                bm25_retriever=bm25_retriever,
+            )
+        else:
+            query_vec = embedder.embed([sample.question])[0]
+            results = retrieve_by_vector(query_vec, index, top_k=top_k)
+
         retrieved_doc_ids = [r.chunk.doc_id for r in results]
 
         hit = hit_at_k(retrieved_doc_ids, sample.gold_doc_ids)
@@ -202,6 +227,7 @@ def run_retrieval_eval(
     return EvalReport(
         n_questions=n,
         top_k=top_k,
+        retriever=retriever,
         hit_rate=sum(r.hit for r in per_question) / n,
         mrr=sum(r.reciprocal_rank for r in per_question) / n,
         mean_context_precision=sum(r.context_precision for r in per_question) / n,
@@ -218,7 +244,7 @@ def format_eval_report(report: EvalReport) -> str:
 
     No ANSI escape codes. Values are rounded to 3 decimal places.
     """
-    header = f"Evaluation report  (n={report.n_questions}, top_k={report.top_k})"
+    header = f"Evaluation report  (n={report.n_questions}, top_k={report.top_k}, retriever={report.retriever})"
     lines = [
         header,
         _SEPARATOR,
