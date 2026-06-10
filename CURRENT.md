@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1.6-T04
+Task:         P1.6-T06
 Phase:        Phase 1.6
 Spec:         docs/phases/phase-1.6-evaluation-harness.md
 Taskboard:    docs/phases/phase-1.6-taskboard.md
@@ -17,10 +17,15 @@ Updated By:   codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_eval_runner.py --tb=short -q`: pass, 24 passed
-- `uv run pytest --tb=short -q`: pass, 308 passed (no regressions)
-- `uv run python -c "from pathlib import Path; from tiny_rag_lab.eval import load_eval_samples, run_retrieval_eval; from tiny_rag_lab.embeddings import FakeEmbedder; from tiny_rag_lab.documents import load_documents; from tiny_rag_lab.chunking import chunk_documents; from tiny_rag_lab.index_loader import LoadedIndex; corpus=Path('tests/fixtures/corpus'); docs=load_documents(corpus); chunks=chunk_documents(docs, chunk_size=500, chunk_overlap=50); emb=FakeEmbedder(dim=8); index=LoadedIndex(manifest={}, chunks=chunks, embeddings=emb.embed([c.text for c in chunks]), chunk_ids=[c.chunk_id for c in chunks]); samples=load_eval_samples(Path('tests/fixtures/eval/qa.jsonl')); report=run_retrieval_eval(samples, index, emb, top_k=3); print(report.n_questions, report.top_k, len(report.per_question), round(report.hit_rate, 3), round(report.mrr, 3))"`:
-  pass, prints `3 3 3 1.0 0.778`
+- `uv run pytest tests/test_cmd_eval.py --tb=short -q`: pass, 11 passed
+- `uv run pytest --tb=short -q`: pass, 319 passed (no regressions)
+- `uv run rag eval --help`: pass
+- `uv run rag eval --index-dir .tiny-rag/index`: fail as expected, exits 2
+  because `--qa-file` is required
+- `uv run rag --help`: pass
+- `uv run rag index --help`: pass
+- `uv run rag retrieve --help`: pass
+- `uv run rag ask --help`: pass
 
 ## Blocker
 
@@ -28,35 +33,34 @@ Updated By:   codex
 
 ## Notes
 
-Reviewed by codex; T04 accepted. Runner embeds each question, delegates to
-`retrieve_by_vector`, records ranked `doc_id` values, computes the four
-Phase 1.6 retrieval metrics, and aggregates arithmetic means correctly.
+Reviewed by codex; T06 accepted. `rag eval` wires the required `--qa-file`,
+default `--index-dir`, default `--top-k`, existing `_make_embedder` factory,
+index loading, eval runner, and report formatter without changing existing
+subcommands.
 
 ## Handoff
 
 ### Task Summary
 
-Implemented `run_retrieval_eval(samples, index, embedder, top_k) -> EvalReport`
-in `tiny_rag_lab/eval.py`. For each sample: embeds the question, retrieves
-top_k chunks via `retrieve_by_vector`, extracts `chunk.doc_id` for each result,
-computes the four metrics, builds an `EvalResult`. Aggregates arithmetic means
-into `EvalReport`. Empty samples returns a zero-filled report without dividing.
+Added `cmd_eval()` handler and `rag eval` subparser to `tiny_rag_lab/cli.py`.
+Reuses the existing `_make_embedder` factory so tests can patch it with
+FakeEmbedder without touching the CLI interface. Flags: `--qa-file` (required),
+`--index-dir` (default `.tiny-rag/index`), `--top-k` (default 5).
 
 ### Files Changed
 
-- `tiny_rag_lab/eval.py`: added `run_retrieval_eval()`; added `TYPE_CHECKING` imports for `Embedder` and `LoadedIndex`; deferred `retrieve_by_vector` import inside the function
-- `tests/test_eval_runner.py`: added 12 runner tests covering report structure, aggregation correctness, top_k, empty samples
+- `tiny_rag_lab/cli.py`: added `cmd_eval()` and `rag eval` subparser; no changes to existing commands
+- `tests/test_cmd_eval.py`: new — 7 parser tests + 5 end-to-end tests (11 total)
 
 ### Design Decisions
 
-- `retrieve_by_vector` is imported inside the function body (deferred) to avoid a circular import: `eval.py` → `retrieval.py` → `index_loader.py` → potential back-reference. `TYPE_CHECKING` block handles the type hints without runtime cost.
-- `_build_index()` fixture helper builds an in-memory `LoadedIndex` directly, matching the pattern in `test_persistence_roundtrip.py`, no disk I/O needed.
-- Aggregation tests verify the formula (`report.hit_rate == mean(r.hit for r in ...)`) rather than hard-coded expected values, so they are independent of FakeEmbedder's specific ranking.
+- `cmd_eval` follows the same structure as `cmd_retrieve`: load index, make embedder from manifest model name, run eval, print output
+- All eval imports are deferred inside `cmd_eval` (same pattern as other commands) so `cli.py` imports cleanly with no heavy dependencies at module level
 
 ### Tests Run
 
-- `uv run pytest tests/test_eval_runner.py --tb=short -q`: 24 passed
-- `uv run pytest --tb=short -q`: 308 passed
+- `uv run pytest tests/test_cmd_eval.py --tb=short -q`: 11 passed
+- `uv run pytest --tb=short -q`: 319 passed
 
 ### Known Gaps
 
@@ -64,4 +68,4 @@ into `EvalReport`. Empty samples returns a zero-filled report without dividing.
 
 ### Questions For Next Agent
 
-- T06 (`rag eval` CLI) is now fully unblocked — T04 and T05 are both done
+- T07 (phase close) is the only remaining task — docs only, no code changes

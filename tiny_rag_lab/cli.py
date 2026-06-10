@@ -165,6 +165,21 @@ def cmd_ask(args):
     )
 
 
+def cmd_eval(args):
+    from pathlib import Path
+
+    from tiny_rag_lab.eval import format_eval_report, load_eval_samples, run_retrieval_eval
+    from tiny_rag_lab.index_loader import load_index
+
+    index = load_index(Path(args.index_dir))
+    model_name = index.manifest.get("embedding_model")
+    embedder = _make_embedder(model_name)
+
+    samples = load_eval_samples(Path(args.qa_file))
+    report = run_retrieval_eval(samples, index, embedder, top_k=args.top_k)
+    print(format_eval_report(report))
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="rag",
@@ -239,6 +254,25 @@ def build_parser():
         help="OpenAI-compatible base URL (default: env OPENAI_BASE_URL)",
     )
     p_ask.set_defaults(func=cmd_ask)
+
+    # rag eval
+    p_eval = subparsers.add_parser(
+        "eval",
+        help="evaluate retrieval quality against a qa.jsonl file",
+    )
+    p_eval.add_argument(
+        "--qa-file", required=True, metavar="PATH",
+        help="path to qa.jsonl evaluation file",
+    )
+    p_eval.add_argument(
+        "--index-dir", default=".tiny-rag/index", metavar="PATH",
+        help="path to index directory (default: .tiny-rag/index)",
+    )
+    p_eval.add_argument(
+        "--top-k", type=int, default=5, metavar="INT",
+        help="number of chunks to retrieve per question (default: 5)",
+    )
+    p_eval.set_defaults(func=cmd_eval)
 
     return parser
 
