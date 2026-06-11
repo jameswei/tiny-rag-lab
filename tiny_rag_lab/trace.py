@@ -44,8 +44,8 @@ class RetrieveTrace:
     """Full trace record for one rag retrieve call.
 
     latency_by_stage keys:
-      "load"    — index loading from disk
-      "embed"   — query embedding (dense and hybrid only; absent for bm25)
+      "load"     — index loading from disk
+      "embed"    — query embedding (dense and hybrid only; absent for bm25)
       "retrieve" — ranking and top-k selection
     """
 

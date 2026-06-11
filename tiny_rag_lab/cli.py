@@ -86,39 +86,71 @@ def cmd_retrieve(args):
     from tiny_rag_lab.bm25 import BM25Retriever
     from tiny_rag_lab.hybrid import retrieve_hybrid
     from tiny_rag_lab.index_loader import load_index
-    from tiny_rag_lab.retrieval import retrieve
+    from tiny_rag_lab.retrieval import retrieve_by_vector
+    from tiny_rag_lab.trace import ChunkTrace, RetrieveTrace, format_retrieve_trace, write_trace_json
 
+    t0 = time.perf_counter()
     index = load_index(Path(args.index_dir))
+    latency: dict[str, float] = {"load": time.perf_counter() - t0}
+
     retriever = getattr(args, "retriever", "dense")
 
     if retriever == "bm25":
-        embedder = None
+        t0 = time.perf_counter()
         results = BM25Retriever(index.chunks).retrieve(args.query, top_k=args.top_k)
+        latency["retrieve"] = time.perf_counter() - t0
     elif retriever == "hybrid":
+        # Time embed and retrieve separately for hybrid by calling the two
+        # stages directly instead of retrieve_hybrid (which folds them together).
+        from tiny_rag_lab.hybrid import reciprocal_rank_fusion
         model_name = index.manifest.get("embedding_model")
         embedder = _make_embedder(model_name)
-        results = retrieve_hybrid(args.query, index, embedder, top_k=args.top_k)
-    else:
+        t0 = time.perf_counter()
+        query_vec = embedder.embed([args.query])[0]
+        latency["embed"] = time.perf_counter() - t0
+        t0 = time.perf_counter()
+        bm25_retriever = BM25Retriever(index.chunks)
+        dense_results = retrieve_by_vector(query_vec, index, top_k=args.top_k)
+        bm25_results = bm25_retriever.retrieve(args.query, top_k=args.top_k)
+        results = reciprocal_rank_fusion(
+            [dense_results, bm25_results], top_k=args.top_k
+        )
+        latency["retrieve"] = time.perf_counter() - t0
+    else:  # dense
         model_name = index.manifest.get("embedding_model")
         embedder = _make_embedder(model_name)
-        results = retrieve(args.query, index, embedder, top_k=args.top_k)
+        t0 = time.perf_counter()
+        query_vec = embedder.embed([args.query])[0]
+        latency["embed"] = time.perf_counter() - t0
+        t0 = time.perf_counter()
+        results = retrieve_by_vector(query_vec, index, top_k=args.top_k)
+        latency["retrieve"] = time.perf_counter() - t0
 
-    if not results:
-        print("No results found.")
-        return
+    chunks = [
+        ChunkTrace(
+            rank=r.rank,
+            chunk_id=r.chunk.chunk_id,
+            doc_id=r.chunk.doc_id,
+            title=r.chunk.metadata.get("title", ""),
+            path=r.chunk.metadata.get("path", r.chunk.doc_id),
+            score=r.score,
+            text_preview=r.chunk.text[:120].replace("\n", " ").strip(),
+        )
+        for r in results
+    ]
+    trace = RetrieveTrace(
+        query=args.query,
+        retriever=retriever,
+        top_k=args.top_k,
+        chunks=chunks,
+        latency_by_stage=latency,
+    )
 
-    print(f"Top {len(results)} result(s) for: {args.query!r}\n")
-    for r in results:
-        title = r.chunk.metadata.get("title", "")
-        path = r.chunk.metadata.get("path", r.chunk.doc_id)
-        preview = r.chunk.text[:200].replace("\n", " ").strip()
-        if len(r.chunk.text) > 200:
-            preview += " ..."
-        print(f"Rank {r.rank}  score={r.score:.4f}  chunk_id={r.chunk.chunk_id}")
-        print(f"  Title : {title}")
-        print(f"  Path  : {path}")
-        print(f"  {preview}")
-        print()
+    print(format_retrieve_trace(trace))
+
+    trace_out = getattr(args, "trace_out", None)
+    if trace_out:
+        write_trace_json(trace, Path(trace_out))
 
 
 def cmd_ask(args):
@@ -244,6 +276,10 @@ def build_parser():
     p_retrieve.add_argument(
         "--retriever", choices=["dense", "bm25", "hybrid"], default="dense",
         help="retrieval strategy (default: dense)",
+    )
+    p_retrieve.add_argument(
+        "--trace-out", default=None, metavar="PATH",
+        help="write JSON trace to PATH (optional)",
     )
     p_retrieve.set_defaults(func=cmd_retrieve)
 

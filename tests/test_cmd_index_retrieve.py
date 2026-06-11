@@ -174,7 +174,7 @@ def test_retrieve_output_contains_title(retrieve_setup, capsys):
     with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
         cmd_retrieve(args)
     out = capsys.readouterr().out
-    assert "Title" in out
+    assert "title" in out
 
 
 def test_retrieve_output_contains_path(retrieve_setup, capsys):
@@ -182,7 +182,7 @@ def test_retrieve_output_contains_path(retrieve_setup, capsys):
     with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
         cmd_retrieve(args)
     out = capsys.readouterr().out
-    assert "Path" in out
+    assert "path" in out
 
 
 def test_retrieve_respects_top_k(retrieve_setup, capsys):
