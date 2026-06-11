@@ -1,6 +1,6 @@
 # Phase 1.8 Spec: RAG Failure Lab
 
-**Status:** Active — activated by owner on 2026-06-11
+**Status:** Complete — closed by Codex on 2026-06-11
 **Authors:** Claude Code + owner decisions
 **Based on:** `docs/roadmap.md`, `docs/phases/phase-1.7-observability.md`
 **Taskboard:** `docs/phases/phase-1.8-taskboard.md`

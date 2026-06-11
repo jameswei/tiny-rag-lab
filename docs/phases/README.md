@@ -6,7 +6,12 @@ historical context.
 
 ## Current Phase
 
-**Phase 1.8 — RAG Failure Lab** — activated by owner on 2026-06-11
+No active phase.
+
+The next implementation phase must be proposed, reviewed, signed off, and
+activated here before agents claim implementation tasks.
+
+Phase 1.8 is complete:
 
 - Spec: `docs/phases/phase-1.8-failure-lab.md`
 - Taskboard: `docs/phases/phase-1.8-taskboard.md`
@@ -48,6 +53,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
+| Phase 1.8 | RAG failure lab | Complete; see `docs/phases/phase-1.8-taskboard.md` |
 | Phase 1.7 | Observability and debugging | Complete; see `docs/phases/phase-1.7-taskboard.md` |
 | Phase 1.6 | Evaluation harness | Complete; see `docs/phases/phase-1.6-taskboard.md` |
 | Phase 1.5 | Retrieval mechanics | Complete; see `docs/phases/phase-1.5-taskboard.md` |
@@ -57,7 +63,6 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 1.8 | RAG failure lab | Active; see `docs/phases/phase-1.8-taskboard.md` |
 | Later | Agentic RAG | Deferred |
 
 Candidate and directional phases must not be treated as active implementation

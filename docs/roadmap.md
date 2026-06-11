@@ -16,8 +16,8 @@ Expected outputs:
 - evaluation dataset format
 - first phase spec and taskboard
 
-Status: Phase 1, Phase 1.5, and Phase 1.6 are complete under
-`docs/phases/`. No implementation phase is currently active.
+Status: Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, and Phase 1.8 are complete
+under `docs/phases/`. No implementation phase is currently active.
 
 ## Phase 1: Naive Classic RAG
 
@@ -151,6 +151,9 @@ Learning questions:
 - Which failures can be caught by retrieval metrics?
 - Which failures require LLM-as-judge or human review?
 - Which trace fields are most useful for diagnosing each failure?
+
+Status: Complete; see `docs/phases/phase-1.8-failure-lab.md` and
+`docs/phases/phase-1.8-taskboard.md`.
 
 ## Later: Reporting, Artifacts, And Agentic RAG
 

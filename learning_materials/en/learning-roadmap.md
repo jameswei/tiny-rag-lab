@@ -15,6 +15,7 @@ directory. Start at the top and work down.
 | 4 | [Persistence and Testing](persistence-and-testing.md) | The on-disk format, round-trip integrity, and fake backends |
 | 5 | [Evaluating Retrieval](evaluating-retrieval.md) | Metrics that tell you whether the retriever works |
 | 6 | [Observability and Debugging](observability-and-debugging.md) | Per-run traces that explain one retrieve or ask command |
+| 7 | [RAG Failure Lab](rag-failure-lab.md) | Curated failure cases that compare baseline and intervention retrieval |
 
 ---
 
@@ -65,14 +66,26 @@ The pipeline has two main planes, plus infrastructure and measurement:
                    │ prompt, answer,       │     AskTrace
                    │ citations, latency    │     (terminal + JSON)
                    │                       │
-                   │ trace.py              │
-                   └──────────────────────-┘
+	                   │ trace.py              │
+	                   └──────────────────────-┘
+
+	                   ┌──────────────────────-┐
+	                   │   5. Failure Lab      │
+	                   │                       │
+ failure cases ──────►│ baseline vs.          │────► DiagnosisReport
+	                   │ intervention          │     (confirmed, fixed,
+	                   │ retrieval             │      moved, unchanged)
+	                   │                       │
+	                   │ failure.py            │
+	                   └──────────────────────-┘
 ```
 
 The two planes meet at the index on disk — the indexing plane writes it, the
 retrieval plane reads it. The evaluation layer reuses the retrieval plane
 exactly as the user experiences it. The observability layer records what
 happened in one `retrieve` or `ask` run so you can debug it later.
+The failure lab turns known retrieval mistakes into repeatable baseline vs.
+intervention comparisons.
 
 ---
 
@@ -113,11 +126,12 @@ rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-ove
 rag retrieve "question" --index-dir .tiny-rag/index --top-k 5 --trace-out /tmp/retrieve.json
 rag ask "question" --index-dir .tiny-rag/index --top-k 5 --trace-out /tmp/ask.json
 rag eval --qa-file qa.jsonl --index-dir .tiny-rag/index --top-k 5
+rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-rag/index
 ```
 
 Each command reuses the output of the previous one. `index` builds the index.
 `retrieve` searches it. `ask` runs the full pipeline. `eval` measures retrieval
-quality.
+quality. `diagnose` studies curated failure cases.
 
 ---
 
@@ -131,3 +145,4 @@ quality.
 | Persistence and Testing | Save/load index, round-trip integrity, fake backends | `index_writer.py`, `index_loader.py`, test suite |
 | Evaluating Retrieval | Retrieval quality metrics | `eval.py` |
 | Observability and Debugging | Per-run trace records and JSON artifacts | `trace.py`, `cli.py` |
+| RAG Failure Lab | Failure case diagnosis | `failure.py`, `cli.py` |

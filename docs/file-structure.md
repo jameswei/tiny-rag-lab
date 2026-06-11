@@ -25,7 +25,7 @@ docs/architecture.md               conceptual RAG planes and interfaces
 
 ## Implementation Layout
 
-Phase 1, 1.5, and 1.6 implementation files:
+Phase 1 through 1.8 implementation files:
 
 ```text
 tiny_rag_lab/
@@ -36,6 +36,7 @@ tiny_rag_lab/
   chunking.py
   embeddings.py
   eval.py              (Phase 1.6 + 1.5: metrics and retriever-aware eval runner)
+  failure.py           (Phase 1.8: failure cases, diagnosis runner, report formatter)
   hybrid.py           (Phase 1.5: RRF and dense+BM25 retrieval)
   index_loader.py
   index_writer.py
@@ -43,12 +44,14 @@ tiny_rag_lab/
   retrieval.py
   prompting.py
   generation.py
+  trace.py             (Phase 1.7: retrieve/ask trace records and formatters)
 scripts/
   prepare_watsonx_docsqa.py
 tests/
   fixtures/
     corpus/
     eval/              (Phase 1.6: qa.jsonl fixture)
+    failure/           (Phase 1.8: curated failure cases)
   test_*.py
 ```
 

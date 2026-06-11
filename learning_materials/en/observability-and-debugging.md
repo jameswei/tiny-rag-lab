@@ -164,13 +164,12 @@ prompting or generation.
 
 ---
 
-## How This Connects To Phase 1.8
+## How This Connects To The Failure Lab
 
-Phase 1.8 will study RAG failures. The trace schema from Phase 1.7 is the input
-contract for that work. A failure lab needs durable artifacts: query, chunks,
-scores, prompt, answer, citations, and latency. The trace files provide exactly
-that without adding a database or report UI.
+Phase 1.8 adds a failure lab for curated retrieval failures. The trace schema
+from Phase 1.7 remains the durable per-run record: query, chunks, scores,
+prompt, answer, citations, and latency. The failure lab focuses on repeatable
+baseline vs. intervention retrieval cases, while traces explain individual runs.
 
 The key learning point: observability is not just logging. It is choosing the
 small set of fields that lets you explain system behavior later.
-

@@ -14,6 +14,7 @@
 | 4 | [持久化与测试](persistence-and-testing.md) | 索引的磁盘格式、往返完整性以及假后端测试模式 |
 | 5 | [评估检索质量](evaluating-retrieval.md) | 用指标回答"检索器到底好不好用" |
 | 6 | [可观测性与调试](observability-and-debugging.md) | 用单次运行 trace 解释一次 retrieve 或 ask 命令 |
+| 7 | [RAG 失败实验室](rag-failure-lab.md) | 用策划好的失败案例比较 baseline 和 intervention 检索 |
 
 ---
 
@@ -63,13 +64,24 @@
                    │ answer、citations、   │     AskTrace
                    │ latency               │     (终端 + JSON)
                    │                       │
-                   │ trace.py              │
-                   └──────────────────────┘
+	                   │ trace.py              │
+	                   └──────────────────────┘
+
+	                   ┌──────────────────────┐
+	                   │   5. 失败实验室       │
+	                   │                       │
+ 失败案例 ───────────►│ baseline vs.          │────► DiagnosisReport
+	                   │ intervention          │     (confirmed, fixed,
+	                   │ retrieval             │      moved, unchanged)
+	                   │                       │
+	                   │ failure.py            │
+	                   └──────────────────────┘
 ```
 
 两个平面通过磁盘上的索引连接——索引平面写入，检索平面读取。评估层复用了与用户
 体验完全一致的检索路径。可观测性层记录一次 `retrieve` 或 `ask` 运行中发生的事，
 便于事后调试。
+失败实验室把已知检索错误变成可重复的 baseline vs. intervention 对比。
 
 ---
 
@@ -110,10 +122,11 @@ rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-ove
 rag retrieve "问题" --index-dir .tiny-rag/index --top-k 5 --trace-out /tmp/retrieve.json
 rag ask "问题" --index-dir .tiny-rag/index --top-k 5 --trace-out /tmp/ask.json
 rag eval --qa-file qa.jsonl --index-dir .tiny-rag/index --top-k 5
+rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-rag/index
 ```
 
 每个命令复用前一个命令的输出。`index` 构建索引，`retrieve` 搜索索引，`ask`
-运行完整管线，`eval` 评估检索质量。
+运行完整管线，`eval` 评估检索质量，`diagnose` 研究策划好的失败案例。
 
 ---
 
@@ -127,3 +140,4 @@ rag eval --qa-file qa.jsonl --index-dir .tiny-rag/index --top-k 5
 | 持久化与测试 | 索引读写、往返完整性、假后端模式 | `index_writer.py`, `index_loader.py`, 测试套件 |
 | 评估检索质量 | 检索质量指标 | `eval.py` |
 | 可观测性与调试 | 单次运行 trace 记录和 JSON 产物 | `trace.py`, `cli.py` |
+| RAG 失败实验室 | 失败案例诊断 | `failure.py`, `cli.py` |

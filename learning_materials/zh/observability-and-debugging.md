@@ -156,12 +156,11 @@ Ask trace 包含检索信息，另外还有 prompt 和答案。
 
 ---
 
-## 这如何连接到 Phase 1.8
+## 这如何连接到失败实验室
 
-Phase 1.8 会研究 RAG 失败模式。Phase 1.7 的 trace schema 是这项工作的输入契约。
-失败分析需要持久产物：query、chunks、scores、prompt、answer、citations 和
-latency。trace 文件正好提供这些内容，而且不需要数据库或报表 UI。
+Phase 1.8 增加了面向策划检索失败的失败实验室。Phase 1.7 的 trace schema 仍然是
+单次运行的持久记录：query、chunks、scores、prompt、answer、citations 和 latency。
+失败实验室关注可重复的 baseline vs. intervention 检索案例，而 trace 负责解释单次运行。
 
 关键学习点：可观测性不只是 logging。它是在选择一组足够小、但能在事后解释系统
 行为的字段。
-

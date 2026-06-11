@@ -11,8 +11,8 @@
 ## Goal
 
 Make each single RAG run explainable by adding trustworthy trace records to the
-`retrieve` and `ask` flows. The trace schema established here serves as the
-stable data contract that Phase 1.8 (RAG failure lab) will consume.
+`retrieve` and `ask` flows. The trace schema established here serves as a stable
+data contract for later failure-lab and reporting work.
 
 ---
 
@@ -270,5 +270,5 @@ Phase 1.7 is complete when:
 ## Schema Stability Note
 
 The `ChunkTrace`, `RetrieveTrace`, and `AskTrace` field sets are intentionally
-minimal. Phase 1.8 will read these JSON traces to label failure modes. Any field
-added or renamed in Phase 1.7 should be treated as a durable contract.
+minimal. Any later failure-lab or reporting work that depends on a trace field
+should treat that field as a durable contract.
