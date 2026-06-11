@@ -234,3 +234,179 @@ def detect_failure_label(
         return LABEL_DISTRACTOR_EVIDENCE
 
     return LABEL_NO_FAILURE
+
+
+# ---------------------------------------------------------------------------
+# Diagnosis runner
+# ---------------------------------------------------------------------------
+
+def run_diagnosis(
+    cases: list[FailureCase],
+    index: LoadedIndex,
+    embedder: Embedder | None,
+    thresholds: DetectionThresholds | None = None,
+) -> DiagnosisReport:
+    """Run baseline and intervention retrieval for every case and return an
+    aggregate DiagnosisReport.
+
+    Builds BM25Retriever once before the case loop when any case uses bm25 or
+    hybrid — same build-once pattern as run_retrieval_eval in eval.py.
+
+    Raises ValueError if embedder is None and any case requires dense or hybrid
+    retrieval.
+    """
+    from tiny_rag_lab.bm25 import BM25Retriever
+    from tiny_rag_lab.eval import (
+        context_precision_at_k,
+        context_recall_at_k,
+        hit_at_k,
+        reciprocal_rank,
+    )
+    from tiny_rag_lab.hybrid import retrieve_hybrid
+    from tiny_rag_lab.retrieval import retrieve_by_vector
+
+    if not cases:
+        return DiagnosisReport(n_cases=0)
+
+    needs_embedder = any(
+        c.baseline.retriever in ("dense", "hybrid") or
+        c.intervention.retriever in ("dense", "hybrid")
+        for c in cases
+    )
+    if needs_embedder and embedder is None:
+        raise ValueError(
+            "embedder must not be None when any case uses dense or hybrid retrieval"
+        )
+
+    needs_bm25 = any(
+        c.baseline.retriever in ("bm25", "hybrid") or
+        c.intervention.retriever in ("bm25", "hybrid")
+        for c in cases
+    )
+    bm25_retriever = BM25Retriever(index.chunks) if needs_bm25 else None
+
+    def _retrieve(question: str, config: RetrieverConfig) -> list[str]:
+        if config.retriever == "bm25":
+            results = bm25_retriever.retrieve(question, top_k=config.top_k)
+        elif config.retriever == "hybrid":
+            results = retrieve_hybrid(
+                question, index, embedder, top_k=config.top_k,
+                bm25_retriever=bm25_retriever,
+            )
+        else:
+            query_vec = embedder.embed([question])[0]
+            results = retrieve_by_vector(query_vec, index, top_k=config.top_k)
+        return [r.chunk.doc_id for r in results]
+
+    def _metrics(retrieved: list[str], gold: list[str]) -> dict[str, float]:
+        return {
+            "hit": float(hit_at_k(retrieved, gold)),
+            "reciprocal_rank": reciprocal_rank(retrieved, gold),
+            "context_precision": context_precision_at_k(retrieved, gold),
+            "context_recall": context_recall_at_k(retrieved, gold),
+        }
+
+    per_case: list[DiagnosisResult] = []
+    for case in cases:
+        baseline_doc_ids = _retrieve(case.question, case.baseline)
+        intervention_doc_ids = _retrieve(case.question, case.intervention)
+
+        baseline_label = detect_failure_label(
+            baseline_doc_ids, case.gold_doc_ids, case.expected_label, thresholds,
+        )
+        intervention_label = detect_failure_label(
+            intervention_doc_ids, case.gold_doc_ids, case.expected_label, thresholds,
+        )
+
+        fixed = baseline_label != LABEL_NO_FAILURE and intervention_label == LABEL_NO_FAILURE
+        moved = (
+            baseline_label != LABEL_NO_FAILURE
+            and intervention_label != LABEL_NO_FAILURE
+            and baseline_label != intervention_label
+        )
+
+        per_case.append(DiagnosisResult(
+            case_id=case.case_id,
+            question=case.question,
+            expected_label=case.expected_label,
+            baseline_label=baseline_label,
+            intervention_label=intervention_label,
+            baseline_retrieved_doc_ids=baseline_doc_ids,
+            intervention_retrieved_doc_ids=intervention_doc_ids,
+            baseline_metrics=_metrics(baseline_doc_ids, case.gold_doc_ids),
+            intervention_metrics=_metrics(intervention_doc_ids, case.gold_doc_ids),
+            fixed=fixed,
+            moved=moved,
+        ))
+
+    return DiagnosisReport(
+        n_cases=len(per_case),
+        n_fixed=sum(r.fixed for r in per_case),
+        n_moved=sum(r.moved for r in per_case),
+        n_confirmed=sum(r.baseline_label == r.expected_label for r in per_case),
+        per_case=per_case,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Report formatter
+# ---------------------------------------------------------------------------
+
+_SEPARATOR = "─" * 44
+
+
+def format_diagnosis_report(report: DiagnosisReport) -> str:
+    """Return a plain-text summary of the diagnosis report.
+
+    No ANSI escape codes. Float values at 3 decimal places.
+    Outcome word per case: FIXED, MOVED, CONFIRMED, or UNCHANGED.
+
+    Example:
+      Diagnosis report  (n=6)
+      ────────────────────────────────────────────
+        Confirmed  : 4
+        Fixed      : 1
+        Moved      : 1
+      ────────────────────────────────────────────
+      Case fc001  expected=missing_evidence
+        baseline   : missing_evidence       hit=0.000  prec=0.000  recall=0.000  mrr=0.000
+        interv.    : no_failure             hit=1.000  prec=0.500  recall=1.000  mrr=0.500
+        FIXED
+    """
+    lines = [
+        f"Diagnosis report  (n={report.n_cases})",
+        _SEPARATOR,
+        f"  Confirmed  : {report.n_confirmed}",
+        f"  Fixed      : {report.n_fixed}",
+        f"  Moved      : {report.n_moved}",
+        _SEPARATOR,
+    ]
+    for dr in report.per_case:
+        lines.append(f"Case {dr.case_id}  expected={dr.expected_label}")
+        bm = dr.baseline_metrics
+        lines.append(
+            f"  baseline   : {dr.baseline_label:<24}"
+            f"  hit={bm.get('hit', 0.0):.3f}"
+            f"  prec={bm.get('context_precision', 0.0):.3f}"
+            f"  recall={bm.get('context_recall', 0.0):.3f}"
+            f"  mrr={bm.get('reciprocal_rank', 0.0):.3f}"
+        )
+        im = dr.intervention_metrics
+        lines.append(
+            f"  interv.    : {dr.intervention_label:<24}"
+            f"  hit={im.get('hit', 0.0):.3f}"
+            f"  prec={im.get('context_precision', 0.0):.3f}"
+            f"  recall={im.get('context_recall', 0.0):.3f}"
+            f"  mrr={im.get('reciprocal_rank', 0.0):.3f}"
+        )
+        if dr.fixed:
+            outcome = "FIXED"
+        elif dr.moved:
+            outcome = "MOVED"
+        elif dr.baseline_label == dr.expected_label:
+            outcome = "CONFIRMED"
+        else:
+            outcome = "UNCHANGED"
+        lines.append(f"  {outcome}")
+        lines.append("")
+    return "\n".join(lines).rstrip()

@@ -10,12 +10,15 @@ Test naming convention:
 import dataclasses
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from tiny_rag_lab.failure import (
     load_failure_cases,
     detect_failure_label,
+    run_diagnosis,
+    format_diagnosis_report,
     LABEL_DISTRACTOR_EVIDENCE,
     LABEL_MISSING_EVIDENCE,
     LABEL_LOW_RANK_EVIDENCE,
@@ -475,3 +478,248 @@ def test_detect_no_reimplementation_of_context_precision():
     assert context_precision_at_k(retrieved, gold) == pytest.approx(1 / 3)
     label = detect_failure_label(retrieved, gold, LABEL_DISTRACTOR_EVIDENCE)
     assert label == LABEL_DISTRACTOR_EVIDENCE
+
+
+FIXTURE_CORPUS = Path(__file__).parent / "fixtures" / "corpus"
+
+
+def _fake_embedder_factory(dim: int = 8):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    def _make(model_name=None):
+        return FakeEmbedder(dim=dim)
+    return _make
+
+
+@pytest.fixture()
+def loaded_index(tmp_path):
+    """Build an index from the fixture corpus using FakeEmbedder; return LoadedIndex."""
+    from tiny_rag_lab.cli import build_parser, cmd_index
+    from tiny_rag_lab.index_loader import load_index
+
+    index_dir = tmp_path / "index"
+    args = build_parser().parse_args([
+        "index", "--corpus", str(FIXTURE_CORPUS),
+        "--index-dir", str(index_dir),
+        "--chunk-size", "500", "--chunk-overlap", "50",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+        cmd_index(args)
+    return load_index(index_dir)
+
+
+# ---------------------------------------------------------------------------
+# T04 — run_diagnosis runner
+# ---------------------------------------------------------------------------
+
+def test_runner_returns_diagnosis_report(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    from tiny_rag_lab.failure import DiagnosisReport
+    assert isinstance(report, DiagnosisReport)
+
+
+def test_runner_n_cases_equals_fixture_count(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    assert report.n_cases == 6
+
+
+def test_runner_per_case_length_matches_n_cases(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    assert len(report.per_case) == report.n_cases
+
+
+def test_runner_unanswerable_case_gets_correct_label(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    fc005 = next(r for r in report.per_case if r.case_id == "fc005")
+    assert fc005.baseline_label == LABEL_UNANSWERABLE
+    assert fc005.intervention_label == LABEL_UNANSWERABLE
+
+
+def test_runner_n_fixed_matches_per_case(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    assert report.n_fixed == sum(r.fixed for r in report.per_case)
+
+
+def test_runner_n_confirmed_matches_per_case(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    assert report.n_confirmed == sum(r.baseline_label == r.expected_label for r in report.per_case)
+
+
+def test_runner_retrieved_doc_ids_populated(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    for dr in report.per_case:
+        assert isinstance(dr.baseline_retrieved_doc_ids, list)
+        assert isinstance(dr.intervention_retrieved_doc_ids, list)
+        # non-empty retrieval (corpus has 6 docs, all cases use top_k >= 1)
+        assert len(dr.baseline_retrieved_doc_ids) >= 1
+
+
+def test_runner_metrics_keys_present(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    expected_keys = {"hit", "reciprocal_rank", "context_precision", "context_recall"}
+    for dr in report.per_case:
+        assert set(dr.baseline_metrics.keys()) == expected_keys
+        assert set(dr.intervention_metrics.keys()) == expected_keys
+
+
+def test_runner_empty_cases_returns_empty_report(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    report = run_diagnosis([], loaded_index, FakeEmbedder(dim=8))
+    assert report.n_cases == 0
+    assert report.per_case == []
+
+
+def test_runner_none_embedder_with_dense_raises(loaded_index):
+    cases = [FailureCase(
+        case_id="x", question="Q?",
+        gold_doc_ids=["with_h1.md"],
+        expected_label=LABEL_MISSING_EVIDENCE,
+        baseline=RetrieverConfig(retriever="dense", top_k=3),
+        intervention=RetrieverConfig(retriever="dense", top_k=3),
+    )]
+    with pytest.raises(ValueError, match="embedder"):
+        run_diagnosis(cases, loaded_index, embedder=None)
+
+
+def test_runner_bm25_only_cases_accept_none_embedder(loaded_index):
+    cases = [FailureCase(
+        case_id="x", question="What is X?",
+        gold_doc_ids=["with_h1.md"],
+        expected_label=LABEL_MISSING_EVIDENCE,
+        baseline=RetrieverConfig(retriever="bm25", top_k=3),
+        intervention=RetrieverConfig(retriever="bm25", top_k=6),
+    )]
+    # Should not raise
+    report = run_diagnosis(cases, loaded_index, embedder=None)
+    assert report.n_cases == 1
+
+
+# ---------------------------------------------------------------------------
+# T05 — format_diagnosis_report
+# ---------------------------------------------------------------------------
+
+def _make_report_with_cases() -> "DiagnosisReport":
+    fixed = _make_diagnosis_result(
+        case_id="fc001",
+        expected_label=LABEL_MISSING_EVIDENCE,
+        baseline_label=LABEL_MISSING_EVIDENCE,
+        intervention_label=LABEL_NO_FAILURE,
+        fixed=True, moved=False,
+    )
+    confirmed = _make_diagnosis_result(
+        case_id="fc005",
+        expected_label=LABEL_UNANSWERABLE,
+        baseline_label=LABEL_UNANSWERABLE,
+        intervention_label=LABEL_UNANSWERABLE,
+        fixed=False, moved=False,
+    )
+    moved = _make_diagnosis_result(
+        case_id="fc003",
+        expected_label=LABEL_MISSING_EVIDENCE,
+        baseline_label=LABEL_MISSING_EVIDENCE,
+        intervention_label=LABEL_LOW_RANK_EVIDENCE,
+        fixed=False, moved=True,
+    )
+    unchanged = _make_diagnosis_result(
+        case_id="fc006",
+        expected_label=LABEL_DISTRACTOR_EVIDENCE,
+        baseline_label=LABEL_NO_FAILURE,
+        intervention_label=LABEL_NO_FAILURE,
+        fixed=False, moved=False,
+    )
+    return DiagnosisReport(
+        n_cases=4, n_fixed=1, n_moved=1, n_confirmed=2,
+        per_case=[fixed, confirmed, moved, unchanged],
+    )
+
+
+def test_format_contains_n_cases():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "n=4" in output
+
+
+def test_format_contains_confirmed_count():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "Confirmed" in output
+    assert "2" in output
+
+
+def test_format_contains_fixed_count():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "Fixed" in output
+    assert "1" in output
+
+
+def test_format_contains_moved_count():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "Moved" in output
+
+
+def test_format_per_case_has_case_id():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    for dr in report.per_case:
+        assert dr.case_id in output
+
+
+def test_format_outcome_word_fixed():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "FIXED" in output
+
+
+def test_format_outcome_word_confirmed():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "CONFIRMED" in output
+
+
+def test_format_outcome_word_moved():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "MOVED" in output
+
+
+def test_format_outcome_word_unchanged():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "UNCHANGED" in output
+
+
+def test_format_no_ansi_codes():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    assert "\x1b" not in output
+
+
+def test_format_float_values_three_decimal_places():
+    report = _make_report_with_cases()
+    output = format_diagnosis_report(report)
+    # metrics are 0.000 from _make_diagnosis_result defaults
+    assert "hit=0.000" in output
+
+
+def test_format_empty_report():
+    report = DiagnosisReport(n_cases=0)
+    output = format_diagnosis_report(report)
+    assert "n=0" in output
+    assert "Confirmed" in output
