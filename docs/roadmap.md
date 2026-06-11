@@ -76,7 +76,8 @@ Capabilities:
 - retrieval metrics: hit rate, MRR, context precision, context recall
 - answer metrics: faithfulness, answer correctness, answer relevance
 - deterministic eval runs where possible
-- comparison reports across chunking, retriever, and prompt configurations
+- retriever-aware reports for a single eval run; broader comparison reports
+  are deferred until trace and artifact shapes are stable
 
 Learning questions:
 
@@ -87,26 +88,40 @@ Learning questions:
 
 ## Phase 1.7: Observability And Debugging
 
-Goal: make each RAG run explainable.
+Goal: make each single RAG run explainable by adding trustworthy trace
+records before building broader failure analysis or reporting features.
 
-Capabilities:
+Included capabilities:
 
-- per-query trace: query, rewritten query if any, retrieved chunks, scores, prompt, answer, citations
-- token estimates for prompt/context budget
-- latency by stage: loading, embedding, retrieval, reranking, generation, evaluation
-- failure classifications such as missing evidence, distractor evidence, unsupported answer, citation mismatch, and unanswerable query
-- saved run artifacts for later comparison
+- per-query trace data model for retrieve and ask flows
+- retriever-aware trace fields: retriever name, top-k, ranks, scores, chunk ids,
+  doc ids, titles, and paths
+- prompt, answer, citations, and source table inputs for answer-producing runs
+- latency by major stage: loading, embedding, retrieval, prompt assembly, and
+  generation where applicable
+- optional JSON trace output such as `--trace-out PATH`
+- concise human-readable trace output for interactive debugging
 
 Learning questions:
 
 - Where did the pipeline spend time?
 - Which retrieved chunks influenced the answer?
-- Why did a bad answer happen?
-- How can failures be grouped into useful categories?
+- Which retriever produced which evidence?
+- What exact prompt and sources were given to generation?
+- What trace fields are stable enough for later failure analysis?
+
+Deferred from Phase 1.7:
+
+- failure classification taxonomy
+- full eval-run artifact storage
+- detailed token budget estimation if it requires model-specific tokenizer
+  decisions
+- comparison UI or multi-run reporting
 
 ## Phase 1.8: RAG Failure Lab
 
-Goal: intentionally create and study common RAG failure modes.
+Goal: intentionally create and study common RAG failure modes using the trace
+foundation from Phase 1.7.
 
 Scenarios:
 
@@ -119,16 +134,37 @@ Scenarios:
 - citation points to a related but unsupported source
 - query is unanswerable from the corpus
 
+Expected capabilities:
+
+- curated failure examples with reproducible inputs
+- trace-backed notes explaining what failed and why
+- lightweight failure labels grounded in observed traces, such as missing
+  evidence, distractor evidence, unsupported answer, citation mismatch, and
+  unanswerable query
+- prompt or retrieval experiments that demonstrate whether a failure is fixed
+  or only moved
+
 Learning questions:
 
 - How should the system behave when evidence is missing?
 - How can prompts reduce unsupported answers?
 - Which failures can be caught by retrieval metrics?
 - Which failures require LLM-as-judge or human review?
+- Which trace fields are most useful for diagnosing each failure?
 
-## Later: Agentic RAG
+## Later: Reporting, Artifacts, And Agentic RAG
 
-Only after classic RAG is clear, consider advanced phases:
+After the trace and failure-lab foundations are clear, consider broader
+observability and workflow features:
+
+- full eval-run artifact storage with run ids, schemas, retention rules, and
+  reproducibility metadata
+- comparison reports across chunking, retriever, prompt, and generation
+  configurations
+- richer token budget estimation with explicit tokenizer/model choices
+- UI or notebook-style reports for multi-run inspection
+
+Only after classic RAG is clear, consider advanced agentic phases:
 
 - query rewriting
 - multi-step retrieval
