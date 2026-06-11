@@ -4,7 +4,6 @@ import json
 from tiny_rag_lab.models import (
     Chunk,
     Document,
-    RagTrace,
     RetrievalResult,
     make_chunk_id,
 )
@@ -123,23 +122,3 @@ def test_retrieval_result_serializes():
     assert json.dumps(d)
 
 
-# ---------------------------------------------------------------------------
-# RagTrace
-# ---------------------------------------------------------------------------
-
-def test_rag_trace_serializes():
-    normalized = "Trace text."
-    chunk = _sample_chunk(normalized, 0, 5)
-    result = RetrievalResult(chunk=chunk, score=0.9, rank=1)
-    trace = RagTrace(
-        query="What is this?",
-        retrieved_chunks=[result],
-        prompt="Answer from context...",
-        answer="It is a test.",
-        citations=["[Source: abc123456789abcd]"],
-        latency_by_stage={"embed": 0.01, "retrieve": 0.005, "generate": 0.8},
-    )
-    d = dataclasses.asdict(trace)
-    assert json.dumps(d)
-    assert d["query"] == "What is this?"
-    assert len(d["retrieved_chunks"]) == 1

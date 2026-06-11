@@ -69,16 +69,3 @@ class RetrievalResult:
     rank: int            # 1-indexed
 
 
-@dataclass
-class RagTrace:
-    """Full record of one RAG pipeline run, printed to the terminal in Phase 1.
-
-    latency_by_stage keys: "embed", "retrieve", "generate" (seconds).
-    """
-
-    query: str
-    retrieved_chunks: list[RetrievalResult]
-    prompt: str
-    answer: str
-    citations: list[str]
-    latency_by_stage: dict[str, float]

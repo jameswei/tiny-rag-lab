@@ -155,57 +155,70 @@ def cmd_retrieve(args):
 
 def cmd_ask(args):
     from tiny_rag_lab.index_loader import load_index
-    from tiny_rag_lab.models import RagTrace
-    from tiny_rag_lab.prompting import assemble_prompt, format_source_table
+    from tiny_rag_lab.prompting import assemble_prompt
     from tiny_rag_lab.retrieval import retrieve_by_vector
+    from tiny_rag_lab.trace import AskTrace, ChunkTrace, format_ask_trace, write_trace_json
 
+    t0 = time.perf_counter()
     index = load_index(Path(args.index_dir))
+    t_load = time.perf_counter() - t0
+
     model_name = index.manifest.get("embedding_model")
     embedder = _make_embedder(model_name)
     generator = _make_generator(args)
 
-    # Stage: embed query
     t0 = time.perf_counter()
     query_vec = embedder.embed([args.query])[0]
     t_embed = time.perf_counter() - t0
 
-    # Stage: retrieve
-    t1 = time.perf_counter()
+    t0 = time.perf_counter()
     results = retrieve_by_vector(query_vec, index, top_k=args.top_k)
-    t_retrieve = time.perf_counter() - t1
+    t_retrieve = time.perf_counter() - t0
 
-    # Assemble prompt and generate
+    t0 = time.perf_counter()
     prompt = assemble_prompt(args.query, results)
+    t_prompt_assembly = time.perf_counter() - t0
 
-    t2 = time.perf_counter()
+    t0 = time.perf_counter()
     answer = generator.generate(prompt)
-    t_generate = time.perf_counter() - t2
+    t_generate = time.perf_counter() - t0
 
     citations = _CITATION_RE.findall(answer)
 
-    trace = RagTrace(
+    chunks = [
+        ChunkTrace(
+            rank=r.rank,
+            chunk_id=r.chunk.chunk_id,
+            doc_id=r.chunk.doc_id,
+            title=r.chunk.metadata.get("title", ""),
+            path=r.chunk.metadata.get("path", r.chunk.doc_id),
+            score=r.score,
+            text_preview=r.chunk.text[:120].replace("\n", " ").strip(),
+        )
+        for r in results
+    ]
+    trace = AskTrace(
         query=args.query,
-        retrieved_chunks=results,
+        retriever="dense",
+        top_k=args.top_k,
+        chunks=chunks,
         prompt=prompt,
         answer=answer,
         citations=citations,
         latency_by_stage={
+            "load": t_load,
             "embed": t_embed,
             "retrieve": t_retrieve,
+            "prompt_assembly": t_prompt_assembly,
             "generate": t_generate,
         },
     )
 
-    print(trace.answer)
-    print()
-    print(format_source_table(results))
-    print()
-    print(
-        f"Timings:"
-        f"  embed={trace.latency_by_stage['embed']:.3f}s"
-        f"  retrieve={trace.latency_by_stage['retrieve']:.3f}s"
-        f"  generate={trace.latency_by_stage['generate']:.3f}s"
-    )
+    print(format_ask_trace(trace))
+
+    trace_out = getattr(args, "trace_out", None)
+    if trace_out:
+        write_trace_json(trace, Path(trace_out))
 
 
 def cmd_eval(args):
@@ -308,6 +321,10 @@ def build_parser():
     p_ask.add_argument(
         "--base-url", default=None, metavar="URL",
         help="OpenAI-compatible base URL (default: env OPENAI_BASE_URL)",
+    )
+    p_ask.add_argument(
+        "--trace-out", default=None, metavar="PATH",
+        help="write JSON trace to PATH (optional)",
     )
     p_ask.set_defaults(func=cmd_ask)
 
