@@ -1,6 +1,6 @@
 # Phase 1.8 Spec: RAG Failure Lab
 
-**Status:** Scope signed off by Codex on 2026-06-11; not active until owner activation in `docs/phases/README.md`
+**Status:** Active — activated by owner on 2026-06-11
 **Authors:** Claude Code + owner decisions
 **Based on:** `docs/roadmap.md`, `docs/phases/phase-1.7-observability.md`
 **Taskboard:** `docs/phases/phase-1.8-taskboard.md`

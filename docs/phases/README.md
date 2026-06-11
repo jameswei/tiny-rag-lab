@@ -6,10 +6,10 @@ historical context.
 
 ## Current Phase
 
-No active phase.
+**Phase 1.8 — RAG Failure Lab** — activated by owner on 2026-06-11
 
-The next implementation phase must be proposed, reviewed, signed off, and
-activated here before agents claim implementation tasks.
+- Spec: `docs/phases/phase-1.8-failure-lab.md`
+- Taskboard: `docs/phases/phase-1.8-taskboard.md`
 
 Phase 1.7 is complete:
 
@@ -57,7 +57,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 1.8 | RAG failure lab | Scope signed off by Codex on 2026-06-11; pending owner activation — spec: `docs/phases/phase-1.8-failure-lab.md`, taskboard: `docs/phases/phase-1.8-taskboard.md` |
+| Phase 1.8 | RAG failure lab | Active; see `docs/phases/phase-1.8-taskboard.md` |
 | Later | Agentic RAG | Deferred |
 
 Candidate and directional phases must not be treated as active implementation
