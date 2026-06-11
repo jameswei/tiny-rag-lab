@@ -241,6 +241,28 @@ def cmd_eval(args):
     print(format_eval_report(report))
 
 
+def cmd_diagnose(args):
+    from tiny_rag_lab.failure import (
+        format_diagnosis_report,
+        load_failure_cases,
+        run_diagnosis,
+    )
+    from tiny_rag_lab.index_loader import load_index
+
+    index = load_index(Path(args.index_dir))
+    cases = load_failure_cases(Path(args.cases_file))
+
+    needs_embedder = any(
+        c.baseline.retriever in ("dense", "hybrid") or
+        c.intervention.retriever in ("dense", "hybrid")
+        for c in cases
+    )
+    embedder = _make_embedder(index.manifest.get("embedding_model")) if needs_embedder else None
+
+    report = run_diagnosis(cases, index, embedder)
+    print(format_diagnosis_report(report))
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="rag",
@@ -350,6 +372,21 @@ def build_parser():
         help="retrieval strategy (default: dense)",
     )
     p_eval.set_defaults(func=cmd_eval)
+
+    # rag diagnose
+    p_diagnose = subparsers.add_parser(
+        "diagnose",
+        help="run baseline vs. intervention retrieval for curated failure cases",
+    )
+    p_diagnose.add_argument(
+        "--cases-file", required=True, metavar="PATH",
+        help="path to failure cases JSONL file",
+    )
+    p_diagnose.add_argument(
+        "--index-dir", default=".tiny-rag/index", metavar="PATH",
+        help="path to index directory (default: .tiny-rag/index)",
+    )
+    p_diagnose.set_defaults(func=cmd_diagnose)
 
     return parser
 
