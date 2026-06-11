@@ -6,19 +6,22 @@ historical context.
 
 ## Current Phase
 
-No implementation phase is currently active.
+**Phase 1.7** is active:
 
-Phase 1.5 is complete:
+- Spec: `docs/phases/phase-1.7-observability.md`
+- Taskboard: `docs/phases/phase-1.7-taskboard.md`
 
-- Spec: `docs/phases/phase-1.5-retrieval-mechanics.md`
-- Taskboard: `docs/phases/phase-1.5-taskboard.md`
-
-Phase 1.5 scope proposal was reviewed and signed off by Codex on 2026-06-10.
+Phase 1.7 scope proposal was reviewed and signed off by Codex on 2026-06-11.
 
 Phase 1.6 is complete:
 
 - Spec: `docs/phases/phase-1.6-evaluation-harness.md`
 - Taskboard: `docs/phases/phase-1.6-taskboard.md`
+
+Phase 1.5 is complete:
+
+- Spec: `docs/phases/phase-1.5-retrieval-mechanics.md`
+- Taskboard: `docs/phases/phase-1.5-taskboard.md`
 
 Phase 1 is complete:
 
@@ -42,15 +45,14 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
-| Phase 1.5 | Retrieval mechanics | Complete; see `docs/phases/phase-1.5-taskboard.md` |
 | Phase 1.6 | Evaluation harness | Complete; see `docs/phases/phase-1.6-taskboard.md` |
+| Phase 1.5 | Retrieval mechanics | Complete; see `docs/phases/phase-1.5-taskboard.md` |
 | Phase 1 | Naive classic RAG | Complete; see `docs/phases/phase-1-taskboard.md` |
 
 ## Candidate And Deferred Phases
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 1.7 | Observability and debugging | Directional |
 | Phase 1.8 | RAG failure lab | Directional |
 | Later | Agentic RAG | Deferred |
 
