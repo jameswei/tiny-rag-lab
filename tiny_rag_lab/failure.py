@@ -209,9 +209,11 @@ def detect_failure_label(
     surrounding context is noisy. Checking low_rank first prevents a large top_k
     from shadowing a rank-ordering failure with a precision signal.
 
-    Calls hit_at_k and context_precision_at_k from eval.py.
+    Calls hit_at_k, reciprocal_rank, and context_precision_at_k from eval.py.
+    rank > threshold is expressed as rr < 1/threshold (since rr = 1/rank and
+    a hit is guaranteed at this point, rr > 0).
     """
-    from tiny_rag_lab.eval import context_precision_at_k, hit_at_k
+    from tiny_rag_lab.eval import context_precision_at_k, hit_at_k, reciprocal_rank
 
     if thresholds is None:
         thresholds = DetectionThresholds()
@@ -222,12 +224,10 @@ def detect_failure_label(
     if not hit_at_k(retrieved_doc_ids, gold_doc_ids):
         return LABEL_MISSING_EVIDENCE
 
-    gold_set = set(gold_doc_ids)
-    first_rank = next(
-        (i for i, doc_id in enumerate(retrieved_doc_ids, start=1) if doc_id in gold_set),
-        None,
-    )
-    if first_rank is not None and first_rank > thresholds.low_rank_threshold:
+    # reciprocal_rank > 0 is guaranteed (hit confirmed above).
+    # rank > threshold ⟺ 1/rank < 1/threshold ⟺ rr < 1/threshold.
+    rr = reciprocal_rank(retrieved_doc_ids, gold_doc_ids)
+    if rr < 1.0 / thresholds.low_rank_threshold:
         return LABEL_LOW_RANK_EVIDENCE
 
     if context_precision_at_k(retrieved_doc_ids, gold_doc_ids) < thresholds.distractor_precision_threshold:

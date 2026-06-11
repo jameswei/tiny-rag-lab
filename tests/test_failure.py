@@ -448,14 +448,22 @@ def test_detect_custom_precision_threshold():
     assert label == LABEL_DISTRACTOR_EVIDENCE
 
 
+def test_detect_uses_reciprocal_rank_for_low_rank_check():
+    # reciprocal_rank(["a","b","c","gold"], ["gold"]) = 1/4 = 0.25
+    # default threshold=3, 1/threshold=0.333; 0.25 < 0.333 → low_rank
+    from tiny_rag_lab.eval import reciprocal_rank
+    retrieved = ["a.md", "b.md", "c.md", "gold.md"]
+    gold = ["gold.md"]
+    assert reciprocal_rank(retrieved, gold) == pytest.approx(0.25)
+    label = detect_failure_label(retrieved, gold, LABEL_LOW_RANK_EVIDENCE)
+    assert label == LABEL_LOW_RANK_EVIDENCE
+
+
 def test_detect_no_reimplementation_of_hit_at_k():
-    # hit_at_k from eval.py: any retrieved doc in gold → True
-    # If we compute it ourselves we'd duplicate logic; verify behavior matches
     from tiny_rag_lab.eval import hit_at_k
     retrieved = ["a.md", "gold.md"]
     gold = ["gold.md"]
     assert hit_at_k(retrieved, gold) is True
-    # detect_failure_label uses the same path
     label = detect_failure_label(retrieved, gold, LABEL_NO_FAILURE)
     assert label != LABEL_MISSING_EVIDENCE  # hit was found
 
@@ -465,6 +473,5 @@ def test_detect_no_reimplementation_of_context_precision():
     retrieved = ["gold.md", "noise1.md", "noise2.md"]
     gold = ["gold.md"]
     assert context_precision_at_k(retrieved, gold) == pytest.approx(1 / 3)
-    # detect should reach distractor when precision < 0.5
     label = detect_failure_label(retrieved, gold, LABEL_DISTRACTOR_EVIDENCE)
     assert label == LABEL_DISTRACTOR_EVIDENCE
