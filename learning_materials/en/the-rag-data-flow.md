@@ -1,15 +1,20 @@
 # The RAG Data Flow — How Data Moves From File to Answer
 
-The Phase 1 implementation is built around four dataclasses. They are not just
+The implementation is built around a small set of dataclasses. They are not just
 type definitions — they are the **contract** between every stage of the
-pipeline. If you understand these four types and how they flow through the CLI,
+pipeline. If you understand these types and how they flow through the CLI,
 you understand the architecture.
 
 ```
-┌──────────┐     ┌──────────┐     ┌──────────────────┐     ┌──────────┐
-│ Document │ ──► │  Chunk   │ ──► │ RetrievalResult  │ ──► │ RagTrace │
-└──────────┘     └──────────┘     └──────────────────┘     └──────────┘
-  indexing           indexing           retrieval             generation
+┌──────────┐     ┌──────────┐     ┌──────────────────┐
+│ Document │ ──► │  Chunk   │ ──► │ RetrievalResult  │
+└──────────┘     └──────────┘     └──────────────────┘
+  indexing           indexing           retrieval
+
+                       ┌──────────────────────────────┐
+                       │ RetrieveTrace / AskTrace     │
+                       └──────────────────────────────┘
+                         observability
 ```
 
 Each arrow is a transformation with a clear rule. Let's walk through every one.
@@ -70,7 +75,7 @@ if stripped.startswith("# "):
 If no H1 exists (or the file is plain text), the title falls back to the
 **filename stem** — `faq.md` becomes `"faq"`. This is simple but intentional:
 Phase 1 doesn't need fancy title extraction. The point is that every document
-has *some* human-readable label for the source table.
+has *some* human-readable label for trace output.
 
 ---
 
@@ -130,7 +135,7 @@ The `metadata` dict always includes:
 
 | Key | Value | Why |
 |---|---|---|
-| `title` | Document title | Shows in source table |
+| `title` | Document title | Shows in trace output |
 | `path` | Filesystem path | Lets the user find the source |
 | `format` | `"markdown"` or `"text"` | Preserves original file type |
 | `raw_hash` | SHA-256 of raw_text | Detect source changes later |
@@ -167,39 +172,73 @@ covered in the retrieval deep-dive.
 
 ---
 
-## RagTrace — The Full Record of One Ask
+## RetrieveTrace and AskTrace — Records Of One Run
 
-`rag ask` is the only command that runs the complete pipeline. `RagTrace`
-captures everything that happened:
+Phase 1.7 moved observability types into `tiny_rag_lab/trace.py`.
+`rag retrieve` builds a `RetrieveTrace`, and `rag ask` builds an `AskTrace`.
+Both commands print formatter-backed trace output, and both can write JSON with
+`--trace-out`.
 
 ```python
 @dataclass
-class RagTrace:
+class ChunkTrace:
+    rank: int
+    chunk_id: str
+    doc_id: str
+    title: str
+    path: str
+    score: float
+    text_preview: str
+```
+
+```python
+@dataclass
+class RetrieveTrace:
     query: str
-    retrieved_chunks: list[RetrievalResult]
+    retriever: str
+    top_k: int
+    chunks: list[ChunkTrace]
+    latency_by_stage: dict[str, float]
+```
+
+```python
+@dataclass
+class AskTrace:
+    query: str
+    retriever: str
+    top_k: int
+    chunks: list[ChunkTrace]
     prompt: str
     answer: str
     citations: list[str]
     latency_by_stage: dict[str, float]
 ```
 
-In Phase 1, traces are printed to the terminal — not stored to disk. But the
-dataclass exists so that Phase 1.7 (Observability) can save traces with zero
-breaking changes to the contract.
+`RetrieveTrace` is for inspecting search without generation. `AskTrace` is for
+inspecting the full RAG path: retrieval, prompt assembly, generation, and
+citations.
 
-`latency_by_stage` records three timings:
+`latency_by_stage` makes stage boundaries explicit:
 
 | Key | What it measures |
 |---|---|
+| `"load"` | Time to load the index from disk |
 | `"embed"` | Time to compute the query embedding |
-| `"retrieve"` | Time to rank chunks by cosine similarity |
+| `"retrieve"` | Time to rank chunks |
+| `"prompt_assembly"` | Time to build the prompt for `rag ask` |
 | `"generate"` | Time for the LLM to produce an answer |
 
-These are measured with `time.perf_counter()` around each stage in `cmd_ask`.
-The numbers are visible at the bottom of every `rag ask` output:
+BM25 retrieve traces omit `"embed"` because BM25 does not use an embedding
+model. Dense and hybrid retrieve traces include it.
+
+The numbers are visible in retrieve and ask traces, with different keys:
 
 ```
-Timings:  embed=0.012s  retrieve=0.001s  generate=1.234s
+Retrieve trace:
+latency   : load=0.006s  embed=0.012s  retrieve=0.001s
+
+Ask trace:
+latency   : load=0.006s  embed=0.012s  retrieve=0.001s  prompt_assembly=0.000s  generate=1.234s
 ```
 
 This tells you immediately where the pipeline spends time. In Phase 1 with a
@@ -228,8 +267,9 @@ one thing. The CLI just calls them in order with the user's arguments.
 
 ```
 load_index(index_dir)               → LoadedIndex
-  └─ retrieve(query, index, embed)  → list[RetrievalResult]
-       └─ print ranked chunks
+  └─ embed query if needed          → query vector
+       └─ retrieve top-k chunks     → list[RetrievalResult]
+            └─ build RetrieveTrace  → terminal output / optional JSON
 ```
 
 Retrieval is the heart of RAG. `rag retrieve` lets you inspect the search
@@ -239,7 +279,7 @@ the wrong chunks are returned, no prompt can fix it.
 ### `rag ask` — Full end-to-end
 
 ```
-load_index → embed query → retrieve → assemble prompt → generate → print trace
+load_index → embed query → retrieve → assemble prompt → generate → build AskTrace
 ```
 
 `cmd_ask` calls `retrieve_by_vector` (the pure-ranking function) rather than
@@ -251,14 +291,16 @@ retrieval — they only depend on `list[RetrievalResult]`.
 
 ## What This Teaches
 
-The four dataclasses are the **real architecture** of Phase 1. The CLI is just
+The dataclasses are the **real architecture** of this learning lab. The CLI is just
 a thin shell that calls them in order. If you can draw the Document → Chunk →
-RetrievalResult → RagTrace chain from memory, you can reason about any change
-to the pipeline — new chunkers, different retrievers, better prompts, richer
-traces — because you know exactly what data each stage receives and produces.
+RetrievalResult → RetrieveTrace / AskTrace chain from memory, you can reason
+about any change to the pipeline — new chunkers, different retrievers, better
+prompts, richer traces — because you know exactly what data each stage receives
+and produces.
 
 The next deep-dives zoom into the stages one at a time:
 
 - **The Indexing Plane** — how documents become chunks and vectors
 - **Retrieval and Generation** — how similarity search and prompt assembly work
 - **Persistence and Testing** — how the index is saved, loaded, and verified
+- **Observability and Debugging** — how trace records explain one run

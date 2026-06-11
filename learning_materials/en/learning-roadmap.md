@@ -14,6 +14,7 @@ directory. Start at the top and work down.
 | 3 | [Retrieval and Generation](retrieval-and-generation.md) | How queries find chunks and become answers |
 | 4 | [Persistence and Testing](persistence-and-testing.md) | The on-disk format, round-trip integrity, and fake backends |
 | 5 | [Evaluating Retrieval](evaluating-retrieval.md) | Metrics that tell you whether the retriever works |
+| 6 | [Observability and Debugging](observability-and-debugging.md) | Per-run traces that explain one retrieve or ask command |
 
 ---
 
@@ -40,8 +41,8 @@ The pipeline has two main planes, plus infrastructure and measurement:
      user ────────►│ embed query →         │
      question      │ cosine search →       │────► printed answer
                    │ pack prompt →         │     + citations
-                   │ call LLM              │     + source table
-                   │                       │     + latencies
+                   │ call LLM              │     + trace output
+                   │                       │     + optional JSON trace
                    │ retrieval.py          │
                    │ prompting.py          │
                    │ generation.py         │
@@ -56,24 +57,40 @@ The pipeline has two main planes, plus infrastructure and measurement:
                    │                       │
                    │ eval.py               │
                    └──────────────────────-┘
+
+                   ┌──────────────────────-┐
+                   │   4. Observability    │
+                   │                       │
+ retrieve / ask ──►│ collect chunks,       │────► RetrieveTrace /
+                   │ prompt, answer,       │     AskTrace
+                   │ citations, latency    │     (terminal + JSON)
+                   │                       │
+                   │ trace.py              │
+                   └──────────────────────-┘
 ```
 
 The two planes meet at the index on disk — the indexing plane writes it, the
 retrieval plane reads it. The evaluation layer reuses the retrieval plane
-exactly as the user experiences it.
+exactly as the user experiences it. The observability layer records what
+happened in one `retrieve` or `ask` run so you can debug it later.
 
 ---
 
 ## Data Flow: Document → Answer
 
-Four dataclasses carry data through the pipeline. Each arrow is a
-transformation.
+The core pipeline uses three data dataclasses, then the observability layer
+turns command output into trace dataclasses. Each arrow is a transformation.
 
 ```
-┌──────────┐     ┌──────────┐     ┌──────────────────┐     ┌──────────┐
-│ Document │ ──► │  Chunk   │ ──► │ RetrievalResult  │ ──► │ RagTrace │
-└──────────┘     └──────────┘     └──────────────────┘     └──────────┘
-  indexing          indexing            retrieval              generation
+┌──────────┐     ┌──────────┐     ┌──────────────────┐
+│ Document │ ──► │  Chunk   │ ──► │ RetrievalResult  │
+└──────────┘     └──────────┘     └──────────────────┘
+  indexing          indexing            retrieval
+
+                       ┌──────────────────────────────┐
+                       │ RetrieveTrace / AskTrace     │
+                       └──────────────────────────────┘
+                         observability
 ```
 
 | Type | Fields (key ones) | Created by | Consumed by |
@@ -81,7 +98,8 @@ transformation.
 | **Document** | `doc_id`, `normalized_text`, `raw_hash`, `title`, `format` | `documents.load_document()` | Chunker |
 | **Chunk** | `chunk_id`, `doc_id`, `text`, `char_start`, `char_end`, `metadata` | `chunking.chunk_document()` | Embedder, Retriever |
 | **RetrievalResult** | `chunk`, `score`, `rank` (1-indexed) | `retrieval.retrieve_by_vector()` | Prompt assembler |
-| **RagTrace** | `query`, `retrieved_chunks`, `prompt`, `answer`, `citations`, `latency_by_stage` | `cli.cmd_ask()` | Terminal output (Phase 1), disk storage (Phase 1.7) |
+| **RetrieveTrace** | `query`, `retriever`, `top_k`, `chunks`, `latency_by_stage` | `cli.cmd_retrieve()` | Terminal output, optional JSON trace |
+| **AskTrace** | `query`, `retriever`, `top_k`, `chunks`, `prompt`, `answer`, `citations`, `latency_by_stage` | `cli.cmd_ask()` | Terminal output, optional JSON trace |
 
 The critical invariant: `document.normalized_text[chunk.char_start:chunk.char_end] == chunk.text`.
 If this breaks, citations point to wrong text.
@@ -92,8 +110,8 @@ If this breaks, citations point to wrong text.
 
 ```
 rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-overlap 120
-rag retrieve "question" --index-dir .tiny-rag/index --top-k 5
-rag ask "question" --index-dir .tiny-rag/index --top-k 5
+rag retrieve "question" --index-dir .tiny-rag/index --top-k 5 --trace-out /tmp/retrieve.json
+rag ask "question" --index-dir .tiny-rag/index --top-k 5 --trace-out /tmp/ask.json
 rag eval --qa-file qa.jsonl --index-dir .tiny-rag/index --top-k 5
 ```
 
@@ -112,3 +130,4 @@ quality.
 | Retrieval and Generation | Cosine search, prompt assembly, LLM call | `retrieval.py`, `prompting.py`, `generation.py` |
 | Persistence and Testing | Save/load index, round-trip integrity, fake backends | `index_writer.py`, `index_loader.py`, test suite |
 | Evaluating Retrieval | Retrieval quality metrics | `eval.py` |
+| Observability and Debugging | Per-run trace records and JSON artifacts | `trace.py`, `cli.py` |

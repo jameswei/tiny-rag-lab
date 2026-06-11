@@ -6,12 +6,15 @@ historical context.
 
 ## Current Phase
 
-**Phase 1.7** is active:
+No active phase.
+
+The next implementation phase must be proposed, reviewed, signed off, and
+activated here before agents claim implementation tasks.
+
+Phase 1.7 is complete:
 
 - Spec: `docs/phases/phase-1.7-observability.md`
 - Taskboard: `docs/phases/phase-1.7-taskboard.md`
-
-Phase 1.7 scope proposal was reviewed and signed off by Codex on 2026-06-11.
 
 Phase 1.6 is complete:
 
@@ -45,6 +48,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
+| Phase 1.7 | Observability and debugging | Complete; see `docs/phases/phase-1.7-taskboard.md` |
 | Phase 1.6 | Evaluation harness | Complete; see `docs/phases/phase-1.6-taskboard.md` |
 | Phase 1.5 | Retrieval mechanics | Complete; see `docs/phases/phase-1.5-taskboard.md` |
 | Phase 1 | Naive classic RAG | Complete; see `docs/phases/phase-1-taskboard.md` |

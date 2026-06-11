@@ -153,20 +153,34 @@ To authenticate with the watsonx API, you need an API key...
 ```
 
 `[Source: <chunk_id>]` 标记是 prompt 和答案之间的契约。模型被指示在回答中包含
-这些标记，CLI 用正则表达式提取它们来构建引用列表和源表格。
+这些标记，CLI 用正则表达式提取它们来构建 `AskTrace` 中的引用列表。
 
-### 源表格
+### Ask trace 输出
 
-`format_source_table` 产生 `rag ask` 输出底部的人类可读摘要：
+Phase 1.7 用 `format_ask_trace` 替换了旧的 `rag ask` 终端打印。终端输出现在
+在一个 trace 视图中展示 query、latency、检索块、答案和引用：
 
 ```
-Sources:
-  [Source: a1b2c3d4e5f67890]  API Authentication Guide  (docs/auth.md)
-  [Source: f9e8d7c6b5a43210]  Rate Limits              (docs/limits.md)
+Ask trace
+────────────────────────────────────────────
+  query     : "How do I authenticate?"
+  retriever : dense
+  top_k     : 5
+  latency   : load=0.004s  embed=0.011s  retrieve=0.001s  prompt_assembly=0.000s  generate=0.825s
+────────────────────────────────────────────
+Rank 1  score=0.6234  chunk_id=a1b2c3d4e5f67890
+  doc_id  : docs/auth.md
+  title   : API Authentication Guide
+  preview : To authenticate with the watsonx API...
+
+Answer:
+...
+
+Citations: a1b2c3d4e5f67890
 ```
 
-这个表格将每个块 ID（在答案中作为引用出现）映射到人类可读的标题和路径。用户
-可以看到像 `[Source: a1b2c3d4e5f67890]` 这样的引用，并立刻找到它来自哪个文档。
+同一份 `AskTrace` 也可以通过 `rag ask ... --trace-out PATH` 写成 JSON。这个 JSON
+包含完整 prompt、answer、citations、检索块摘要和各阶段耗时。
 
 ### 为什么模板是模块级字符串
 

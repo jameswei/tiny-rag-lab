@@ -164,22 +164,36 @@ To authenticate with the watsonx API, you need an API key...
 
 The `[Source: <chunk_id>]` marker is the contract between the prompt and the
 answer. The model is instructed to include these markers in its response, and
-the CLI extracts them with a regex to build the citation list and source table.
+the CLI extracts them with a regex to build the citation list in `AskTrace`.
 
-### The source table
+### Ask trace output
 
-`format_source_table` produces the human-readable summary at the bottom of
-`rag ask` output:
+Phase 1.7 replaced the old ad-hoc `rag ask` terminal prints with
+`format_ask_trace`. The terminal output now shows the query, latency, retrieved
+chunks, answer, and citations in one trace view:
 
 ```
-Sources:
-  [Source: a1b2c3d4e5f67890]  API Authentication Guide  (docs/auth.md)
-  [Source: f9e8d7c6b5a43210]  Rate Limits              (docs/limits.md)
+Ask trace
+────────────────────────────────────────────
+  query     : "How do I authenticate?"
+  retriever : dense
+  top_k     : 5
+  latency   : load=0.004s  embed=0.011s  retrieve=0.001s  prompt_assembly=0.000s  generate=0.825s
+────────────────────────────────────────────
+Rank 1  score=0.6234  chunk_id=a1b2c3d4e5f67890
+  doc_id  : docs/auth.md
+  title   : API Authentication Guide
+  preview : To authenticate with the watsonx API...
+
+Answer:
+...
+
+Citations: a1b2c3d4e5f67890
 ```
 
-This table maps each chunk ID (which appears in the answer as a citation) to a
-human-readable title and path. The user can look at a citation like
-`[Source: a1b2c3d4e5f67890]` and immediately find which document it came from.
+The same `AskTrace` can also be written to JSON with `rag ask ... --trace-out
+PATH`. That JSON contains the full prompt, answer, citations, retrieved chunk
+summaries, and stage latencies.
 
 ### Why the template is a module-level string
 

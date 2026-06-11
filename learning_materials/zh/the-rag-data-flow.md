@@ -1,14 +1,19 @@
 # RAG 数据流 —— 数据如何从文件变成答案
 
-Phase 1 的实现围绕四个 dataclass 构建。它们不只是类型定义 —— 它们是流水线
-每个阶段之间的**契约**。如果你理解了这四个类型以及它们如何在 CLI 中流转，
+实现围绕一小组 dataclass 构建。它们不只是类型定义 —— 它们是流水线
+每个阶段之间的**契约**。如果你理解了这些类型以及它们如何在 CLI 中流转，
 你就理解了整个架构。
 
 ```
-┌──────────┐     ┌──────────┐     ┌──────────────────┐     ┌──────────┐
-│ Document │ ──► │  Chunk   │ ──► │ RetrievalResult  │ ──► │ RagTrace │
-└──────────┘     └──────────┘     └──────────────────┘     └──────────┘
-   索引阶段           索引阶段             检索阶段               生成阶段
+┌──────────┐     ┌──────────┐     ┌──────────────────┐
+│ Document │ ──► │  Chunk   │ ──► │ RetrievalResult  │
+└──────────┘     └──────────┘     └──────────────────┘
+   索引阶段           索引阶段             检索阶段
+
+                       ┌──────────────────────────────┐
+                       │ RetrieveTrace / AskTrace     │
+                       └──────────────────────────────┘
+                         可观测性层
 ```
 
 每个箭头都是一条有明确规则的转换。让我们逐一走过。
@@ -63,7 +68,7 @@ if stripped.startswith("# "):
 
 如果没有 H1（或文件是纯文本），标题回退到**文件名主干** —— `faq.md` 变成
 `"faq"`。这很简单，但是有意为之：Phase 1 不需要花哨的标题提取。关键点是每个
-文档都有一个人类可读的标签，用于源表格。
+文档都有一个人类可读的标签，用于 trace 输出。
 
 ---
 
@@ -119,7 +124,7 @@ def make_chunk_id(doc_id: str, char_start: int, chunk_text: str) -> str:
 
 | 键 | 值 | 原因 |
 |---|---|---|
-| `title` | 文档标题 | 显示在源表格中 |
+| `title` | 文档标题 | 显示在 trace 输出中 |
 | `path` | 文件系统路径 | 让用户可以找到源文件 |
 | `format` | `"markdown"` 或 `"text"` | 保留原始文件类型 |
 | `raw_hash` | raw_text 的 SHA-256 | 以后检测源变化 |
@@ -153,37 +158,71 @@ class RetrievalResult:
 
 ---
 
-## RagTrace —— 一次 Ask 的完整记录
+## RetrieveTrace 和 AskTrace —— 一次运行的记录
 
-`rag ask` 是唯一运行完整流水线的命令。`RagTrace` 捕获了发生的一切：
+Phase 1.7 将可观测性类型移动到了 `tiny_rag_lab/trace.py`。`rag retrieve`
+构建 `RetrieveTrace`，`rag ask` 构建 `AskTrace`。两个命令都会打印由 formatter
+生成的 trace 输出，也都可以通过 `--trace-out` 写出 JSON。
 
 ```python
 @dataclass
-class RagTrace:
+class ChunkTrace:
+    rank: int
+    chunk_id: str
+    doc_id: str
+    title: str
+    path: str
+    score: float
+    text_preview: str
+```
+
+```python
+@dataclass
+class RetrieveTrace:
     query: str
-    retrieved_chunks: list[RetrievalResult]
+    retriever: str
+    top_k: int
+    chunks: list[ChunkTrace]
+    latency_by_stage: dict[str, float]
+```
+
+```python
+@dataclass
+class AskTrace:
+    query: str
+    retriever: str
+    top_k: int
+    chunks: list[ChunkTrace]
     prompt: str
     answer: str
     citations: list[str]
     latency_by_stage: dict[str, float]
 ```
 
-在 Phase 1 中，trace 打印到终端 —— 不存储到磁盘。但 dataclass 存在是为了
-Phase 1.7（可观测性）可以在不破坏契约的情况下保存 trace。
+`RetrieveTrace` 用于在不生成答案的情况下检查搜索结果。`AskTrace` 用于检查完整
+RAG 路径：检索、prompt 组装、生成和引用。
 
-`latency_by_stage` 记录三个时间：
+`latency_by_stage` 让阶段边界变得明确：
 
 | 键 | 测量的内容 |
 |---|---|
+| `"load"` | 从磁盘加载索引的时间 |
 | `"embed"` | 计算查询嵌入的时间 |
-| `"retrieve"` | 按余弦相似度排名块的时间 |
+| `"retrieve"` | 对块进行排名的时间 |
+| `"prompt_assembly"` | 为 `rag ask` 构建 prompt 的时间 |
 | `"generate"` | LLM 生成答案的时间 |
 
-这些通过 `time.perf_counter()` 在 `cmd_ask` 的每个阶段周围测量。数字在每次
-`rag ask` 输出的底部可见：
+BM25 的 retrieve trace 不包含 `"embed"`，因为 BM25 不使用嵌入模型。dense 和
+hybrid retrieve trace 会包含它。
+
+这些数字在 retrieve 和 ask trace 中可见，但两者的字段不同：
 
 ```
-Timings:  embed=0.012s  retrieve=0.001s  generate=1.234s
+Retrieve trace:
+latency   : load=0.006s  embed=0.012s  retrieve=0.001s
+
+Ask trace:
+latency   : load=0.006s  embed=0.012s  retrieve=0.001s  prompt_assembly=0.000s  generate=1.234s
 ```
 
 这立刻告诉你流水线在哪里花费时间。在 Phase 1 中使用本地嵌入器和 API 生成器时，
@@ -211,8 +250,9 @@ load_documents(corpus_root)          → list[Document]
 
 ```
 load_index(index_dir)               → LoadedIndex
-  └─ retrieve(query, index, embed)  → list[RetrievalResult]
-       └─ 打印排名的块
+  └─ 按需嵌入查询                  → query vector
+       └─ 检索 top-k 块             → list[RetrievalResult]
+            └─ 构建 RetrieveTrace   → 终端输出 / 可选 JSON
 ```
 
 检索是 RAG 的核心。`rag retrieve` 让你在 LLM 介入之前检查搜索结果。这是调试的
@@ -221,7 +261,7 @@ load_index(index_dir)               → LoadedIndex
 ### `rag ask` —— 完全端到端
 
 ```
-load_index → 嵌入查询 → 检索 → 组装 prompt → 生成 → 打印 trace
+load_index → 嵌入查询 → 检索 → 组装 prompt → 生成 → 构建 AskTrace
 ```
 
 `cmd_ask` 调用 `retrieve_by_vector`（纯排名函数）而不是 `retrieve`（后者也会
@@ -232,8 +272,8 @@ load_index → 嵌入查询 → 检索 → 组装 prompt → 生成 → 打印 t
 
 ## 这教会我们什么
 
-四个 dataclass 是 Phase 1 的**真正架构**。CLI 只是按顺序调用它们的薄壳。
-如果你能凭记忆画出 Document → Chunk → RetrievalResult → RagTrace 链条，
+这些 dataclass 是这个学习实验室的**真正架构**。CLI 只是按顺序调用它们的薄壳。
+如果你能凭记忆画出 Document → Chunk → RetrievalResult → RetrieveTrace / AskTrace 链条，
 你就能推理流水线的任何变化 —— 新的切块器、不同的检索器、更好的 prompt、
 更丰富的 trace —— 因为你确切知道每个阶段接收和产生什么数据。
 
@@ -242,3 +282,4 @@ load_index → 嵌入查询 → 检索 → 组装 prompt → 生成 → 打印 t
 - **索引平面** —— 文档如何变成块和向量
 - **检索与生成** —— 相似度搜索和 prompt 组装的原理
 - **持久化与测试** —— 索引如何保存、加载和验证
+- **可观测性与调试** —— trace 记录如何解释一次运行

@@ -1,6 +1,6 @@
 # Phase 1.7 Spec: Observability and Debugging
 
-**Status:** Scope signed off by Codex on 2026-06-11; not active until owner activation in `docs/phases/README.md`
+**Status:** Complete — closed by Codex on 2026-06-11
 **Authors:** Claude Code + owner decisions
 **Based on:** `docs/roadmap.md`, `docs/phases/phase-1.6-evaluation-harness.md`
 **Taskboard:** `docs/phases/phase-1.7-taskboard.md`
@@ -42,13 +42,13 @@ stable data contract that Phase 1.8 (RAG failure lab) will consume.
 
 ---
 
-## Design Decision: `RagTrace` in `models.py`
+## Design Decision: `RagTrace` Removal
 
-`RagTrace` currently lives in `models.py` and will be removed. All trace types
-(`ChunkTrace`, `RetrieveTrace`, `AskTrace`) live in the new `tiny_rag_lab/trace.py`.
-`RagTrace` is replaced by `AskTrace`. The single internal import in `cli.py`
-(`from tiny_rag_lab.models import RagTrace`) and the existing `RagTrace` tests in
-`tests/test_models.py` are updated or removed as part of T05.
+`RagTrace` was removed from `models.py`. All trace types (`ChunkTrace`,
+`RetrieveTrace`, `AskTrace`) now live in `tiny_rag_lab/trace.py`, and
+`RagTrace` is replaced by `AskTrace`. The former internal import in `cli.py`
+(`from tiny_rag_lab.models import RagTrace`) and the old `RagTrace` tests in
+`tests/test_models.py` were updated or removed as part of T05.
 
 This mirrors the `eval.py` precedent: observability types belong in an
 observability module, not in the core data-contract module (`models.py` stays
