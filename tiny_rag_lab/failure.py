@@ -121,3 +121,116 @@ class DiagnosisReport:
     n_moved: int = 0
     n_confirmed: int = 0        # baseline_label == expected_label
     per_case: list[DiagnosisResult] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Failure case loader
+# ---------------------------------------------------------------------------
+
+def load_failure_cases(path: Path) -> list[FailureCase]:
+    """Load FailureCase objects from a cases.jsonl file.
+
+    Does NOT skip rows with empty gold_doc_ids — unanswerable_query cases
+    legitimately have gold_doc_ids: []. This diverges from load_eval_samples,
+    which skips empty gold lists.
+    Skips rows with empty case_id or empty question.
+    Silently skips malformed JSON rows.
+    baseline and intervention default to RetrieverConfig() when absent.
+    """
+    cases: list[FailureCase] = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(row, dict):
+                continue
+            case_id = str(row.get("case_id", "")).strip()
+            if not case_id:
+                continue
+            question = str(row.get("question", "")).strip()
+            if not question:
+                continue
+
+            gold_doc_ids = row.get("gold_doc_ids")
+            if not isinstance(gold_doc_ids, list):
+                gold_doc_ids = []
+
+            baseline_raw = row.get("baseline") or {}
+            baseline = RetrieverConfig(
+                retriever=str(baseline_raw.get("retriever", "dense")),
+                top_k=int(baseline_raw.get("top_k", 5)),
+            ) if isinstance(baseline_raw, dict) else RetrieverConfig()
+
+            intervention_raw = row.get("intervention") or {}
+            intervention = RetrieverConfig(
+                retriever=str(intervention_raw.get("retriever", "dense")),
+                top_k=int(intervention_raw.get("top_k", 5)),
+            ) if isinstance(intervention_raw, dict) else RetrieverConfig()
+
+            cases.append(FailureCase(
+                case_id=case_id,
+                question=question,
+                gold_doc_ids=list(gold_doc_ids),
+                expected_label=str(row.get("expected_label", LABEL_NO_FAILURE)),
+                baseline=baseline,
+                intervention=intervention,
+                notes=str(row.get("notes", "")),
+            ))
+    return cases
+
+
+# ---------------------------------------------------------------------------
+# Failure label detection
+# ---------------------------------------------------------------------------
+
+def detect_failure_label(
+    retrieved_doc_ids: list[str],
+    gold_doc_ids: list[str],
+    expected_label: str,
+    thresholds: DetectionThresholds | None = None,
+) -> str:
+    """Assign a failure label from retrieved and gold doc IDs.
+
+    Detection order (first match wins):
+    1. gold_doc_ids empty + expected_label == LABEL_UNANSWERABLE → LABEL_UNANSWERABLE
+    2. gold_doc_ids empty otherwise → LABEL_NO_FAILURE (cannot evaluate)
+    3. no hit → LABEL_MISSING_EVIDENCE
+    4. first gold hit at rank > low_rank_threshold → LABEL_LOW_RANK_EVIDENCE
+    5. context_precision < distractor_precision_threshold → LABEL_DISTRACTOR_EVIDENCE
+    6. LABEL_NO_FAILURE
+
+    Steps 4 and 5 are mutually exclusive: low_rank fires when gold is buried
+    regardless of precision; distractor fires only when gold is well-ranked but
+    surrounding context is noisy. Checking low_rank first prevents a large top_k
+    from shadowing a rank-ordering failure with a precision signal.
+
+    Calls hit_at_k and context_precision_at_k from eval.py.
+    """
+    from tiny_rag_lab.eval import context_precision_at_k, hit_at_k
+
+    if thresholds is None:
+        thresholds = DetectionThresholds()
+
+    if not gold_doc_ids:
+        return LABEL_UNANSWERABLE if expected_label == LABEL_UNANSWERABLE else LABEL_NO_FAILURE
+
+    if not hit_at_k(retrieved_doc_ids, gold_doc_ids):
+        return LABEL_MISSING_EVIDENCE
+
+    gold_set = set(gold_doc_ids)
+    first_rank = next(
+        (i for i, doc_id in enumerate(retrieved_doc_ids, start=1) if doc_id in gold_set),
+        None,
+    )
+    if first_rank is not None and first_rank > thresholds.low_rank_threshold:
+        return LABEL_LOW_RANK_EVIDENCE
+
+    if context_precision_at_k(retrieved_doc_ids, gold_doc_ids) < thresholds.distractor_precision_threshold:
+        return LABEL_DISTRACTOR_EVIDENCE
+
+    return LABEL_NO_FAILURE
