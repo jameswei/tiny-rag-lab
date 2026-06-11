@@ -57,7 +57,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 1.8 | RAG failure lab | Directional |
+| Phase 1.8 | RAG failure lab | Scope signed off by Codex on 2026-06-11; pending owner activation — spec: `docs/phases/phase-1.8-failure-lab.md`, taskboard: `docs/phases/phase-1.8-taskboard.md` |
 | Later | Agentic RAG | Deferred |
 
 Candidate and directional phases must not be treated as active implementation
