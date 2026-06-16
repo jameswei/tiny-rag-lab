@@ -13,9 +13,10 @@ directory. Start at the top and work down.
 | 2 | [The Indexing Plane](the-indexing-plane.md) | How documents become searchable vectors |
 | 3 | [Retrieval and Generation](retrieval-and-generation.md) | How queries find chunks and become answers |
 | 4 | [Persistence and Testing](persistence-and-testing.md) | The on-disk format, round-trip integrity, and fake backends |
-| 5 | [Evaluating Retrieval](evaluating-retrieval.md) | Metrics that tell you whether the retriever works |
-| 6 | [Observability and Debugging](observability-and-debugging.md) | Per-run traces that explain one retrieve or ask command |
-| 7 | [RAG Failure Lab](rag-failure-lab.md) | Curated failure cases that compare baseline and intervention retrieval |
+| 5 | [Retrieval Mechanics](retrieval-mechanics.md) | BM25 keyword retrieval, hybrid search, and Reciprocal Rank Fusion |
+| 6 | [Evaluating Retrieval](evaluating-retrieval.md) | Metrics that tell you whether the retriever works |
+| 7 | [Observability and Debugging](observability-and-debugging.md) | Per-run traces that explain one retrieve or ask command |
+| 8 | [RAG Failure Lab](rag-failure-lab.md) | Curated failure cases that compare baseline and intervention retrieval |
 
 ---
 
@@ -143,6 +144,7 @@ quality. `diagnose` studies curated failure cases.
 | The Indexing Plane | Loading, normalizing, chunking, embedding | `documents.py`, `chunking.py`, `embeddings.py` |
 | Retrieval and Generation | Cosine search, prompt assembly, LLM call | `retrieval.py`, `prompting.py`, `generation.py` |
 | Persistence and Testing | Save/load index, round-trip integrity, fake backends | `index_writer.py`, `index_loader.py`, test suite |
+| Retrieval Mechanics | BM25 keyword retrieval, hybrid search, RRF fusion | `bm25.py`, `hybrid.py`, `retrieval.py` |
 | Evaluating Retrieval | Retrieval quality metrics | `eval.py` |
 | Observability and Debugging | Per-run trace records and JSON artifacts | `trace.py`, `cli.py` |
 | RAG Failure Lab | Failure case diagnosis | `failure.py`, `cli.py` |

@@ -12,9 +12,10 @@
 | 2 | [索引平面](the-indexing-plane.md) | 文档如何变成可搜索的向量 |
 | 3 | [检索与生成](retrieval-and-generation.md) | 查询如何找到相关片段并生成答案 |
 | 4 | [持久化与测试](persistence-and-testing.md) | 索引的磁盘格式、往返完整性以及假后端测试模式 |
-| 5 | [评估检索质量](evaluating-retrieval.md) | 用指标回答"检索器到底好不好用" |
-| 6 | [可观测性与调试](observability-and-debugging.md) | 用单次运行 trace 解释一次 retrieve 或 ask 命令 |
-| 7 | [RAG 失败实验室](rag-failure-lab.md) | 用策划好的失败案例比较 baseline 和 intervention 检索 |
+| 5 | [检索机制](retrieval-mechanics.md) | BM25 关键词检索、混合搜索与 Reciprocal Rank Fusion |
+| 6 | [评估检索质量](evaluating-retrieval.md) | 用指标回答"检索器到底好不好用" |
+| 7 | [可观测性与调试](observability-and-debugging.md) | 用单次运行 trace 解释一次 retrieve 或 ask 命令 |
+| 8 | [RAG 失败实验室](rag-failure-lab.md) | 用策划好的失败案例比较 baseline 和 intervention 检索 |
 
 ---
 
@@ -138,6 +139,7 @@ rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-r
 | 索引平面 | 加载、规范化、分块、嵌入 | `documents.py`, `chunking.py`, `embeddings.py` |
 | 检索与生成 | 余弦搜索、提示词组装、LLM 调用 | `retrieval.py`, `prompting.py`, `generation.py` |
 | 持久化与测试 | 索引读写、往返完整性、假后端模式 | `index_writer.py`, `index_loader.py`, 测试套件 |
+| 检索机制 | BM25 关键词检索、混合搜索、RRF 融合 | `bm25.py`, `hybrid.py`, `retrieval.py` |
 | 评估检索质量 | 检索质量指标 | `eval.py` |
 | 可观测性与调试 | 单次运行 trace 记录和 JSON 产物 | `trace.py`, `cli.py` |
 | RAG 失败实验室 | 失败案例诊断 | `failure.py`, `cli.py` |
