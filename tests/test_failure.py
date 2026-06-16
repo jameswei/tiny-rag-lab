@@ -30,6 +30,7 @@ from tiny_rag_lab.failure import (
     FailureCase,
     RetrieverConfig,
 )
+from tiny_rag_lab.reranker import FakeReranker
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +75,7 @@ def test_dataclass_retriever_config_json_serializable():
     rc = RetrieverConfig(retriever="hybrid", top_k=3)
     d = dataclasses.asdict(rc)
     text = json.dumps(d)
-    assert json.loads(text) == {"retriever": "hybrid", "top_k": 3}
+    assert json.loads(text) == {"retriever": "hybrid", "top_k": 3, "reranker": "none", "rerank_top_n": None}
 
 
 def test_dataclass_failure_case_defaults():
@@ -249,7 +250,7 @@ FIXTURE_CASES = Path(__file__).parent / "fixtures" / "failure" / "cases.jsonl"
 
 def test_load_returns_six_cases():
     cases = load_failure_cases(FIXTURE_CASES)
-    assert len(cases) == 6
+    assert len(cases) == 7
 
 
 def test_load_all_are_failure_case_instances():
@@ -514,7 +515,7 @@ def loaded_index(tmp_path):
 def test_runner_returns_diagnosis_report(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
-    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
     from tiny_rag_lab.failure import DiagnosisReport
     assert isinstance(report, DiagnosisReport)
 
@@ -522,21 +523,21 @@ def test_runner_returns_diagnosis_report(loaded_index):
 def test_runner_n_cases_equals_fixture_count(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
-    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
-    assert report.n_cases == 6
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
+    assert report.n_cases == 7
 
 
 def test_runner_per_case_length_matches_n_cases(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
-    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
     assert len(report.per_case) == report.n_cases
 
 
 def test_runner_unanswerable_case_gets_correct_label(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
-    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
     fc005 = next(r for r in report.per_case if r.case_id == "fc005")
     assert fc005.baseline_label == LABEL_UNANSWERABLE
     assert fc005.intervention_label == LABEL_UNANSWERABLE
@@ -545,21 +546,21 @@ def test_runner_unanswerable_case_gets_correct_label(loaded_index):
 def test_runner_n_fixed_matches_per_case(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
-    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
     assert report.n_fixed == sum(r.fixed for r in report.per_case)
 
 
 def test_runner_n_confirmed_matches_per_case(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
-    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
     assert report.n_confirmed == sum(r.baseline_label == r.expected_label for r in report.per_case)
 
 
 def test_runner_retrieved_doc_ids_populated(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
-    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
     for dr in report.per_case:
         assert isinstance(dr.baseline_retrieved_doc_ids, list)
         assert isinstance(dr.intervention_retrieved_doc_ids, list)
@@ -570,7 +571,7 @@ def test_runner_retrieved_doc_ids_populated(loaded_index):
 def test_runner_metrics_keys_present(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
-    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8))
+    report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
     expected_keys = {"hit", "reciprocal_rank", "context_precision", "context_recall"}
     for dr in report.per_case:
         assert set(dr.baseline_metrics.keys()) == expected_keys
@@ -723,3 +724,123 @@ def test_format_empty_report():
     output = format_diagnosis_report(report)
     assert "n=0" in output
     assert "Confirmed" in output
+
+
+# ---------------------------------------------------------------------------
+# P1.9-T06 — reranker integration
+# ---------------------------------------------------------------------------
+
+def test_runner_reranker_none_raises_when_case_needs_reranker(loaded_index):
+    """run_diagnosis raises if any case uses reranker and none is provided."""
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = [FailureCase(
+        case_id="x", question="Q?",
+        gold_doc_ids=["with_h1.md"],
+        expected_label=LABEL_NO_FAILURE,
+        baseline=RetrieverConfig(retriever="dense", top_k=5),
+        intervention=RetrieverConfig(
+            retriever="dense", top_k=2, rerank_top_n=5,
+            reranker="cross-encoder",
+        ),
+    )]
+    with pytest.raises(ValueError, match="reranker"):
+        run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=None)
+
+
+def test_runner_rerank_top_n_lt_top_k_raises(loaded_index):
+    """run_diagnosis raises if rerank_top_n < top_k for a reranked case."""
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = [FailureCase(
+        case_id="x", question="Q?",
+        gold_doc_ids=["with_h1.md"],
+        expected_label=LABEL_NO_FAILURE,
+        baseline=RetrieverConfig(retriever="dense", top_k=5),
+        intervention=RetrieverConfig(
+            retriever="dense", top_k=5, rerank_top_n=3,
+            reranker="cross-encoder",
+        ),
+    )]
+    with pytest.raises(ValueError, match="rerank_top_n"):
+        run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
+
+
+
+def test_runner_fc007_in_fixture(loaded_index):
+    """fc007 loads from the fixture and has correct config."""
+    cases = load_failure_cases(FIXTURE_CASES)
+    fc007 = next(c for c in cases if c.case_id == "fc007")
+    assert fc007.expected_label == LABEL_LOW_RANK_EVIDENCE
+    assert fc007.baseline.retriever == "bm25"
+    assert fc007.baseline.top_k == 6
+    assert fc007.baseline.reranker == "none"
+    assert fc007.intervention.retriever == "bm25"
+    assert fc007.intervention.top_k == 1
+    assert fc007.intervention.reranker == "cross-encoder"
+    assert fc007.intervention.rerank_top_n == 6
+
+
+def test_load_retriever_config_defaults_for_reranker():
+    """RetrieverConfig defaults reranker='none' and rerank_top_n=None."""
+    rc = RetrieverConfig()
+    assert rc.reranker == "none"
+    assert rc.rerank_top_n is None
+
+
+def test_load_cases_fc001_reranker_defaults():
+    """Existing cases without reranker fields get defaults."""
+    cases = load_failure_cases(FIXTURE_CASES)
+    fc001 = next(c for c in cases if c.case_id == "fc001")
+    assert fc001.baseline.reranker == "none"
+    assert fc001.baseline.rerank_top_n is None
+    assert fc001.intervention.reranker == "none"
+    assert fc001.intervention.rerank_top_n is None
+
+
+def test_runner_noop_vs_boosting_reranker_proves_fix(loaded_index):
+    """fc007: no-op reranker leaves failure, boosting reranker fixes it.
+
+    Runs diagnosis twice on fc007: once with a no-op FakeReranker (which
+    should not fix the failure) and once with a boosting FakeReranker
+    that promotes gold chunks to rank 1. This proves the reranker (not
+    just the top_k change) is responsible for the fix.
+    """
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    from tiny_rag_lab.bm25 import BM25Retriever
+
+    cases = load_failure_cases(FIXTURE_CASES)
+    fc007 = next(c for c in cases if c.case_id == "fc007")
+    embedder = FakeEmbedder(dim=8)
+
+    # Discover the gold doc's actual chunk IDs via BM25 (matching fc007's
+    # retriever).
+    bm25 = BM25Retriever(loaded_index.chunks)
+    results = bm25.retrieve(fc007.question, top_k=6)
+    gold_chunk_ids = [
+        r.chunk.chunk_id for r in results
+        if r.chunk.doc_id in fc007.gold_doc_ids
+    ]
+
+    # No-op reranker: should NOT fix the failure.
+    report_noop = run_diagnosis(
+        cases, loaded_index, embedder, reranker=FakeReranker(),
+    )
+    dr_noop = next(r for r in report_noop.per_case if r.case_id == "fc007")
+
+    # Boosting reranker: should fix the failure.
+    score_map = {cid: 1.0 for cid in gold_chunk_ids}
+    reranker = FakeReranker(score_map=score_map) if score_map else FakeReranker()
+    report_boost = run_diagnosis(
+        cases, loaded_index, embedder, reranker=reranker,
+    )
+    dr_boost = next(r for r in report_boost.per_case if r.case_id == "fc007")
+
+    # Baseline is the same in both runs (no reranker on baseline).
+    assert dr_noop.baseline_label == dr_boost.baseline_label
+    # Baseline must be low_rank_evidence (gold in results but rank > 3).
+    assert dr_noop.baseline_label == LABEL_LOW_RANK_EVIDENCE
+    # No-op reranker does NOT fix the case.
+    assert dr_noop.fixed is False
+    # Boosting reranker moves gold to rank 1 → no_failure.
+    assert dr_boost.intervention_label == LABEL_NO_FAILURE
+    # Boosting reranker DOES fix the case.
+    assert dr_boost.fixed is True

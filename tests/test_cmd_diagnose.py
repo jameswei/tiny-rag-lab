@@ -13,6 +13,7 @@ from tiny_rag_lab.embeddings import FakeEmbedder
 
 FIXTURE_CORPUS = Path(__file__).parent / "fixtures" / "corpus"
 FIXTURE_CASES = Path(__file__).parent / "fixtures" / "failure" / "cases.jsonl"
+from tiny_rag_lab.reranker import FakeReranker
 
 
 # ---------------------------------------------------------------------------
@@ -100,35 +101,40 @@ def test_diagnose_parser_index_dir_custom():
 # ---------------------------------------------------------------------------
 
 def test_diagnose_prints_diagnosis_report(diagnose_setup, capsys):
-    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()):
         cmd_diagnose(_diagnose_args(FIXTURE_CASES, diagnose_setup))
     out = capsys.readouterr().out
     assert "Diagnosis report" in out
 
 
 def test_diagnose_output_contains_n_cases(diagnose_setup, capsys):
-    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()):
         cmd_diagnose(_diagnose_args(FIXTURE_CASES, diagnose_setup))
     out = capsys.readouterr().out
-    assert "n=6" in out
+    assert "n=7" in out
 
 
 def test_diagnose_output_contains_case_id(diagnose_setup, capsys):
-    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()):
         cmd_diagnose(_diagnose_args(FIXTURE_CASES, diagnose_setup))
     out = capsys.readouterr().out
     assert "fc001" in out
 
 
 def test_diagnose_output_contains_outcome_word(diagnose_setup, capsys):
-    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()):
         cmd_diagnose(_diagnose_args(FIXTURE_CASES, diagnose_setup))
     out = capsys.readouterr().out
     assert any(word in out for word in ("FIXED", "MOVED", "CONFIRMED", "UNCHANGED"))
 
 
 def test_diagnose_output_no_ansi_codes(diagnose_setup, capsys):
-    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()):
         cmd_diagnose(_diagnose_args(FIXTURE_CASES, diagnose_setup))
     out = capsys.readouterr().out
     assert "\x1b" not in out
@@ -139,3 +145,16 @@ def test_diagnose_shows_in_rag_help(capsys):
         build_parser().parse_args(["--help"])
     out = capsys.readouterr().out
     assert "diagnose" in out
+
+
+# ---------------------------------------------------------------------------
+# P1.9-T06 — reranker in cmd_diagnose
+# ---------------------------------------------------------------------------
+
+def test_diagnose_output_contains_fc007(diagnose_setup, capsys):
+    """Diagnose output includes fc007 case."""
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()):
+        cmd_diagnose(_diagnose_args(FIXTURE_CASES, diagnose_setup))
+    out = capsys.readouterr().out
+    assert "fc007" in out

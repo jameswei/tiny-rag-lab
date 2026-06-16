@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P1.9-T05
+Task:         P1.9-T07
 Phase:        Phase 1.9 — Reranking
 Spec:         docs/phases/phase-1.9-reranking.md
 Taskboard:    docs/phases/phase-1.9-taskboard.md
@@ -27,27 +27,17 @@ Updated By:   whale
 
 ### Prior Tasks
 
-P1.9-T02, T03, T04 are done (signed off by codex 2026-06-17). Full suite:
-536 passed, 8 skipped.
+P1.9-T01 through T06 are all done (signed off by codex). Full suite:
+549 passed, 8 skipped.
 
 ### Handoff
 
-T05 is unblocked (depends on T01 and T03, both done). Scope:
+T07 — Phase close. Acceptance criteria (from taskboard):
 
-- `trace.py`: add `reranker` / `rerank_top_n` fields to `AskTrace`
-- `trace.py`: update `format_ask_trace` to render reranker info and
-  `pre_rerank_*` fields
-- `cli.py`: add `--reranker` / `--rerank-top-n` / `--reranker-model` flags
-  to `rag ask` subparser
-- `cli.py`: two-stage retrieve flow in `cmd_ask` before `assemble_prompt`
-- `tests/test_cmd_ask.py`: new reranker tests
-
-T06 is also unblocked (depends on T01 and T03, both done).
-
-### Files Carrying State From T02-T04
-
-- `tiny_rag_lab/reranker.py`: `CrossEncoderReranker`, `FakeReranker`,
-  `apply_reranker`, `chunk_traces_from_rerank`
-- `tiny_rag_lab/trace.py`: `RetrieveTrace` already has `reranker` /
-  `rerank_top_n`; `format_retrieve_trace` already renders them
-- `tiny_rag_lab/cli.py`: `_make_reranker` factory exists
+- All P1.9-T01–T06 rows `done` with reviewer sign-off ✓
+- `uv run pytest --tb=short -q`: all passed
+- `uv run rag retrieve --help` shows reranker flags
+- `uv run rag retrieve --reranker none "x" --index-dir PATH` matches pre-1.9 output on the fixture index
+- `python -c "import sys; import tiny_rag_lab.reranker; assert 'sentence_transformers' not in sys.modules"` succeeds
+- Update `docs/phases/README.md` to mark Phase 1.9 complete and set `Current Phase` to next
+- Update `docs/roadmap.md` Phase 1.9 section to "Complete; see ..."

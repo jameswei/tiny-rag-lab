@@ -197,11 +197,33 @@ def cmd_ask(args):
     from tiny_rag_lab.index_loader import load_index
     from tiny_rag_lab.prompting import assemble_prompt
     from tiny_rag_lab.retrieval import retrieve_by_vector
+    from tiny_rag_lab.reranker import chunk_traces_from_rerank
     from tiny_rag_lab.trace import AskTrace, ChunkTrace, format_ask_trace, write_trace_json
 
     t0 = time.perf_counter()
     index = load_index(Path(args.index_dir))
     t_load = time.perf_counter() - t0
+
+    reranker_name = getattr(args, "reranker", "none")
+    rerank_top_n = getattr(args, "rerank_top_n", 20)
+    reranker_model = getattr(args, "reranker_model", None)
+
+    # Validate reranker flags.
+    if reranker_name == "none" and reranker_model is not None:
+        raise ValueError(
+            f"--reranker-model is only valid with --reranker cross-encoder, "
+            f"got --reranker {reranker_name}"
+        )
+    if rerank_top_n < 1:
+        raise ValueError(f"--rerank-top-n must be >= 1, got {rerank_top_n}")
+    if reranker_name != "none" and rerank_top_n < args.top_k:
+        raise ValueError(
+            f"--rerank-top-n ({rerank_top_n}) must be >= --top-k ({args.top_k}) "
+            f"when --reranker is active"
+        )
+
+    reranker = _make_reranker(reranker_name, reranker_model)
+    retrieval_k = rerank_top_n if reranker is not None else args.top_k
 
     model_name = index.manifest.get("embedding_model")
     embedder = _make_embedder(model_name)
@@ -212,8 +234,19 @@ def cmd_ask(args):
     t_embed = time.perf_counter() - t0
 
     t0 = time.perf_counter()
-    results = retrieve_by_vector(query_vec, index, top_k=args.top_k)
+    results = retrieve_by_vector(query_vec, index, top_k=retrieval_k)
     t_retrieve = time.perf_counter() - t0
+
+    # Phase 1.9: rerank when a reranker is active.
+    rerank_audit = None
+    t_rerank = 0.0
+    if reranker is not None:
+        from tiny_rag_lab.reranker import apply_reranker
+        t0 = time.perf_counter()
+        results, rerank_audit = apply_reranker(
+            args.query, results, reranker, args.top_k,
+        )
+        t_rerank = time.perf_counter() - t0
 
     t0 = time.perf_counter()
     prompt = assemble_prompt(args.query, results)
@@ -225,18 +258,18 @@ def cmd_ask(args):
 
     citations = _CITATION_RE.findall(answer)
 
-    chunks = [
-        ChunkTrace(
-            rank=r.rank,
-            chunk_id=r.chunk.chunk_id,
-            doc_id=r.chunk.doc_id,
-            title=r.chunk.metadata.get("title", ""),
-            path=r.chunk.metadata.get("path", r.chunk.doc_id),
-            score=r.score,
-            text_preview=r.chunk.text[:120].replace("\n", " ").strip(),
-        )
-        for r in results
-    ]
+    chunks = chunk_traces_from_rerank(results, rerank_audit)
+
+    latency = {
+        "load": t_load,
+        "embed": t_embed,
+        "retrieve": t_retrieve,
+        "prompt_assembly": t_prompt_assembly,
+        "generate": t_generate,
+    }
+    if reranker is not None:
+        latency["rerank"] = t_rerank
+
     trace = AskTrace(
         query=args.query,
         retriever="dense",
@@ -245,13 +278,9 @@ def cmd_ask(args):
         prompt=prompt,
         answer=answer,
         citations=citations,
-        latency_by_stage={
-            "load": t_load,
-            "embed": t_embed,
-            "retrieve": t_retrieve,
-            "prompt_assembly": t_prompt_assembly,
-            "generate": t_generate,
-        },
+        latency_by_stage=latency,
+        reranker=reranker.name if reranker else "none",
+        rerank_top_n=rerank_top_n if reranker else None,
     )
 
     print(format_ask_trace(trace))
@@ -326,7 +355,18 @@ def cmd_diagnose(args):
     )
     embedder = _make_embedder(index.manifest.get("embedding_model")) if needs_embedder else None
 
-    report = run_diagnosis(cases, index, embedder)
+    # Build reranker only when at least one case uses a non-none reranker.
+    needs_reranker = any(
+        config.reranker != "none"
+        for c in cases
+        for config in (c.baseline, c.intervention)
+    )
+    reranker = None
+    if needs_reranker:
+        # Cross-encoder is the only implemented reranker; use default model.
+        reranker = _make_reranker("cross-encoder", None)
+
+    report = run_diagnosis(cases, index, embedder, reranker=reranker)
     print(format_diagnosis_report(report))
 
 
@@ -429,6 +469,21 @@ def build_parser():
     p_ask.add_argument(
         "--trace-out", default=None, metavar="PATH",
         help="write JSON trace to PATH (optional)",
+    )
+    p_ask.add_argument(
+        "--reranker", choices=["none", "cross-encoder"], default="none",
+        help="second-pass reranker (default: none)",
+    )
+    p_ask.add_argument(
+        "--rerank-top-n", type=int, default=20, metavar="INT",
+        help=(
+            "candidates to feed the reranker; must be >= top_k "
+            "(default: 20; ignored when --reranker none)"
+        ),
+    )
+    p_ask.add_argument(
+        "--reranker-model", default=None, metavar="NAME",
+        help="cross-encoder model name (default: ms-marco-MiniLM-L-6-v2)",
     )
     p_ask.set_defaults(func=cmd_ask)
 

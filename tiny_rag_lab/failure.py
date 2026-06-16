@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tiny_rag_lab.embeddings import Embedder
     from tiny_rag_lab.index_loader import LoadedIndex
+    from tiny_rag_lab.reranker import Reranker
 
 
 # ---------------------------------------------------------------------------
@@ -47,6 +48,8 @@ class RetrieverConfig:
 
     retriever: str = "dense"    # "dense" | "bm25" | "hybrid"
     top_k: int = 5
+    reranker: str = "none"                # Phase 1.9
+    rerank_top_n: int | None = None       # Phase 1.9
 
 
 @dataclass
@@ -164,12 +167,16 @@ def load_failure_cases(path: Path) -> list[FailureCase]:
             baseline = RetrieverConfig(
                 retriever=str(baseline_raw.get("retriever", "dense")),
                 top_k=int(baseline_raw.get("top_k", 5)),
+                reranker=str(baseline_raw.get("reranker", "none")),
+                rerank_top_n=baseline_raw.get("rerank_top_n"),
             ) if isinstance(baseline_raw, dict) else RetrieverConfig()
 
             intervention_raw = row.get("intervention") or {}
             intervention = RetrieverConfig(
                 retriever=str(intervention_raw.get("retriever", "dense")),
                 top_k=int(intervention_raw.get("top_k", 5)),
+                reranker=str(intervention_raw.get("reranker", "none")),
+                rerank_top_n=intervention_raw.get("rerank_top_n"),
             ) if isinstance(intervention_raw, dict) else RetrieverConfig()
 
             cases.append(FailureCase(
@@ -244,10 +251,15 @@ def run_diagnosis(
     cases: list[FailureCase],
     index: LoadedIndex,
     embedder: Embedder | None,
+    reranker: "Reranker | None" = None,
     thresholds: DetectionThresholds | None = None,
 ) -> DiagnosisReport:
     """Run baseline and intervention retrieval for every case and return an
     aggregate DiagnosisReport.
+
+    When reranker is provided, cases whose config specifies a non-none reranker
+    use it; cases with reranker="none" skip rerank. Raises ValueError if any
+    case needs a reranker and reranker is None.
 
     Builds BM25Retriever once before the case loop when any case uses bm25 or
     hybrid — same build-once pattern as run_retrieval_eval in eval.py.
@@ -285,17 +297,52 @@ def run_diagnosis(
     )
     bm25_retriever = BM25Retriever(index.chunks) if needs_bm25 else None
 
+    # Validate: if any case needs a reranker and none is provided, raise.
+    needs_reranker = any(
+        config.reranker != "none"
+        for c in cases
+        for config in (c.baseline, c.intervention)
+    )
+    if needs_reranker and reranker is None:
+        raise ValueError(
+            "reranker must not be None when any case uses a non-none reranker"
+        )
+
+    # Validate: rerank_top_n must be >= top_k when reranker is active.
+    for c in cases:
+        for label, config in (("baseline", c.baseline), ("intervention", c.intervention)):
+            if config.reranker != "none" and config.rerank_top_n is not None:
+                if config.rerank_top_n < config.top_k:
+                    raise ValueError(
+                        f"case {c.case_id} {label}: rerank_top_n "
+                        f"({config.rerank_top_n}) must be >= top_k ({config.top_k})"
+                    )
+
     def _retrieve(question: str, config: RetrieverConfig) -> list[str]:
+        # When reranker is active, retrieve rerank_top_n candidates first.
+        retrieval_k = (
+            config.rerank_top_n
+            if config.reranker != "none" and reranker is not None and config.rerank_top_n is not None
+            else config.top_k
+        )
+
         if config.retriever == "bm25":
-            results = bm25_retriever.retrieve(question, top_k=config.top_k)
+            results = bm25_retriever.retrieve(question, top_k=retrieval_k)
         elif config.retriever == "hybrid":
             results = retrieve_hybrid(
-                question, index, embedder, top_k=config.top_k,
+                question, index, embedder, top_k=retrieval_k,
                 bm25_retriever=bm25_retriever,
             )
         else:
             query_vec = embedder.embed([question])[0]
-            results = retrieve_by_vector(query_vec, index, top_k=config.top_k)
+            results = retrieve_by_vector(query_vec, index, top_k=retrieval_k)
+
+        if config.reranker != "none" and reranker is not None:
+            from tiny_rag_lab.reranker import apply_reranker
+            results, _audit = apply_reranker(
+                question, results, reranker, config.top_k,
+            )
+
         return [r.chunk.doc_id for r in results]
 
     def _metrics(retrieved: list[str], gold: list[str]) -> dict[str, float]:

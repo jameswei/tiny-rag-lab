@@ -481,14 +481,15 @@ Add `fc007` to `tests/fixtures/failure/cases.jsonl`:
 
 | ID | Scenario | Expected Label | Baseline | Intervention |
 |---|---|---|---|---|
-| fc007 | Cross-encoder rerank fixes buried evidence | low_rank_evidence | hybrid, top_k=6, rerank_top_n=null, reranker=none | hybrid, top_k=2, rerank_top_n=6, reranker=cross-encoder |
+| fc007 | Cross-encoder rerank fixes buried evidence | low_rank_evidence | bm25, top_k=6, rerank_top_n=null, reranker=none | bm25, top_k=1, rerank_top_n=6, reranker=cross-encoder |
 
-The baseline retrieves six chunks under hybrid with no rerank so the gold
-chunk lands at rank 4-6, triggering `low_rank_evidence` (default
+The baseline retrieves six chunks under BM25 with no rerank; the gold
+chunk lands at rank 4-6 because the question does not lexically match the
+gold document, triggering `low_rank_evidence` (default
 `low_rank_threshold = 3`, fires at rank > 3). The intervention retrieves
 the same six-chunk candidate pool, reranks them with the cross-encoder,
-and returns the top two — the reranker pulls the gold chunk to rank 1 or
-2, producing `no_failure`. `fixed = True`.
+and returns only the top one — the reranker pulls the gold chunk to rank
+1, producing `no_failure`. `fixed = True`.
 
 Existing cases `fc001` through `fc006` keep their current configs and
 labels. Their JSONL rows do not include `reranker` or `rerank_top_n`
