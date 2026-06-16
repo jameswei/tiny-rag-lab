@@ -28,6 +28,11 @@ class ChunkTrace:
     title, path. text_preview (first 120 chars of chunk.text) is added for
     the human-readable formatter — it avoids embedding full chunk text in the
     JSON trace while still making the output readable.
+
+    pre_rerank_rank and pre_rerank_score are populated by Phase 1.9 reranking
+    integrations. They stay None when no reranker ran, so existing Phase 1
+    through 1.8 trace consumers see the same rank / score semantics they
+    always have.
     """
 
     rank: int
@@ -37,6 +42,8 @@ class ChunkTrace:
     path: str
     score: float
     text_preview: str
+    pre_rerank_rank: int | None = None
+    pre_rerank_score: float | None = None
 
 
 @dataclass
