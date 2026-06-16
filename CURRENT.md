@@ -5,11 +5,11 @@ Phase:        Phase 1.9 — Reranking
 Spec:         docs/phases/phase-1.9-reranking.md
 Taskboard:    docs/phases/phase-1.9-taskboard.md
 Owner:        claude
-Status:       review
-Review Result: pending
-Reviewer:
+Status:       done
+Review Result: signed_off
+Reviewer:     codex
 Last Updated: 2026-06-16
-Updated By:   claude
+Updated By:   codex
 
 ## Findings From Last Review
 
@@ -18,6 +18,7 @@ Updated By:   claude
 ## Tests Reviewed
 
 - `uv run pytest tests/test_reranker.py --tb=short -q`: 22 passed
+- `uv run pytest tests/test_trace.py tests/test_cmd_retrieve.py tests/test_cmd_ask.py --tb=short -q`: 60 passed
 - `uv run pytest --tb=short -q`: 519 passed (Phase 1.8 closed at 497; +22 new
   tests from T01, no regressions)
 
