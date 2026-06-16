@@ -137,6 +137,68 @@ class FakeReranker:
 
 
 # ---------------------------------------------------------------------------
+# Cross-encoder reranker (T02)
+# ---------------------------------------------------------------------------
+
+class CrossEncoderReranker:
+    """Local cross-encoder reranker backed by sentence-transformers.
+
+    The model is lazily loaded on the first rerank() call. Construction is
+    free of side effects (no network, no disk read) — importing this class
+    does not import sentence_transformers.
+
+    DEFAULT_MODEL is the well-known MS MARCO MiniLM cross-encoder (~80 MB),
+    chosen as a small English-focused default that a learner can download
+    on a laptop without hesitating. Pass model_name to swap in a different
+    cross-encoder (e.g. BAAI/bge-reranker-base for multilingual corpora).
+    """
+
+    DEFAULT_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    name: str
+
+    def __init__(self, model_name: str | None = None) -> None:
+        self._model_name = model_name or self.DEFAULT_MODEL
+        self._model = None  # lazy — no I/O in __init__
+        self.name = "cross-encoder"
+
+    def rerank(
+        self,
+        query: str,
+        candidates: list["RetrievalResult"],
+    ) -> list["RerankResult"]:
+        if not candidates:
+            return []
+
+        if self._model is None:
+            from sentence_transformers import CrossEncoder
+
+            self._model = CrossEncoder(self._model_name)
+
+        pairs = [(query, c.chunk.text) for c in candidates]
+        scores = self._model.predict(pairs)
+
+        # Build scored pairs, then stable-sort twice (tie-break first,
+        # primary key second) so the sort policy is visible. Same pattern
+        # as FakeReranker.
+        scored: list[tuple["RetrievalResult", float]] = [
+            (c, float(score)) for c, score in zip(candidates, scores)
+        ]
+        scored.sort(key=lambda pair: pair[0].rank)             # tie-break asc
+        scored.sort(key=lambda pair: pair[1], reverse=True)    # primary desc
+
+        return [
+            RerankResult(
+                chunk_id=c.chunk.chunk_id,
+                pre_rank=c.rank,
+                post_rank=new_rank,
+                pre_score=c.score,
+                post_score=score,
+            )
+            for new_rank, (c, score) in enumerate(scored, start=1)
+        ]
+
+
+# ---------------------------------------------------------------------------
 # Helpers used by CLI, eval, and ask integrations (later T03-T05)
 # ---------------------------------------------------------------------------
 

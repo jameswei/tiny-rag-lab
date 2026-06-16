@@ -54,6 +54,7 @@ class RetrieveTrace:
       "load"     — index loading from disk
       "embed"    — query embedding (dense and hybrid only; absent for bm25)
       "retrieve" — ranking and top-k selection
+      "rerank"   — cross-encoder reranking (Phase 1.9; absent when no reranker)
     """
 
     query: str
@@ -61,6 +62,8 @@ class RetrieveTrace:
     top_k: int
     chunks: list[ChunkTrace] = field(default_factory=list)
     latency_by_stage: dict[str, float] = field(default_factory=dict)
+    reranker: str = "none"          # Phase 1.9
+    rerank_top_n: int | None = None # Phase 1.9
 
 
 @dataclass
@@ -138,10 +141,17 @@ def format_retrieve_trace(trace: RetrieveTrace) -> str:
     latency_str = "  ".join(
         f"{k}={v:.3f}s" for k, v in trace.latency_by_stage.items()
     )
+    # Phase 1.9: show reranker info when active.
+    reranker_line = ""
+    if trace.reranker != "none":
+        reranker_line = f"  reranker  : {trace.reranker}"
+        if trace.rerank_top_n is not None:
+            reranker_line += f"  (rerank_top_n={trace.rerank_top_n})"
     lines = [
         "Retrieve trace",
         _SEP,
         f'  query     : {trace.query!r}',
+    ] + ([reranker_line] if reranker_line else []) + [
         f"  retriever : {trace.retriever}",
         f"  top_k     : {trace.top_k}",
         f"  latency   : {latency_str}",
@@ -154,6 +164,10 @@ def format_retrieve_trace(trace: RetrieveTrace) -> str:
             f"Rank {c.rank}  score={c.score:.4f}  chunk_id={c.chunk_id}"
         )
         lines.append(f"  doc_id  : {c.doc_id}")
+        if c.pre_rerank_rank is not None:
+            lines.append(
+                f"  pre     : rank={c.pre_rerank_rank}  score={c.pre_rerank_score:.4f}"
+            )
         lines.append(f"  title   : {c.title}")
         lines.append(f"  path    : {c.path}")
         lines.append(f"  preview : {c.text_preview}")

@@ -335,3 +335,37 @@ def test_format_eval_report_contains_retriever_name():
 def test_format_eval_report_retriever_defaults_to_dense():
     out = format_eval_report(_make_report())
     assert "retriever=dense" in out
+
+
+# ---------------------------------------------------------------------------
+# P1.9-T04 — format_eval_report reranker lines
+# ---------------------------------------------------------------------------
+
+def test_format_report_renders_reranker_when_active():
+    """format_eval_report includes Reranker and Rerank Top-N when active."""
+    report = EvalReport(
+        n_questions=1, top_k=5, hit_rate=0.5, mrr=0.5,
+        reranker="cross-encoder", rerank_top_n=20,
+    )
+    out = format_eval_report(report)
+    assert "Reranker" in out
+    assert "cross-encoder" in out
+    assert "Rerank Top-N" in out
+    assert "20" in out
+
+
+def test_format_report_omits_reranker_when_none():
+    """format_eval_report does not show reranker lines when reranker='none'."""
+    report = EvalReport(
+        n_questions=1, top_k=5, hit_rate=0.5, mrr=0.5,
+    )
+    out = format_eval_report(report)
+    assert "Reranker" not in out
+    assert "Rerank Top-N" not in out
+
+
+def test_format_report_reranker_none_is_default():
+    """Default EvalReport has reranker='none' and rerank_top_n=None."""
+    report = EvalReport(n_questions=1, top_k=5)
+    assert report.reranker == "none"
+    assert report.rerank_top_n is None

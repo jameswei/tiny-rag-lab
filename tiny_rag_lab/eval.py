@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tiny_rag_lab.embeddings import Embedder
     from tiny_rag_lab.index_loader import LoadedIndex
+    from tiny_rag_lab.reranker import Reranker
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +62,8 @@ class EvalReport:
     mean_context_precision: float = 0.0
     mean_context_recall: float = 0.0
     per_question: list[EvalResult] = field(default_factory=list)
+    reranker: str = "none"                # Phase 1.9
+    rerank_top_n: int | None = None       # Phase 1.9
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +169,8 @@ def run_retrieval_eval(
     embedder: Embedder | None,
     top_k: int,
     retriever: str = "dense",
+    reranker: "Reranker | None" = None,
+    rerank_top_n: int | None = None,
 ) -> EvalReport:
     """Run retrieval for every sample and return an aggregate EvalReport.
 
@@ -173,7 +178,15 @@ def run_retrieval_eval(
     "hybrid" fuses both via RRF. Strategy-specific objects are built once before
     the per-sample loop so BM25 indexes the corpus only once.
 
+    When reranker is None the runner is identical to Phase 1.6 behavior.
+
+    When reranker is provided, the base retriever is asked for rerank_top_n
+    candidates per sample, reranker.rerank is called once per sample, and the
+    top_k post-rerank slice feeds the metric functions.
+
     Raises ValueError if retriever is "dense" or "hybrid" and embedder is None.
+    Raises ValueError if reranker is not None and rerank_top_n is None.
+    Raises ValueError if rerank_top_n < top_k.
     """
     from tiny_rag_lab.bm25 import BM25Retriever
     from tiny_rag_lab.hybrid import retrieve_hybrid
@@ -186,8 +199,24 @@ def run_retrieval_eval(
     if retriever in ("dense", "hybrid") and embedder is None:
         raise ValueError(f"embedder must not be None for retriever={retriever!r}")
 
+    # Validate reranker params (must fire before any retrieval, even when
+    # samples is empty — invalid configs should raise, not silently pass).
+    if reranker is not None and rerank_top_n is None:
+        raise ValueError("rerank_top_n must be set when reranker is provided")
+    if rerank_top_n is not None and rerank_top_n < top_k:
+        raise ValueError(
+            f"rerank_top_n ({rerank_top_n}) must be >= top_k ({top_k})"
+        )
+
     if not samples:
-        return EvalReport(n_questions=0, top_k=top_k, retriever=retriever)
+        return EvalReport(
+            n_questions=0, top_k=top_k, retriever=retriever,
+            reranker=reranker.name if reranker else "none",
+            rerank_top_n=rerank_top_n,
+        )
+
+    # Base retriever fetches rerank_top_n when reranker is active, otherwise top_k.
+    retrieval_k = rerank_top_n if reranker is not None else top_k
 
     # Build strategy-specific objects once before the loop.
     bm25_retriever = BM25Retriever(index.chunks) if retriever in ("bm25", "hybrid") else None
@@ -195,15 +224,22 @@ def run_retrieval_eval(
     per_question: list[EvalResult] = []
     for sample in samples:
         if retriever == "bm25":
-            results = bm25_retriever.retrieve(sample.question, top_k=top_k)
+            results = bm25_retriever.retrieve(sample.question, top_k=retrieval_k)
         elif retriever == "hybrid":
             results = retrieve_hybrid(
-                sample.question, index, embedder, top_k=top_k,
+                sample.question, index, embedder, top_k=retrieval_k,
                 bm25_retriever=bm25_retriever,
             )
         else:
             query_vec = embedder.embed([sample.question])[0]
-            results = retrieve_by_vector(query_vec, index, top_k=top_k)
+            results = retrieve_by_vector(query_vec, index, top_k=retrieval_k)
+
+        # Phase 1.9: rerank when a reranker is provided.
+        if reranker is not None:
+            from tiny_rag_lab.reranker import apply_reranker
+            results, _audit = apply_reranker(
+                sample.question, results, reranker, top_k,
+            )
 
         retrieved_doc_ids = [r.chunk.doc_id for r in results]
 
@@ -233,6 +269,8 @@ def run_retrieval_eval(
         mean_context_precision=sum(r.context_precision for r in per_question) / n,
         mean_context_recall=sum(r.context_recall for r in per_question) / n,
         per_question=per_question,
+        reranker=reranker.name if reranker else "none",
+        rerank_top_n=rerank_top_n,
     )
 
 
@@ -243,11 +281,23 @@ def format_eval_report(report: EvalReport) -> str:
     """Return a plain-text summary of retrieval evaluation metrics.
 
     No ANSI escape codes. Values are rounded to 3 decimal places.
+    Phase 1.9: when reranker is active, reranker name and rerank_top_n are
+    printed after the retriever line.
     """
-    header = f"Evaluation report  (n={report.n_questions}, top_k={report.top_k}, retriever={report.retriever})"
+    header = (
+        f"Evaluation report  "
+        f"(n={report.n_questions}, top_k={report.top_k}, retriever={report.retriever})"
+    )
     lines = [
         header,
         _SEPARATOR,
+    ]
+    if report.reranker != "none":
+        lines.append(f"Reranker          :  {report.reranker}")
+        if report.rerank_top_n is not None:
+            lines.append(f"Rerank Top-N      :  {report.rerank_top_n}")
+        lines.append("")
+    lines += [
         f"Hit Rate @ {report.top_k:<6}:  {report.hit_rate:.3f}",
         f"MRR               :  {report.mrr:.3f}",
         f"Context Precision :  {report.mean_context_precision:.3f}",

@@ -11,6 +11,7 @@ import pytest
 
 from tiny_rag_lab.cli import build_parser, cmd_index, cmd_retrieve
 from tiny_rag_lab.embeddings import FakeEmbedder
+from tiny_rag_lab.reranker import FakeReranker
 
 FIXTURE_CORPUS = Path(__file__).parent / "fixtures" / "corpus"
 
@@ -178,3 +179,108 @@ def test_retrieve_trace_out_hybrid_latency_keys(tmp_path, index_dir):
     assert "load" in loaded["latency_by_stage"]
     assert "embed" in loaded["latency_by_stage"]
     assert "retrieve" in loaded["latency_by_stage"]
+
+
+# ---------------------------------------------------------------------------
+# P1.9-T03 — reranker flags and trace (cmd_retrieve)
+# ---------------------------------------------------------------------------
+
+def test_retrieve_help_shows_reranker_flags(capsys):
+    parser = build_parser()
+    try:
+        parser.parse_args(["retrieve", "--help"])
+    except SystemExit:
+        pass
+    out = capsys.readouterr().out
+    assert "--reranker" in out
+    assert "--rerank-top-n" in out
+    assert "--reranker-model" in out
+
+
+def test_retrieve_reranker_none_is_noop(tmp_path, index_dir):
+    """--reranker none produces a trace with defaults and no rerank latency."""
+    out_path = tmp_path / "trace.json"
+    parser = build_parser()
+    args = parser.parse_args([
+        "retrieve", "sample document",
+        "--index-dir", str(index_dir),
+        "--top-k", "2",
+        "--reranker", "none",
+        "--trace-out", str(out_path),
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+        cmd_retrieve(args)
+    loaded = json.loads(out_path.read_text())
+    assert loaded["reranker"] == "none"
+    assert loaded["rerank_top_n"] is None
+    assert "rerank" not in loaded["latency_by_stage"]
+    for c in loaded["chunks"]:
+        assert c["pre_rerank_rank"] is None
+        assert c["pre_rerank_score"] is None
+
+
+def test_retrieve_reranker_cross_encoder_with_fake(tmp_path, index_dir):
+    """Patched FakeReranker produces rerank trace fields."""
+    out_path = tmp_path / "trace.json"
+    parser = build_parser()
+    args = parser.parse_args([
+        "retrieve", "sample document",
+        "--index-dir", str(index_dir),
+        "--top-k", "2",
+        "--reranker", "cross-encoder",
+        "--rerank-top-n", "5",
+        "--trace-out", str(out_path),
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker(name="cross-encoder")):
+        cmd_retrieve(args)
+    loaded = json.loads(out_path.read_text())
+    assert loaded["reranker"] == "cross-encoder"
+    assert loaded["rerank_top_n"] == 5
+    assert "rerank" in loaded["latency_by_stage"]
+    for c in loaded["chunks"]:
+        assert c["pre_rerank_rank"] is not None
+        assert c["pre_rerank_score"] is not None
+
+
+def test_retrieve_rerank_top_n_lt_top_k_exits_nonzero(index_dir):
+    """rerank_top_n < top_k with an active reranker raises ValueError."""
+    parser = build_parser()
+    args = parser.parse_args([
+        "retrieve", "sample document",
+        "--index-dir", str(index_dir),
+        "--top-k", "5",
+        "--reranker", "cross-encoder",
+        "--rerank-top-n", "3",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         pytest.raises(ValueError, match="rerank-top-n"):
+        cmd_retrieve(args)
+
+
+def test_retrieve_reranker_model_with_none_exits_nonzero(index_dir):
+    """--reranker-model with --reranker none raises ValueError."""
+    parser = build_parser()
+    args = parser.parse_args([
+        "retrieve", "sample document",
+        "--index-dir", str(index_dir),
+        "--reranker", "none",
+        "--reranker-model", "some-model",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         pytest.raises(ValueError, match="reranker-model"):
+        cmd_retrieve(args)
+
+
+def test_retrieve_rerank_top_n_lt_1_exits_nonzero(index_dir):
+    """rerank_top_n < 1 raises ValueError."""
+    parser = build_parser()
+    args = parser.parse_args([
+        "retrieve", "sample document",
+        "--index-dir", str(index_dir),
+        "--reranker", "cross-encoder",
+        "--rerank-top-n", "0",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         pytest.raises(ValueError, match="rerank-top-n"):
+        cmd_retrieve(args)

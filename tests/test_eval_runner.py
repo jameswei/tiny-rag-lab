@@ -12,6 +12,7 @@ from tiny_rag_lab.chunking import chunk_documents
 from tiny_rag_lab.documents import load_documents
 from tiny_rag_lab.embeddings import FakeEmbedder
 from tiny_rag_lab.eval import EvalReport, EvalResult, EvalSample, load_eval_samples, run_retrieval_eval
+from tiny_rag_lab.reranker import FakeReranker
 from tiny_rag_lab.index_loader import LoadedIndex
 
 FIXTURE_QA = Path(__file__).parent / "fixtures" / "eval" / "qa.jsonl"
@@ -320,3 +321,112 @@ def test_runner_invalid_retriever_raises():
     samples = load_eval_samples(FIXTURE_QA)
     with pytest.raises(ValueError, match="retriever"):
         run_retrieval_eval(samples, index, embedder, top_k=3, retriever="bogus")
+
+
+# ---------------------------------------------------------------------------
+# P1.9-T04 — reranker integration
+# ---------------------------------------------------------------------------
+
+def test_runner_reranker_default_fields_are_none():
+    """Without reranker, EvalReport fields default to 'none'/None."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_retrieval_eval(samples, index, embedder, top_k=3)
+    assert report.reranker == "none"
+    assert report.rerank_top_n is None
+
+
+def test_runner_with_reranker_sets_report_fields():
+    """Reranker fields populate correctly in EvalReport."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    reranker = FakeReranker()
+    report = run_retrieval_eval(
+        samples, index, embedder, top_k=2, reranker=reranker, rerank_top_n=5,
+    )
+    assert report.reranker == "fake"
+    assert report.rerank_top_n == 5
+    assert report.n_questions == 3
+    assert len(report.per_question) == 3
+
+
+def test_runner_reranker_none_is_identical_to_no_reranker():
+    """run_retrieval_eval with reranker=None matches pre-1.9 behavior."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+
+    report_no_rerank = run_retrieval_eval(samples, index, embedder, top_k=3)
+    report_none = run_retrieval_eval(samples, index, embedder, top_k=3, reranker=None)
+
+    assert report_no_rerank.hit_rate == report_none.hit_rate
+    assert report_no_rerank.mrr == report_none.mrr
+    assert report_no_rerank.mean_context_precision == report_none.mean_context_precision
+    assert report_no_rerank.mean_context_recall == report_none.mean_context_recall
+    assert report_no_rerank.reranker == report_none.reranker == "none"
+
+
+def test_runner_rerank_top_n_none_with_reranker_raises():
+    """reranker provided but rerank_top_n is None raises ValueError."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    with pytest.raises(ValueError, match="rerank_top_n"):
+        run_retrieval_eval(
+            samples, index, embedder, top_k=3,
+            reranker=FakeReranker(), rerank_top_n=None,
+        )
+
+
+def test_runner_rerank_top_n_lt_top_k_raises():
+    """rerank_top_n < top_k raises ValueError."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    with pytest.raises(ValueError, match="rerank_top_n"):
+        run_retrieval_eval(
+            samples, index, embedder, top_k=5,
+            reranker=FakeReranker(), rerank_top_n=3,
+        )
+
+
+def test_runner_reranker_retrieved_at_most_top_k():
+    """Post-rerank slices to top_k even when rerank_top_n is larger."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    top_k = 2
+    report = run_retrieval_eval(
+        samples, index, embedder, top_k=top_k,
+        reranker=FakeReranker(), rerank_top_n=10,
+    )
+    for r in report.per_question:
+        assert len(r.retrieved_doc_ids) <= top_k
+
+
+# ---------------------------------------------------------------------------
+# P1.9-T04 — empty-sample validation regression (reviewer finding)
+# ---------------------------------------------------------------------------
+
+def test_runner_empty_samples_with_reranker_top_n_none_raises():
+    """Validation fires before the empty-sample early return."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    with pytest.raises(ValueError, match="rerank_top_n"):
+        run_retrieval_eval(
+            [], index, embedder, top_k=3,
+            reranker=FakeReranker(), rerank_top_n=None,
+        )
+
+
+def test_runner_empty_samples_with_rerank_top_n_lt_top_k_raises():
+    """Validation fires before the empty-sample early return."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    with pytest.raises(ValueError, match="rerank_top_n"):
+        run_retrieval_eval(
+            [], index, embedder, top_k=5,
+            reranker=FakeReranker(), rerank_top_n=3,
+        )
