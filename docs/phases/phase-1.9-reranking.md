@@ -1,6 +1,6 @@
 # Phase 1.9 Spec: Reranking
 
-**Status:** Review-ready — awaiting non-owner reviewer sign-off
+**Status:** Complete — closed 2026-06-17
 **Authors:** Claude Code; based on Codex's final roadmap and Claude's review refinements
 **Based on:** `docs/phases/phase-1.9-2.2-final-roadmap.md`,
 `docs/phases/phase-1.9-2.1-quality-and-production-roadmap-codex-review-by-claude.md`,

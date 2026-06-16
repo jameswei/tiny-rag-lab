@@ -16,7 +16,7 @@ Expected outputs:
 - evaluation dataset format
 - first phase spec and taskboard
 
-Status: Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, and Phase 1.8 are complete
+Status: Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, Phase 1.8, and Phase 1.9 are complete
 under `docs/phases/`. No implementation phase is currently active. The
 near-term roadmap decision is recorded in
 `docs/phases/phase-1.9-2.2-final-roadmap.md`.
@@ -175,6 +175,9 @@ Expected capabilities:
 - `rag ask` reranked-context support later in the same phase
 - trace fields showing pre-rerank and post-rerank order
 - failure-lab coverage for buried evidence fixed by reranking
+
+Status: Complete; see `docs/phases/phase-1.9-reranking.md` and
+`docs/phases/phase-1.9-taskboard.md`.
 
 ### Phase 2.0: Answer Quality Judging
 

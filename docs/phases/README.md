@@ -6,11 +6,15 @@ historical context.
 
 ## Current Phase
 
-Phase 1.9: Reranking
+No active phase.
+
+Next candidate phases remain directional until their scope proposal is reviewed,
+signed off, and activated here.
+
+Phase 1.9 is complete:
 
 - Spec: `docs/phases/phase-1.9-reranking.md`
 - Taskboard: `docs/phases/phase-1.9-taskboard.md`
-- Activated: 2026-06-16 (owner direction)
 
 Phase 1.8 is complete:
 
@@ -54,6 +58,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
+| Phase 1.9 | Reranking | Complete; see `docs/phases/phase-1.9-taskboard.md` |
 | Phase 1.8 | RAG failure lab | Complete; see `docs/phases/phase-1.8-taskboard.md` |
 | Phase 1.7 | Observability and debugging | Complete; see `docs/phases/phase-1.7-taskboard.md` |
 | Phase 1.6 | Evaluation harness | Complete; see `docs/phases/phase-1.6-taskboard.md` |
