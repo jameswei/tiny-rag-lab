@@ -63,8 +63,14 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
+| Phase 1.9 | Reranking | Signed off by Codex on 2026-06-16; awaiting owner activation under "Current Phase" — see `docs/phases/phase-1.9-reranking.md` and `docs/phases/phase-1.9-taskboard.md` |
+| Phase 2.0 | Answer quality judging | Directional; draft after Phase 1.9 |
+| Phase 2.1 | Context budget and structured answers | Directional; draft after Phase 2.0 |
+| Phase 2.2 | Structural and semantic chunking | Directional; draft after Phase 2.1 |
 | Later | Agentic RAG | Deferred |
 
 Candidate and directional phases must not be treated as active implementation
 contracts until their scope proposal is reviewed, signed off, and named under
 `Current Phase`.
+
+Near-term roadmap decision: `docs/phases/phase-1.9-2.2-final-roadmap.md`.

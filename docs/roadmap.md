@@ -17,7 +17,9 @@ Expected outputs:
 - first phase spec and taskboard
 
 Status: Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, and Phase 1.8 are complete
-under `docs/phases/`. No implementation phase is currently active.
+under `docs/phases/`. No implementation phase is currently active. The
+near-term roadmap decision is recorded in
+`docs/phases/phase-1.9-2.2-final-roadmap.md`.
 
 ## Phase 1: Naive Classic RAG
 
@@ -155,10 +157,69 @@ Learning questions:
 Status: Complete; see `docs/phases/phase-1.8-failure-lab.md` and
 `docs/phases/phase-1.8-taskboard.md`.
 
+## Near-Term Roadmap: Classic RAG Quality
+
+The next roadmap window is decided but not active. Each phase still needs its
+own spec and taskboard before implementation starts.
+
+### Phase 1.9: Reranking
+
+Goal: add a second-pass reranking layer so retrieved candidates can be
+reordered by query-document relevance before evaluation and answer generation.
+
+Expected capabilities:
+
+- `Reranker` interface with fake and local cross-encoder implementations
+- explicit reranker CLI controls such as `--reranker` and `--rerank-top-n`
+- `rag retrieve` and `rag eval` integration first
+- `rag ask` reranked-context support later in the same phase
+- trace fields showing pre-rerank and post-rerank order
+- failure-lab coverage for buried evidence fixed by reranking
+
+### Phase 2.0: Answer Quality Judging
+
+Goal: measure generated answer quality with an LLM-as-judge path behind a
+fakeable interface.
+
+Expected capabilities:
+
+- `Judge` interface with fake and OpenAI-compatible implementations
+- answer-level metrics for faithfulness, relevance, correctness, and citation
+  support
+- optional eval fields such as `reference_answer` and `expected_facts`
+- failure-lab coverage for `unsupported_answer` and `citation_mismatch`
+- reports that keep retrieval metrics and answer metrics separate
+
+### Phase 2.1: Context Budget And Structured Answers
+
+Goal: control prompt context size and optionally return machine-readable
+answers.
+
+Expected capabilities:
+
+- `rag ask` context budget controls, measured in tokens when possible
+- trace fields for selected chunks, omitted chunks, and estimated budget used
+- optional structured JSON answer output
+- plain-text answer output remains the default
+
+### Phase 2.2: Structural And Semantic Chunking
+
+Goal: compare fixed-character chunking with chunking strategies that better
+preserve document structure and meaning.
+
+Expected capabilities:
+
+- keep fixed-character chunking as the baseline and fallback
+- add structural chunking based on Markdown headings, paragraphs, lists, and
+  sentence boundaries where practical
+- add semantic chunking as an experimental mode when useful
+- record chunking strategy and parameters in the index manifest
+- evaluate chunking modes with `rag eval` and failure-lab cases
+
 ## Later: Reporting, Artifacts, And Agentic RAG
 
-After the trace and failure-lab foundations are clear, consider broader
-observability and workflow features:
+After the near-term quality roadmap is clearer, consider broader observability
+and workflow features:
 
 - full eval-run artifact storage with run ids, schemas, retention rules, and
   reproducibility metadata
@@ -167,7 +228,8 @@ observability and workflow features:
 - richer token budget estimation with explicit tokenizer/model choices
 - UI or notebook-style reports for multi-run inspection
 
-Only after classic RAG is clear, consider advanced agentic phases:
+Only after classic RAG quality and production prompt mechanics are measured,
+consider advanced agentic phases:
 
 - query rewriting
 - multi-step retrieval
