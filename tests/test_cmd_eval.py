@@ -182,3 +182,88 @@ def test_eval_hybrid_report_header_contains_retriever_name(eval_setup, capsys):
     with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
         cmd_eval(args)
     assert "retriever=hybrid" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# P2.0-T03 — --judge flag on cmd_eval
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.judge import FakeJudge
+from tiny_rag_lab.generation import FakeGenerator
+
+
+def _eval_args_with_judge(qa_file, index_dir, judge="fake", generator="fake", top_k=3):
+    return build_parser().parse_args([
+        "eval",
+        "--qa-file", str(qa_file),
+        "--index-dir", str(index_dir),
+        "--top-k", str(top_k),
+        "--judge", judge,
+        "--generator", generator,
+    ])
+
+
+def test_eval_parser_judge_flag_default_is_none():
+    args = build_parser().parse_args([
+        "eval", "--qa-file", "f.jsonl", "--index-dir", "d",
+    ])
+    assert args.judge == "none"
+
+
+def test_eval_parser_generator_flag_default_is_openai():
+    args = build_parser().parse_args([
+        "eval", "--qa-file", "f.jsonl", "--index-dir", "d",
+    ])
+    assert args.generator == "openai"
+
+
+def test_eval_parser_judge_choices():
+    for choice in ("none", "fake", "openai"):
+        args = build_parser().parse_args([
+            "eval", "--qa-file", "f.jsonl", "--index-dir", "d", "--judge", choice,
+        ])
+        assert args.judge == choice
+
+
+def test_eval_help_shows_judge_flag(capsys):
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["eval", "--help"])
+    assert "--judge" in capsys.readouterr().out
+
+
+def test_eval_judge_none_output_has_no_answer_section(eval_setup, capsys):
+    """--judge none produces only the retrieval report (identical to Phase 1.9)."""
+    args = _eval_args(FIXTURE_QA, eval_setup)
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+        cmd_eval(args)
+    out = capsys.readouterr().out
+    assert "Evaluation report" in out
+    assert "Answer quality report" not in out
+
+
+def test_eval_judge_fake_prints_both_sections(eval_setup, capsys):
+    """--judge fake --generator fake exits 0 and stdout contains both sections."""
+    args = _eval_args_with_judge(FIXTURE_QA, eval_setup)
+    with (
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()),
+        patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()),
+        patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()),
+    ):
+        cmd_eval(args)
+    out = capsys.readouterr().out
+    assert "Evaluation report" in out
+    assert "Answer quality report" in out
+
+
+def test_eval_judge_fake_answer_section_contains_metrics(eval_setup, capsys):
+    args = _eval_args_with_judge(FIXTURE_QA, eval_setup)
+    with (
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()),
+        patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()),
+        patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()),
+    ):
+        cmd_eval(args)
+    out = capsys.readouterr().out
+    assert "Faithfulness" in out
+    assert "Answer Relevance" in out
+    assert "Citation Support" in out

@@ -369,3 +369,76 @@ def test_format_report_reranker_none_is_default():
     report = EvalReport(n_questions=1, top_k=5)
     assert report.reranker == "none"
     assert report.rerank_top_n is None
+
+
+# ---------------------------------------------------------------------------
+# P2.0-T03 — AnswerEvalReport dataclass and format_answer_eval_report
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.eval import AnswerEvalReport, AnswerEvalResult, format_answer_eval_report
+
+
+def _make_answer_report(**kwargs):
+    defaults = dict(
+        n_questions=3,
+        judge="fake",
+        mean_faithfulness=0.8,
+        mean_answer_relevance=0.75,
+        mean_citation_support=0.9,
+        mean_answer_correctness=None,
+    )
+    defaults.update(kwargs)
+    return AnswerEvalReport(**defaults)
+
+
+def test_answer_eval_report_defaults():
+    r = AnswerEvalReport(n_questions=0)
+    assert r.judge == "none"
+    assert r.mean_faithfulness == 0.0
+    assert r.mean_answer_relevance == 0.0
+    assert r.mean_citation_support == 0.0
+    assert r.mean_answer_correctness is None
+    assert r.per_question == []
+
+
+def test_answer_eval_result_defaults():
+    r = AnswerEvalResult(question_id="q1", question="Q?")
+    assert r.verdict is None
+
+
+def test_format_answer_eval_report_contains_header():
+    out = format_answer_eval_report(_make_answer_report())
+    assert "Answer quality report" in out
+    assert "judge=fake" in out
+
+
+def test_format_answer_eval_report_all_three_base_metrics():
+    out = format_answer_eval_report(_make_answer_report(
+        mean_faithfulness=0.800,
+        mean_answer_relevance=0.750,
+        mean_citation_support=0.900,
+    ))
+    assert "Faithfulness" in out
+    assert "Answer Relevance" in out
+    assert "Citation Support" in out
+
+
+def test_format_answer_eval_report_omits_correctness_when_none():
+    out = format_answer_eval_report(_make_answer_report(mean_answer_correctness=None))
+    assert "Answer Correctness" not in out
+
+
+def test_format_answer_eval_report_includes_correctness_when_set():
+    out = format_answer_eval_report(_make_answer_report(mean_answer_correctness=0.65))
+    assert "Answer Correctness" in out
+    assert "0.650" in out
+
+
+def test_format_answer_eval_report_no_ansi_escape_codes():
+    out = format_answer_eval_report(_make_answer_report())
+    assert "\033[" not in out
+    assert "\x1b[" not in out
+
+
+def test_format_answer_eval_report_returns_string():
+    assert isinstance(format_answer_eval_report(_make_answer_report()), str)

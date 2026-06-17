@@ -11,7 +11,15 @@ import pytest
 from tiny_rag_lab.chunking import chunk_documents
 from tiny_rag_lab.documents import load_documents
 from tiny_rag_lab.embeddings import FakeEmbedder
-from tiny_rag_lab.eval import EvalReport, EvalResult, EvalSample, load_eval_samples, run_retrieval_eval
+from tiny_rag_lab.eval import (
+    AnswerEvalReport,
+    EvalReport,
+    EvalResult,
+    EvalSample,
+    load_eval_samples,
+    run_answer_eval,
+    run_retrieval_eval,
+)
 from tiny_rag_lab.reranker import FakeReranker
 from tiny_rag_lab.index_loader import LoadedIndex
 
@@ -473,3 +481,122 @@ def test_runner_empty_samples_with_rerank_top_n_lt_top_k_raises():
             [], index, embedder, top_k=5,
             reranker=FakeReranker(), rerank_top_n=3,
         )
+
+# ---------------------------------------------------------------------------
+# P2.0-T03 — run_answer_eval
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.judge import FakeJudge, JudgeVerdict
+from tiny_rag_lab.generation import FakeGenerator
+
+
+def _make_fake_judge(**kwargs):
+    return FakeJudge(**kwargs)
+
+
+def test_run_answer_eval_returns_answer_eval_report():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge())
+    assert isinstance(report, AnswerEvalReport)
+
+
+def test_run_answer_eval_n_questions_matches_samples():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge())
+    assert report.n_questions == len(samples)
+
+
+def test_run_answer_eval_judge_name_recorded():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge())
+    assert report.judge == "fake"
+
+
+def test_run_answer_eval_mean_correctness_none_without_reference():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    # fixture qa.jsonl has no reference_answer — correctness must be None
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge())
+    assert report.mean_answer_correctness is None
+
+
+def test_run_answer_eval_mean_correctness_float_with_reference(tmp_path):
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    qa = tmp_path / "qa.jsonl"
+    import json as _json
+    qa.write_text(_json.dumps({
+        "question_id": "q1", "question": "Q?", "answer": "A",
+        "gold_doc_ids": ["with_h1.md"],
+        "reference_answer": "The answer.",
+    }) + "\n")
+    samples = load_eval_samples(qa)
+    verdict_with_correctness = JudgeVerdict(
+        faithfulness=0.9, answer_relevance=0.8, citation_support=0.7,
+        answer_correctness=0.6, judge_name="fake", latency=0.0,
+    )
+    judge = FakeJudge(verdict_map={"": verdict_with_correctness},
+                      default_verdict=verdict_with_correctness)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=judge)
+    assert report.mean_answer_correctness is not None
+
+
+def test_run_answer_eval_aggregates_faithfulness():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge())
+    assert 0.0 <= report.mean_faithfulness <= 1.0
+    assert 0.0 <= report.mean_answer_relevance <= 1.0
+    assert 0.0 <= report.mean_citation_support <= 1.0
+
+
+def test_run_answer_eval_empty_samples_returns_empty_report():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    report = run_answer_eval([], index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge())
+    assert report.n_questions == 0
+
+
+def test_run_answer_eval_reranker_rerank_top_n_required():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    with pytest.raises(ValueError, match="rerank_top_n"):
+        run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                        generator=FakeGenerator(), judge=_make_fake_judge(),
+                        reranker=FakeReranker(), rerank_top_n=None)
+
+
+def test_run_answer_eval_rerank_top_n_lt_top_k_raises():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    with pytest.raises(ValueError, match="rerank_top_n"):
+        run_answer_eval(samples, index, embedder, top_k=5, retriever="dense",
+                        generator=FakeGenerator(), judge=_make_fake_judge(),
+                        reranker=FakeReranker(), rerank_top_n=3)
+
+
+def test_run_answer_eval_with_reranker_succeeds():
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge(),
+                             reranker=FakeReranker(), rerank_top_n=5)
+    assert isinstance(report, AnswerEvalReport)

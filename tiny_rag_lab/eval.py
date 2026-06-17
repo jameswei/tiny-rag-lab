@@ -342,3 +342,118 @@ def format_eval_report(report: EvalReport) -> str:
         f"Context Recall    :  {report.mean_context_recall:.3f}",
     ]
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Answer eval runner (T03)
+# ---------------------------------------------------------------------------
+
+def run_answer_eval(
+    samples: list[EvalSample],
+    index: "LoadedIndex",
+    embedder: "Embedder | None",
+    top_k: int,
+    retriever: str,
+    generator,
+    judge,
+    reranker: "Reranker | None" = None,
+    rerank_top_n: int | None = None,
+) -> AnswerEvalReport:
+    """Retrieve → generate → judge per sample. Returns AnswerEvalReport.
+
+    Raises ValueError if retriever in ("dense","hybrid") and embedder is None.
+    Raises ValueError if reranker is not None and rerank_top_n is None.
+    mean_answer_correctness is None when no sample has reference_answer set.
+    """
+    from tiny_rag_lab.bm25 import BM25Retriever
+    from tiny_rag_lab.hybrid import retrieve_hybrid
+    from tiny_rag_lab.prompting import assemble_prompt
+    from tiny_rag_lab.retrieval import retrieve_by_vector
+
+    _VALID_RETRIEVERS = {"dense", "bm25", "hybrid"}
+    if retriever not in _VALID_RETRIEVERS:
+        raise ValueError(f"retriever must be one of {sorted(_VALID_RETRIEVERS)}, got {retriever!r}")
+
+    if retriever in ("dense", "hybrid") and embedder is None:
+        raise ValueError(f"embedder must not be None for retriever={retriever!r}")
+
+    if reranker is not None and rerank_top_n is None:
+        raise ValueError("rerank_top_n must be set when reranker is provided")
+    if rerank_top_n is not None and rerank_top_n < top_k:
+        raise ValueError(f"rerank_top_n ({rerank_top_n}) must be >= top_k ({top_k})")
+
+    if not samples:
+        return AnswerEvalReport(n_questions=0, judge=judge.name)
+
+    retrieval_k = rerank_top_n if reranker is not None else top_k
+    bm25_retriever = BM25Retriever(index.chunks) if retriever in ("bm25", "hybrid") else None
+
+    per_question: list[AnswerEvalResult] = []
+    for sample in samples:
+        if retriever == "bm25":
+            results = bm25_retriever.retrieve(sample.question, top_k=retrieval_k)
+        elif retriever == "hybrid":
+            results = retrieve_hybrid(
+                sample.question, index, embedder, top_k=retrieval_k,
+                bm25_retriever=bm25_retriever,
+            )
+        else:
+            query_vec = embedder.embed([sample.question])[0]
+            results = retrieve_by_vector(query_vec, index, top_k=retrieval_k)
+
+        if reranker is not None:
+            from tiny_rag_lab.reranker import apply_reranker
+            results, _audit = apply_reranker(sample.question, results, reranker, top_k)
+
+        prompt = assemble_prompt(sample.question, results)
+        answer = generator.generate(prompt)
+
+        context = [r.chunk.text for r in results]
+        verdict = judge.judge(
+            query=sample.question,
+            context=context,
+            answer=answer,
+            reference_answer=sample.reference_answer,
+            expected_facts=sample.expected_facts or None,
+        )
+
+        per_question.append(AnswerEvalResult(
+            question_id=sample.question_id,
+            question=sample.question,
+            verdict=verdict,
+        ))
+
+    n = len(per_question)
+    verdicts = [r.verdict for r in per_question if r.verdict is not None]
+
+    correctness_vals = [
+        v.answer_correctness for v in verdicts
+        if v.answer_correctness is not None
+    ]
+
+    return AnswerEvalReport(
+        n_questions=n,
+        judge=judge.name,
+        mean_faithfulness=sum(v.faithfulness for v in verdicts) / n,
+        mean_answer_relevance=sum(v.answer_relevance for v in verdicts) / n,
+        mean_citation_support=sum(v.citation_support for v in verdicts) / n,
+        mean_answer_correctness=sum(correctness_vals) / len(correctness_vals) if correctness_vals else None,
+        per_question=per_question,
+    )
+
+
+def format_answer_eval_report(report: AnswerEvalReport) -> str:
+    """Return a plain-text summary of answer evaluation metrics.
+
+    Omits the Answer Correctness line when mean_answer_correctness is None
+    (no sample had a reference_answer).
+    """
+    header = f"Answer quality report  (n={report.n_questions}, judge={report.judge})"
+    lines = [header, _SEPARATOR,
+             f"Faithfulness      :  {report.mean_faithfulness:.3f}",
+             f"Answer Relevance  :  {report.mean_answer_relevance:.3f}",
+             f"Citation Support  :  {report.mean_citation_support:.3f}",
+             ]
+    if report.mean_answer_correctness is not None:
+        lines.append(f"Answer Correctness:  {report.mean_answer_correctness:.3f}")
+    return "\n".join(lines)

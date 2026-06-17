@@ -331,7 +331,13 @@ def cmd_ask(args):
 def cmd_eval(args):
     from pathlib import Path
 
-    from tiny_rag_lab.eval import format_eval_report, load_eval_samples, run_retrieval_eval
+    from tiny_rag_lab.eval import (
+        format_answer_eval_report,
+        format_eval_report,
+        load_eval_samples,
+        run_answer_eval,
+        run_retrieval_eval,
+    )
     from tiny_rag_lab.index_loader import load_index
 
     index = load_index(Path(args.index_dir))
@@ -339,6 +345,7 @@ def cmd_eval(args):
     reranker_name = getattr(args, "reranker", "none")
     rerank_top_n = getattr(args, "rerank_top_n", 20)
     reranker_model = getattr(args, "reranker_model", None)
+    judge_name = getattr(args, "judge", "none")
 
     # Validate reranker flags.
     if reranker_name == "none" and reranker_model is not None:
@@ -357,9 +364,6 @@ def cmd_eval(args):
     # Build reranker (None when "none" → existing flow).
     reranker = _make_reranker(reranker_name, reranker_model)
 
-    # Base retriever fetches rerank_top_n when reranker is active, else top_k.
-    retrieval_k = rerank_top_n if reranker is not None else args.top_k
-
     if retriever == "bm25":
         embedder = None
     else:
@@ -373,6 +377,22 @@ def cmd_eval(args):
         rerank_top_n=rerank_top_n if reranker else None,
     )
     print(format_eval_report(report))
+
+    if judge_name != "none":
+        model = getattr(args, "model", None)
+        api_key = getattr(args, "api_key", None)
+        base_url = getattr(args, "base_url", None)
+        generator_name = getattr(args, "generator", "openai")
+        judge = _make_judge(judge_name, model, api_key, base_url)
+        generator = _make_generator_from_flag(generator_name, args)
+        answer_report = run_answer_eval(
+            samples, index, embedder, top_k=args.top_k, retriever=retriever,
+            generator=generator, judge=judge,
+            reranker=reranker,
+            rerank_top_n=rerank_top_n if reranker else None,
+        )
+        print()
+        print(format_answer_eval_report(answer_report))
 
 
 def cmd_diagnose(args):
@@ -560,6 +580,26 @@ def build_parser():
     p_eval.add_argument(
         "--reranker-model", default=None, metavar="NAME",
         help="cross-encoder model name (default: ms-marco-MiniLM-L-6-v2)",
+    )
+    p_eval.add_argument(
+        "--judge", choices=["none", "fake", "openai"], default="none",
+        help="answer-quality judge (default: none)",
+    )
+    p_eval.add_argument(
+        "--generator", choices=["fake", "openai"], default="openai",
+        help="generator backend when --judge is active (default: openai)",
+    )
+    p_eval.add_argument(
+        "--model", default=None, metavar="NAME",
+        help="model name shared by generator and judge (default: provider default)",
+    )
+    p_eval.add_argument(
+        "--api-key", default=None, metavar="KEY",
+        help="API key for generator and judge (default: OPENAI_API_KEY env var)",
+    )
+    p_eval.add_argument(
+        "--base-url", default=None, metavar="URL",
+        help="base URL for OpenAI-compatible endpoint (default: OpenAI)",
     )
     p_eval.set_defaults(func=cmd_eval)
 
