@@ -343,3 +343,77 @@ def test_ask_reranker_model_with_none_exits_nonzero(ask_setup):
          patch("tiny_rag_lab.cli._make_generator", side_effect=_fake_generator_factory()), \
          pytest.raises(ValueError, match="reranker-model"):
         cmd_ask(args)
+
+
+# ---------------------------------------------------------------------------
+# P2.0-T04 — cmd_ask --judge and --generator flags
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.judge import FakeJudge
+
+
+def _ask_args_with_judge(index_dir, judge="fake", generator="fake"):
+    return build_parser().parse_args([
+        "ask", "sample document",
+        "--index-dir", str(index_dir),
+        "--judge", judge,
+        "--generator", generator,
+    ])
+
+
+def test_ask_parser_judge_default_is_none():
+    args = build_parser().parse_args(["ask", "q", "--index-dir", "d"])
+    assert args.judge == "none"
+
+
+def test_ask_parser_generator_default_is_openai():
+    args = build_parser().parse_args(["ask", "q", "--index-dir", "d"])
+    assert args.generator == "openai"
+
+
+def test_ask_parser_judge_choices():
+    for choice in ("none", "fake", "openai"):
+        args = build_parser().parse_args(["ask", "q", "--index-dir", "d", "--judge", choice])
+        assert args.judge == choice
+
+
+def test_ask_judge_none_output_has_no_verdict_block(ask_setup, capsys):
+    """--judge none produces no Judge verdict block (identical to Phase 1.9)."""
+    args = build_parser().parse_args([
+        "ask", "sample document", "--index-dir", str(ask_setup),
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    assert "Judge verdict" not in out
+    assert "Ask trace" in out
+
+
+def test_ask_judge_fake_shows_verdict_block(ask_setup, capsys):
+    """--judge fake --generator fake prints Judge verdict block."""
+    args = _ask_args_with_judge(ask_setup)
+    with (
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()),
+        patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()),
+        patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()),
+    ):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    assert "Judge verdict" in out
+    assert "Faithfulness" in out
+    assert "Answer Relevance" in out
+    assert "Citation Support" in out
+
+
+def test_ask_judge_fake_verdict_block_after_answer(ask_setup, capsys):
+    """Verdict block appears after the answer section."""
+    args = _ask_args_with_judge(ask_setup)
+    with (
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()),
+        patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()),
+        patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()),
+    ):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    assert out.index("Answer:") < out.index("Judge verdict")

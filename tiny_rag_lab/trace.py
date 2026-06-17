@@ -1,12 +1,15 @@
 """Trace data contracts for the observability plane.
 
 Phase 1.7 scope: per-query trace records for the retrieve and ask flows.
+Phase 2.0: AskTrace gains an optional verdict field (JudgeVerdict | None).
+
 Serialization and formatters live in the same module to keep the observability
 mechanics visible in one place.
 
-All dataclass fields are JSON-native types (str, int, float, list, dict) so
-dataclasses.asdict() + json.dumps() serializes any trace without a custom
-encoder.
+All dataclass fields are JSON-native types (str, int, float, list, dict, None)
+so dataclasses.asdict() + json.dumps() serializes any trace without a custom
+encoder. JudgeVerdict is also a dataclass with JSON-native fields — it nests
+cleanly under the verdict key.
 """
 from __future__ import annotations
 
@@ -14,6 +17,10 @@ import dataclasses
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tiny_rag_lab.judge import JudgeVerdict
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +95,7 @@ class AskTrace:
     latency_by_stage: dict[str, float] = field(default_factory=dict)
     reranker: str = "none"          # Phase 1.9
     rerank_top_n: int | None = None # Phase 1.9
+    verdict: "JudgeVerdict | None" = None  # Phase 2.0
 
 
 # ---------------------------------------------------------------------------
@@ -220,4 +228,15 @@ def format_ask_trace(trace: AskTrace) -> str:
     if trace.citations:
         lines.append("")
         lines.append("Citations: " + ", ".join(trace.citations))
+    if trace.verdict is not None:
+        v = trace.verdict
+        lines.append("")
+        lines.append(f"Judge verdict  (judge={v.judge_name})")
+        lines.append(f"  Faithfulness     : {v.faithfulness:.3f}")
+        lines.append(f"  Answer Relevance : {v.answer_relevance:.3f}")
+        lines.append(f"  Citation Support : {v.citation_support:.3f}")
+        if v.answer_correctness is not None:
+            lines.append(f"  Answer Correct.  : {v.answer_correctness:.3f}")
+        if v.notes:
+            lines.append(f"  Notes            : {v.notes}")
     return "\n".join(lines)

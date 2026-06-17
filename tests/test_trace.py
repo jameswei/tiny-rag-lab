@@ -347,4 +347,105 @@ def test_format_ask_trace_contains_latency():
 def test_format_ask_trace_no_ansi_codes():
     t = _ask_trace()
     out = format_ask_trace(t)
+
+
+# ---------------------------------------------------------------------------
+# P2.0-T04 — AskTrace.verdict field and format_ask_trace verdict block
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.judge import JudgeVerdict
+
+
+def _verdict(**kwargs) -> JudgeVerdict:
+    defaults = dict(
+        faithfulness=0.9, answer_relevance=0.8, citation_support=0.7,
+        answer_correctness=None, judge_name="fake", latency=0.0,
+    )
+    defaults.update(kwargs)
+    return JudgeVerdict(**defaults)
+
+
+def test_ask_trace_verdict_defaults_to_none():
+    t = AskTrace(query="q", retriever="dense", top_k=3)
+    assert t.verdict is None
+
+
+def test_ask_trace_verdict_none_serializes_as_null():
+    t = AskTrace(query="q", retriever="dense", top_k=3)
+    d = dataclasses.asdict(t)
+    assert d["verdict"] is None
+    assert json.dumps(d)  # no encoder error
+
+
+def test_ask_trace_verdict_populated_serializes_all_fields():
+    t = AskTrace(query="q", retriever="dense", top_k=3, verdict=_verdict())
+    d = dataclasses.asdict(t)
+    v = d["verdict"]
+    assert v["faithfulness"] == 0.9
+    assert v["answer_relevance"] == 0.8
+    assert v["citation_support"] == 0.7
+    assert v["answer_correctness"] is None
+    assert v["judge_name"] == "fake"
+    assert json.dumps(d)  # no encoder error
+
+
+def test_ask_trace_verdict_answer_correctness_float_serializes():
+    t = AskTrace(query="q", retriever="dense", top_k=3,
+                 verdict=_verdict(answer_correctness=0.65))
+    d = dataclasses.asdict(t)
+    assert d["verdict"]["answer_correctness"] == pytest.approx(0.65)
+
+
+def test_format_ask_trace_verdict_none_has_no_verdict_block():
+    t = _ask_trace()
+    assert t.verdict is None
+    out = format_ask_trace(t)
+    assert "Judge verdict" not in out
+
+
+def test_format_ask_trace_verdict_populated_shows_header():
+    t = _ask_trace()
+    t.verdict = _verdict()
+    out = format_ask_trace(t)
+    assert "Judge verdict" in out
+    assert "judge=fake" in out
+
+
+def test_format_ask_trace_verdict_shows_all_three_base_scores():
+    t = _ask_trace()
+    t.verdict = _verdict(faithfulness=0.900, answer_relevance=0.800,
+                         citation_support=0.700)
+    out = format_ask_trace(t)
+    assert "Faithfulness" in out
+    assert "Answer Relevance" in out
+    assert "Citation Support" in out
+
+
+def test_format_ask_trace_verdict_omits_correctness_when_none():
+    t = _ask_trace()
+    t.verdict = _verdict(answer_correctness=None)
+    out = format_ask_trace(t)
+    assert "Answer Correct" not in out
+
+
+def test_format_ask_trace_verdict_shows_correctness_when_set():
+    t = _ask_trace()
+    t.verdict = _verdict(answer_correctness=0.75)
+    out = format_ask_trace(t)
+    assert "Answer Correct" in out
+    assert "0.750" in out
+
+
+def test_format_ask_trace_verdict_shows_notes_when_set():
+    t = _ask_trace()
+    t.verdict = _verdict(notes="One claim lacks citation.")
+    out = format_ask_trace(t)
+    assert "One claim lacks citation." in out
+
+
+def test_format_ask_trace_verdict_omits_notes_when_empty():
+    t = _ask_trace()
+    t.verdict = _verdict(notes="")
+    out = format_ask_trace(t)
+    assert "Notes" not in out
     assert "\x1b" not in out

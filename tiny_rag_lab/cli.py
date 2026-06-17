@@ -237,6 +237,8 @@ def cmd_ask(args):
     from tiny_rag_lab.retrieval import retrieve_by_vector
     from tiny_rag_lab.reranker import chunk_traces_from_rerank
     from tiny_rag_lab.trace import AskTrace, ChunkTrace, format_ask_trace, write_trace_json
+    judge_name = getattr(args, "judge", "none")
+    generator_flag = getattr(args, "generator", "openai")
 
     t0 = time.perf_counter()
     index = load_index(Path(args.index_dir))
@@ -265,7 +267,7 @@ def cmd_ask(args):
 
     model_name = index.manifest.get("embedding_model")
     embedder = _make_embedder(model_name)
-    generator = _make_generator(args)
+    generator = _make_generator_from_flag(generator_flag, args)
 
     t0 = time.perf_counter()
     query_vec = embedder.embed([args.query])[0]
@@ -296,6 +298,23 @@ def cmd_ask(args):
 
     citations = _CITATION_RE.findall(answer)
 
+    # Phase 2.0: judge the answer when --judge is active.
+    verdict = None
+    if judge_name != "none":
+        judge = _make_judge(
+            judge_name,
+            getattr(args, "model", None),
+            getattr(args, "api_key", None),
+            getattr(args, "base_url", None),
+        )
+        context = [r.chunk.text for r in results]
+        verdict = judge.judge(
+            query=args.query,
+            context=context,
+            answer=answer,
+            citations=citations or None,
+        )
+
     chunks = chunk_traces_from_rerank(results, rerank_audit)
 
     latency = {
@@ -319,6 +338,7 @@ def cmd_ask(args):
         latency_by_stage=latency,
         reranker=reranker.name if reranker else "none",
         rerank_top_n=rerank_top_n if reranker else None,
+        verdict=verdict,
     )
 
     print(format_ask_trace(trace))
@@ -542,6 +562,14 @@ def build_parser():
     p_ask.add_argument(
         "--reranker-model", default=None, metavar="NAME",
         help="cross-encoder model name (default: ms-marco-MiniLM-L-6-v2)",
+    )
+    p_ask.add_argument(
+        "--judge", choices=["none", "fake", "openai"], default="none",
+        help="answer-quality judge (default: none)",
+    )
+    p_ask.add_argument(
+        "--generator", choices=["fake", "openai"], default="openai",
+        help="generator backend (default: openai)",
     )
     p_ask.set_defaults(func=cmd_ask)
 
