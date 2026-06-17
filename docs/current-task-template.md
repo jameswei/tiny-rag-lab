@@ -35,7 +35,8 @@ Updated By:   <!-- agent name -->
 
 ## Notes
 
-<!-- Short live context only. Permanent history belongs in the taskboard. -->
+<!-- Short live context for the next agent. Detailed review findings and -->
+<!-- full test evidence belong above in this file while the task is active. -->
+<!-- The taskboard keeps only a durable summary or pointer to this file. -->
 <!-- Delete this section's placeholder and write what is useful for the next -->
 <!-- agent picking up this task. -->
-

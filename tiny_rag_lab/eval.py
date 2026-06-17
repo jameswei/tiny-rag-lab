@@ -1,8 +1,9 @@
-"""Evaluation harness for the retrieval plane.
+"""Evaluation harness for the retrieval and answer planes.
 
 Phase 1.6 scope: retrieval-quality metrics only (hit rate, MRR, context
-precision, context recall). Answer-quality metrics are deferred to a later
-phase.
+precision, context recall).
+Phase 2.0 scope: answer-quality metrics via LLM-as-judge (AnswerEvalReport,
+run_answer_eval). Judge integration added in T03.
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tiny_rag_lab.embeddings import Embedder
     from tiny_rag_lab.index_loader import LoadedIndex
+    from tiny_rag_lab.judge import JudgeVerdict
     from tiny_rag_lab.reranker import Reranker
 
 
@@ -27,13 +29,18 @@ class EvalSample:
 
     gold_doc_ids are corpus-relative doc_ids identical to Document.doc_id,
     so they can be matched directly against retrieved chunk.doc_id values.
-    answer is kept for future answer-quality metrics but unused in Phase 1.6.
+    answer is kept for answer-quality metrics (Phase 2.0+).
+    reference_answer and expected_facts are optional Phase 2.0 fields; rows
+    without them in JSONL load with defaults and are silently skipped by
+    answer_correctness scoring.
     """
 
     question_id: str
     question: str
     answer: str
     gold_doc_ids: list[str] = field(default_factory=list)
+    reference_answer: str | None = None                     # Phase 2.0
+    expected_facts: list[str] = field(default_factory=list)  # Phase 2.0
 
 
 @dataclass
@@ -66,6 +73,31 @@ class EvalReport:
     rerank_top_n: int | None = None       # Phase 1.9
 
 
+@dataclass
+class AnswerEvalResult:
+    """Per-question answer evaluation result from an LLM judge (Phase 2.0)."""
+
+    question_id: str
+    question: str
+    verdict: "JudgeVerdict | None" = None
+
+
+@dataclass
+class AnswerEvalReport:
+    """Aggregate answer evaluation over all questions (Phase 2.0).
+
+    mean_answer_correctness is None when no sample has reference_answer set.
+    """
+
+    n_questions: int
+    judge: str = "none"
+    mean_faithfulness: float = 0.0
+    mean_answer_relevance: float = 0.0
+    mean_citation_support: float = 0.0
+    mean_answer_correctness: float | None = None
+    per_question: list[AnswerEvalResult] = field(default_factory=list)
+
+
 # ---------------------------------------------------------------------------
 # Eval dataset loader
 # ---------------------------------------------------------------------------
@@ -94,11 +126,17 @@ def load_eval_samples(path: Path) -> list[EvalSample]:
             gold_doc_ids = row.get("gold_doc_ids")
             if not isinstance(gold_doc_ids, list) or not gold_doc_ids:
                 continue
+            raw_ref = row.get("reference_answer")
+            reference_answer = str(raw_ref).strip() if raw_ref else None
+            raw_facts = row.get("expected_facts")
+            expected_facts = list(raw_facts) if isinstance(raw_facts, list) else []
             samples.append(EvalSample(
                 question_id=str(row.get("question_id", "")).strip(),
                 question=question,
                 answer=str(row.get("answer", "")).strip(),
                 gold_doc_ids=list(gold_doc_ids),
+                reference_answer=reference_answer,
+                expected_facts=expected_facts,
             ))
     return samples
 

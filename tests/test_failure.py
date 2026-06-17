@@ -346,6 +346,43 @@ def test_load_empty_gold_doc_ids_not_skipped(tmp_path):
     assert cases[0].gold_doc_ids == []
 
 
+def test_load_failure_cases_answer_fields_populated(tmp_path):
+    f = tmp_path / "cases.jsonl"
+    f.write_text(json.dumps({
+        "case_id": "fc008", "question": "Q?",
+        "answer_label_expected": "unsupported_answer",
+        "baseline_answer": "baseline text",
+        "intervention_answer": "intervention text",
+    }) + "\n", encoding="utf-8")
+    cases = load_failure_cases(f)
+    assert len(cases) == 1
+    assert cases[0].answer_label_expected == "unsupported_answer"
+    assert cases[0].baseline_answer == "baseline text"
+    assert cases[0].intervention_answer == "intervention text"
+
+
+def test_load_failure_cases_answer_fields_default_to_empty(tmp_path):
+    f = tmp_path / "cases.jsonl"
+    f.write_text(
+        '{"case_id": "fc001", "question": "Q?"}\n',
+        encoding="utf-8",
+    )
+    cases = load_failure_cases(f)
+    assert cases[0].answer_label_expected == ""
+    assert cases[0].baseline_answer == ""
+    assert cases[0].intervention_answer == ""
+
+
+def test_load_failure_cases_existing_fixture_still_loads():
+    """Existing cases.jsonl rows without answer fields load with back-compat defaults."""
+    cases = load_failure_cases(FIXTURE_CASES)
+    assert len(cases) > 0
+    for c in cases:
+        assert c.answer_label_expected == ""
+        assert c.baseline_answer == ""
+        assert c.intervention_answer == ""
+
+
 # ---------------------------------------------------------------------------
 # T03 — detect_failure_label
 # ---------------------------------------------------------------------------

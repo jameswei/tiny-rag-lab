@@ -32,6 +32,8 @@ LABEL_LOW_RANK_EVIDENCE   = "low_rank_evidence"    # gold present but first hit 
 LABEL_DISTRACTOR_EVIDENCE = "distractor_evidence"  # context_precision below threshold
 LABEL_UNANSWERABLE        = "unanswerable_query"   # query has no gold in corpus
 LABEL_NO_FAILURE          = "no_failure"           # all thresholds met
+LABEL_UNSUPPORTED_ANSWER  = "unsupported_answer"   # answer not grounded; requires LLM judge (Phase 2.0)
+LABEL_CITATION_MISMATCH   = "citation_mismatch"    # cited chunk does not support claim; requires LLM judge (Phase 2.0)
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +75,9 @@ class FailureCase:
     baseline: RetrieverConfig = field(default_factory=RetrieverConfig)
     intervention: RetrieverConfig = field(default_factory=RetrieverConfig)
     notes: str = ""
+    answer_label_expected: str = ""   # Phase 2.0; "" = not an answer-side case
+    baseline_answer: str = ""         # Phase 2.0; non-empty → run_answer_diagnosis skips generator
+    intervention_answer: str = ""     # Phase 2.0; non-empty → run_answer_diagnosis skips generator
 
 
 @dataclass
@@ -187,6 +192,9 @@ def load_failure_cases(path: Path) -> list[FailureCase]:
                 baseline=baseline,
                 intervention=intervention,
                 notes=str(row.get("notes", "")),
+                answer_label_expected=str(row.get("answer_label_expected", "")),
+                baseline_answer=str(row.get("baseline_answer", "")),
+                intervention_answer=str(row.get("intervention_answer", "")),
             ))
     return cases
 

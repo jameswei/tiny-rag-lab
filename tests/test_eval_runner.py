@@ -126,6 +126,49 @@ def test_load_eval_samples_skips_non_dict_json_rows(tmp_path):
     assert len(samples) == 1
 
 
+def test_load_eval_samples_reference_answer_and_expected_facts_populated(tmp_path):
+    qa = tmp_path / "qa.jsonl"
+    qa.write_text(json.dumps({
+        "question_id": "q1", "question": "Q?", "answer": "A",
+        "gold_doc_ids": ["a.md"],
+        "reference_answer": "The correct answer.",
+        "expected_facts": ["fact one", "fact two"],
+    }) + "\n")
+    samples = load_eval_samples(qa)
+    assert len(samples) == 1
+    assert samples[0].reference_answer == "The correct answer."
+    assert samples[0].expected_facts == ["fact one", "fact two"]
+
+
+def test_load_eval_samples_reference_answer_defaults_to_none(tmp_path):
+    qa = tmp_path / "qa.jsonl"
+    qa.write_text(json.dumps({
+        "question_id": "q1", "question": "Q?", "answer": "A",
+        "gold_doc_ids": ["a.md"],
+    }) + "\n")
+    samples = load_eval_samples(qa)
+    assert samples[0].reference_answer is None
+
+
+def test_load_eval_samples_expected_facts_defaults_to_empty_list(tmp_path):
+    qa = tmp_path / "qa.jsonl"
+    qa.write_text(json.dumps({
+        "question_id": "q1", "question": "Q?", "answer": "A",
+        "gold_doc_ids": ["a.md"],
+    }) + "\n")
+    samples = load_eval_samples(qa)
+    assert samples[0].expected_facts == []
+
+
+def test_load_eval_samples_existing_fixture_still_loads(tmp_path):
+    """Existing qa.jsonl rows without the new fields load with back-compat defaults."""
+    samples = load_eval_samples(FIXTURE_QA)
+    assert len(samples) > 0
+    for s in samples:
+        assert s.reference_answer is None
+        assert s.expected_facts == []
+
+
 # ---------------------------------------------------------------------------
 # T04 — run_retrieval_eval helpers
 # ---------------------------------------------------------------------------

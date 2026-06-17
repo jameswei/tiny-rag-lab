@@ -6,10 +6,18 @@ historical context.
 
 ## Current Phase
 
-No active phase.
+<!-- Activation checklist:
+     - the phase spec and taskboard are signed off
+     - this section names both active files
+     - stale Draft/Review-ready/candidate wording in the phase spec/taskboard
+       is updated
+     - CURRENT.md is created or reset only when a concrete task is claimed or
+       ready for review -->
 
-Next candidate phases remain directional until their scope proposal is reviewed,
-signed off, and activated here.
+**Phase 2.0 — Answer Quality Judging** (active)
+
+- Spec: `docs/phases/phase-2.0-answer-quality-judging.md`
+- Taskboard: `docs/phases/phase-2.0-taskboard.md`
 
 Phase 1.9 is complete:
 
@@ -69,7 +77,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 2.0 | Answer quality judging | Directional; draft after Phase 1.9 |
+| Phase 2.0 | Answer quality judging | Active |
 | Phase 2.1 | Context budget and structured answers | Directional; draft after Phase 2.0 |
 | Phase 2.2 | Structural and semantic chunking | Directional; draft after Phase 2.1 |
 | Later | Agentic RAG | Deferred |

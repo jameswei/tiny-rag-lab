@@ -42,6 +42,16 @@ Phase specs and taskboards move through three states:
 candidate proposal is still under review, the phase index should list it under
 candidate phases, not under "Current Phase".
 
+When activating a signed-off phase, update all workflow pointers together:
+
+- `docs/phases/README.md` names the active spec and taskboard.
+- The phase spec and taskboard no longer describe themselves as Draft,
+  Review-ready, or candidate-only documents.
+- The taskboard row for the first active task is still `todo` or is claimed by
+  the implementation owner; activation alone does not mark any task complete.
+- `CURRENT.md` is created or reset only when a concrete implementation task is
+  claimed or ready for review.
+
 ## Role Definitions
 
 Each agent should operate in one clear role for a task. A single agent may fill
@@ -151,14 +161,38 @@ Use this flow for normal implementation tasks:
     sets `Review Result` to `changes_requested` or `signed_off` and updates
     `Last Updated` / `Updated By`.
 12. Test verifier records test results under "Tests Reviewed".
-13. A non-owner agent records sign-off in both `CURRENT.md` and the taskboard
+13. If changes are requested, keep the taskboard row in `review`, keep the
+    owner unchanged, and write only a short taskboard note such as
+    `Reviewed by {agent} YYYY-MM-DD; changes_requested; see CURRENT.md.`
+14. A non-owner agent records sign-off in both `CURRENT.md` and the taskboard
     `Notes` before the task is marked `done`.
-14. After a task is committed, the agent who committed resets `CURRENT.md` for
+15. After a task is committed, the agent who committed resets `CURRENT.md` for
     the next task. If no next task exists and the phase is fully closed, delete
     `CURRENT.md`; the taskboard is the permanent record.
+    Do not reset or delete `CURRENT.md` while the task is still in `review` or
+    `changes_requested`; it is the live handoff until sign-off.
 
 For large design changes, architecture review should happen before full
 implementation.
+
+## Current Task And Taskboard Records
+
+Use `CURRENT.md` for live task state:
+
+- detailed implementation handoff notes
+- reviewer findings
+- full test commands and results
+- blockers and questions that the next agent must act on
+
+Use the taskboard as the durable phase index:
+
+- task owner and status
+- short blocker or review summaries
+- concise sign-off lines when a task moves to `done`
+- short pointers to `CURRENT.md` while a task is still in review
+
+Do not paste detailed review findings or long test logs into taskboard rows.
+They make the table hard to scan and duplicate the live review record.
 
 ## Review And Sign-Off Requirements
 
