@@ -16,14 +16,15 @@ from unittest.mock import patch
 
 import pytest
 
-# Gate 1: skip if sentence_transformers is not installed.
-pytest.importorskip("sentence_transformers")
+# Gate 1: skip unless the env flag is explicitly set (no import of sentence_transformers yet).
+if os.environ.get("TINY_RAG_LAB_TEST_RERANKER") != "1":
+    pytest.skip(
+        "TINY_RAG_LAB_TEST_RERANKER not set; set to 1 to enable real cross-encoder tests",
+        allow_module_level=True,
+    )
 
-# Gate 2: skip unless the env flag is explicitly set.
-pytestmark = pytest.mark.skipif(
-    os.environ.get("TINY_RAG_LAB_TEST_RERANKER") != "1",
-    reason="TINY_RAG_LAB_TEST_RERANKER not set; set to 1 to enable real cross-encoder tests",
-)
+# Gate 2: skip if sentence_transformers is not installed.
+pytest.importorskip("sentence_transformers")
 
 from tiny_rag_lab.models import Chunk, RetrievalResult
 from tiny_rag_lab.reranker import CrossEncoderReranker

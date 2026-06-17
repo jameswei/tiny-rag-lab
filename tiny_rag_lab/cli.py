@@ -120,7 +120,7 @@ def cmd_retrieve(args):
             f"--reranker-model is only valid with --reranker cross-encoder, "
             f"got --reranker {reranker_name}"
         )
-    if rerank_top_n < 1:
+    if reranker_name != "none" and rerank_top_n < 1:
         raise ValueError(f"--rerank-top-n must be >= 1, got {rerank_top_n}")
     if reranker_name != "none" and rerank_top_n < args.top_k:
         raise ValueError(
@@ -214,7 +214,7 @@ def cmd_ask(args):
             f"--reranker-model is only valid with --reranker cross-encoder, "
             f"got --reranker {reranker_name}"
         )
-    if rerank_top_n < 1:
+    if reranker_name != "none" and rerank_top_n < 1:
         raise ValueError(f"--rerank-top-n must be >= 1, got {rerank_top_n}")
     if reranker_name != "none" and rerank_top_n < args.top_k:
         raise ValueError(
@@ -308,7 +308,7 @@ def cmd_eval(args):
             f"--reranker-model is only valid with --reranker cross-encoder, "
             f"got --reranker {reranker_name}"
         )
-    if rerank_top_n < 1:
+    if reranker_name != "none" and rerank_top_n < 1:
         raise ValueError(f"--rerank-top-n must be >= 1, got {rerank_top_n}")
     if reranker_name != "none" and rerank_top_n < args.top_k:
         raise ValueError(
