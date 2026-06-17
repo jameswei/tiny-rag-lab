@@ -30,6 +30,44 @@ def _make_generator(args):
     return OpenAIGenerator(model=model, api_key=api_key, base_url=base_url)
 
 
+def _make_judge(name: str, model: str | None, api_key: str | None, base_url: str | None):
+    """Create a Judge from CLI flags.
+
+    Returns None for name="none". Falls back to OPENAI_API_KEY env var before
+    raising when name="openai" and no api_key was supplied.
+    """
+    import os
+    from tiny_rag_lab.judge import FakeJudge, OpenAIJudge
+    if name == "none":
+        return None
+    if name == "fake":
+        return FakeJudge()
+    if name == "openai":
+        resolved_key = api_key or os.environ.get("OPENAI_API_KEY")
+        if not resolved_key:
+            raise ValueError(
+                "--api-key or OPENAI_API_KEY env var is required for --judge openai"
+            )
+        return OpenAIJudge(
+            model=model or OpenAIJudge.DEFAULT_MODEL,
+            api_key=resolved_key,
+            base_url=base_url,
+        )
+    raise ValueError(f"Unknown --judge value: {name!r}. Choose none, fake, or openai.")
+
+
+def _make_generator_from_flag(name: str, args):
+    """Create a Generator from the --generator flag.
+
+    fake returns FakeGenerator (offline, no LLM call).
+    openai delegates to the existing _make_generator(args) factory.
+    """
+    if name == "fake":
+        from tiny_rag_lab.generation import FakeGenerator
+        return FakeGenerator()
+    return _make_generator(args)
+
+
 def _make_reranker(name: str, model: str | None):
     """Create a Reranker from CLI name and optional model.
 
