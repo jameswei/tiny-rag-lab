@@ -16,6 +16,7 @@
 | 6 | [评估检索质量](evaluating-retrieval.md) | 用指标回答"检索器到底好不好用" |
 | 7 | [可观测性与调试](observability-and-debugging.md) | 用单次运行 trace 解释一次 retrieve 或 ask 命令 |
 | 8 | [RAG 失败实验室](rag-failure-lab.md) | 用策划好的失败案例比较 baseline 和 intervention 检索 |
+| 9 | [答案质量评判](answer-quality-judging.md) | 用可替换的 judge 衡量生成答案和答案侧失败 |
 
 ---
 
@@ -77,12 +78,24 @@
 	                   │                       │
 	                   │ failure.py            │
 	                   └──────────────────────┘
+
+	                   ┌──────────────────────┐
+	                   │   6. 答案评判层       │
+	                   │                       │
+ 答案 + 上下文 ───────►│ fake/OpenAI judge     │────► AnswerEvalReport
+	                   │ verdict 与答案侧标签  │     AskTrace.verdict
+	                   │                       │     AnswerDiagnosisReport
+	                   │ judge.py, eval.py,    │
+	                   │ failure.py            │
+	                   └──────────────────────┘
 ```
 
 两个平面通过磁盘上的索引连接——索引平面写入，检索平面读取。评估层复用了与用户
 体验完全一致的检索路径。可观测性层记录一次 `retrieve` 或 `ask` 运行中发生的事，
 便于事后调试。
 失败实验室把已知检索错误变成可重复的 baseline vs. intervention 对比。
+答案评判层衡量生成答案是否忠实、相关、在有参考答案时是否正确，以及引用是否支撑
+对应陈述。
 
 ---
 
@@ -143,3 +156,4 @@ rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-r
 | 评估检索质量 | 检索质量指标 | `eval.py` |
 | 可观测性与调试 | 单次运行 trace 记录和 JSON 产物 | `trace.py`, `cli.py` |
 | RAG 失败实验室 | 失败案例诊断 | `failure.py`, `cli.py` |
+| 答案质量评判 | 答案指标、judge verdict、答案侧诊断 | `judge.py`, `eval.py`, `trace.py`, `failure.py`, `cli.py` |

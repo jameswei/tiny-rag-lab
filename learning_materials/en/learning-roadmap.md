@@ -17,6 +17,7 @@ directory. Start at the top and work down.
 | 6 | [Evaluating Retrieval](evaluating-retrieval.md) | Metrics that tell you whether the retriever works |
 | 7 | [Observability and Debugging](observability-and-debugging.md) | Per-run traces that explain one retrieve or ask command |
 | 8 | [RAG Failure Lab](rag-failure-lab.md) | Curated failure cases that compare baseline and intervention retrieval |
+| 9 | [Answer Quality Judging](answer-quality-judging.md) | Measuring generated answers and answer-side failures with a fakeable judge |
 
 ---
 
@@ -79,6 +80,17 @@ The pipeline has two main planes, plus infrastructure and measurement:
 	                   │                       │
 	                   │ failure.py            │
 	                   └──────────────────────-┘
+
+	                   ┌──────────────────────-┐
+	                   │   6. Answer Judging   │
+	                   │                       │
+ answers + context ──►│ fake/OpenAI judge     │────► AnswerEvalReport
+	                   │ verdicts and          │     AskTrace.verdict
+	                   │ answer-side labels    │     AnswerDiagnosisReport
+	                   │                       │
+	                   │ judge.py, eval.py,    │
+	                   │ failure.py            │
+	                   └──────────────────────-┘
 ```
 
 The two planes meet at the index on disk — the indexing plane writes it, the
@@ -87,6 +99,8 @@ exactly as the user experiences it. The observability layer records what
 happened in one `retrieve` or `ask` run so you can debug it later.
 The failure lab turns known retrieval mistakes into repeatable baseline vs.
 intervention comparisons.
+The answer judging layer measures whether the generated answer is faithful,
+relevant, correct when references exist, and supported by its citations.
 
 ---
 
@@ -148,3 +162,4 @@ quality. `diagnose` studies curated failure cases.
 | Evaluating Retrieval | Retrieval quality metrics | `eval.py` |
 | Observability and Debugging | Per-run trace records and JSON artifacts | `trace.py`, `cli.py` |
 | RAG Failure Lab | Failure case diagnosis | `failure.py`, `cli.py` |
+| Answer Quality Judging | Answer metrics, judge verdicts, answer-side diagnosis | `judge.py`, `eval.py`, `trace.py`, `failure.py`, `cli.py` |
