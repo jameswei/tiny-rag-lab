@@ -10,13 +10,15 @@ evaluation, and failure inspection.
 
 ## Current Status
 
-Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, and Phase 1.8 are complete.
+Phase 1 through Phase 2.0 are complete. No phase is currently active.
 
 - **Phase 1 — Naive Classic RAG**: full pipeline from corpus to grounded answers with citations
 - **Phase 1.5 — Retrieval Mechanics**: BM25 keyword retrieval, hybrid retrieval, and retriever comparison flags
 - **Phase 1.6 — Evaluation Harness**: retrieval quality metrics (`rag eval`) against a prepared QA set
 - **Phase 1.7 — Observability And Debugging**: retrieve/ask traces, stage latency, and optional JSON trace output
 - **Phase 1.8 — RAG Failure Lab**: curated failure cases and `rag diagnose` for baseline vs. intervention retrieval
+- **Phase 1.9 — Reranking**: fake and cross-encoder reranker interfaces with retrieve/eval/ask/diagnose integration
+- **Phase 2.0 — Answer Quality Judging**: fake and OpenAI-compatible judge paths for answer metrics and answer-side failure diagnosis
 
 Completed phase contracts:
 
@@ -26,6 +28,8 @@ Completed phase contracts:
 - [Phase 1.6 spec](docs/phases/phase-1.6-evaluation-harness.md) · [taskboard](docs/phases/phase-1.6-taskboard.md)
 - [Phase 1.7 spec](docs/phases/phase-1.7-observability.md) · [taskboard](docs/phases/phase-1.7-taskboard.md)
 - [Phase 1.8 spec](docs/phases/phase-1.8-failure-lab.md) · [taskboard](docs/phases/phase-1.8-taskboard.md)
+- [Phase 1.9 spec](docs/phases/phase-1.9-reranking.md) · [taskboard](docs/phases/phase-1.9-taskboard.md)
+- [Phase 2.0 spec](docs/phases/phase-2.0-answer-quality-judging.md) · [taskboard](docs/phases/phase-2.0-taskboard.md)
 
 ## Phase 1 Result
 
@@ -92,6 +96,30 @@ failure cases + index -> baseline retrieval + intervention retrieval
 -> failure labels, metrics, and diagnosis report
 ```
 
+## Phase 1.9 Result
+
+Phase 1.9 adds a reranker abstraction and optional second-pass reranking for
+retrieve, eval, ask, and diagnose workflows. The default `none` path remains
+unchanged; fake rerankers keep tests offline, and the cross-encoder path is
+lazy and gated.
+
+```text
+initial candidates -> optional reranker -> final top-k chunks
+-> traces and reports with reranker metadata
+```
+
+## Phase 2.0 Result
+
+Phase 2.0 adds answer-quality judging behind a fakeable interface. `rag eval`
+can print retrieval metrics plus answer metrics, `rag ask` can include a judge
+verdict in the trace, and `rag diagnose` can cover answer-side failures such
+as unsupported answers and citation mismatches.
+
+```text
+retrieved context + generated answer -> judge verdict
+-> answer metrics, trace verdicts, and answer-side diagnosis
+```
+
 ## CLI
 
 ```bash
@@ -103,7 +131,9 @@ rag ask "question text" --index-dir .tiny-rag/index --top-k 5
 rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever dense
 rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever bm25
 rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
+rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --judge fake --generator fake
 rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-rag/index
+rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-rag/index --judge fake --generator fake
 ```
 
 Help is available for each command:

@@ -25,7 +25,7 @@ docs/architecture.md               conceptual RAG planes and interfaces
 
 ## Implementation Layout
 
-Phase 1 through 1.8 implementation files:
+Phase 1 through 2.0 implementation files:
 
 ```text
 tiny_rag_lab/
@@ -36,15 +36,17 @@ tiny_rag_lab/
   chunking.py
   embeddings.py
   eval.py              (Phase 1.6 + 1.5: metrics and retriever-aware eval runner)
-  failure.py           (Phase 1.8: failure cases, diagnosis runner, report formatter)
+  failure.py           (Phase 1.8 + 2.0: retrieval and answer-side diagnosis)
   hybrid.py           (Phase 1.5: RRF and dense+BM25 retrieval)
   index_loader.py
   index_writer.py
+  judge.py             (Phase 2.0: judge contracts, fake judge, OpenAI-compatible judge)
   models.py
+  reranker.py          (Phase 1.9: reranker contracts, fake and cross-encoder rerankers)
   retrieval.py
   prompting.py
   generation.py
-  trace.py             (Phase 1.7: retrieve/ask trace records and formatters)
+  trace.py             (Phase 1.7 + 2.0: retrieve/ask trace records, verdict trace)
 scripts/
   prepare_watsonx_docsqa.py
 tests/

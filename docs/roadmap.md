@@ -193,6 +193,9 @@ Expected capabilities:
 - failure-lab coverage for `unsupported_answer` and `citation_mismatch`
 - reports that keep retrieval metrics and answer metrics separate
 
+Status: Complete; see `docs/phases/phase-2.0-answer-quality-judging.md` and
+`docs/phases/phase-2.0-taskboard.md`.
+
 ### Phase 2.1: Context Budget And Structured Answers
 
 Goal: control prompt context size and optionally return machine-readable
