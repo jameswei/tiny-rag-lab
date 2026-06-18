@@ -417,8 +417,10 @@ def cmd_eval(args):
 
 def cmd_diagnose(args):
     from tiny_rag_lab.failure import (
+        format_answer_diagnosis_report,
         format_diagnosis_report,
         load_failure_cases,
+        run_answer_diagnosis,
         run_diagnosis,
     )
     from tiny_rag_lab.index_loader import load_index
@@ -446,6 +448,21 @@ def cmd_diagnose(args):
 
     report = run_diagnosis(cases, index, embedder, reranker=reranker)
     print(format_diagnosis_report(report))
+
+    # Phase 2.0: answer-side diagnosis when --judge is active.
+    judge_name = getattr(args, "judge", "none")
+    if judge_name != "none":
+        model = getattr(args, "model", None)
+        api_key = getattr(args, "api_key", None)
+        base_url = getattr(args, "base_url", None)
+        generator_flag = getattr(args, "generator", "openai")
+        judge = _make_judge(judge_name, model, api_key, base_url)
+        generator = _make_generator_from_flag(generator_flag, args)
+        answer_report = run_answer_diagnosis(
+            cases, index, embedder, generator, judge, reranker=reranker,
+        )
+        print()
+        print(format_answer_diagnosis_report(answer_report))
 
 
 def build_parser():
@@ -643,6 +660,26 @@ def build_parser():
     p_diagnose.add_argument(
         "--index-dir", default=".tiny-rag/index", metavar="PATH",
         help="path to index directory (default: .tiny-rag/index)",
+    )
+    p_diagnose.add_argument(
+        "--judge", choices=["none", "fake", "openai"], default="none",
+        help="LLM judge for answer-side diagnosis (default: none)",
+    )
+    p_diagnose.add_argument(
+        "--generator", choices=["fake", "openai"], default="openai",
+        help="generator backend when --judge is active (default: openai)",
+    )
+    p_diagnose.add_argument(
+        "--model", default=None, metavar="NAME",
+        help="model name for generator and judge (default: gpt-4o-mini for openai)",
+    )
+    p_diagnose.add_argument(
+        "--api-key", default=None, metavar="KEY",
+        help="API key for OpenAI-compatible endpoint (falls back to OPENAI_API_KEY env var)",
+    )
+    p_diagnose.add_argument(
+        "--base-url", default=None, metavar="URL",
+        help="base URL for OpenAI-compatible endpoint (default: OpenAI)",
     )
     p_diagnose.set_defaults(func=cmd_diagnose)
 

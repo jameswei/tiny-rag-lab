@@ -13,6 +13,7 @@ Two failure modes are documented here but not heuristically detectable:
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -20,6 +21,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tiny_rag_lab.embeddings import Embedder
     from tiny_rag_lab.index_loader import LoadedIndex
+    from tiny_rag_lab.judge import JudgeVerdict
     from tiny_rag_lab.reranker import Reranker
 
 
@@ -453,6 +455,234 @@ def format_diagnosis_report(report: DiagnosisReport) -> str:
             f"  prec={im.get('context_precision', 0.0):.3f}"
             f"  recall={im.get('context_recall', 0.0):.3f}"
             f"  mrr={im.get('reciprocal_rank', 0.0):.3f}"
+        )
+        if dr.fixed:
+            outcome = "FIXED"
+        elif dr.moved:
+            outcome = "MOVED"
+        elif dr.baseline_label == dr.expected_label:
+            outcome = "CONFIRMED"
+        else:
+            outcome = "UNCHANGED"
+        lines.append(f"  {outcome}")
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
+# ---------------------------------------------------------------------------
+# Answer-side diagnosis data contracts (Phase 2.0)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AnswerDiagnosisResult:
+    """Per-case answer-side diagnosis from one run of run_answer_diagnosis.
+
+    baseline_verdict and intervention_verdict are None only when the judge
+    raises an unexpected error; in normal operation they are always populated
+    for active cases (answer_label_expected != "").
+
+    fixed is True when baseline has an answer failure and intervention does not.
+    moved is True when both sides have failures but with different labels.
+    """
+
+    case_id: str
+    question: str
+    expected_label: str                  # from answer_label_expected field
+    baseline_label: str
+    intervention_label: str
+    baseline_verdict: "JudgeVerdict | None"
+    intervention_verdict: "JudgeVerdict | None"
+    fixed: bool = False
+    moved: bool = False
+
+
+@dataclass
+class AnswerDiagnosisReport:
+    """Aggregate answer-side diagnosis over all active failure cases."""
+
+    n_cases: int
+    n_fixed: int = 0
+    n_moved: int = 0
+    n_confirmed: int = 0
+    per_case: list[AnswerDiagnosisResult] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Answer-side diagnosis runner (Phase 2.0)
+# ---------------------------------------------------------------------------
+
+def run_answer_diagnosis(
+    cases: list[FailureCase],
+    index: "LoadedIndex",
+    embedder: "Embedder | None",
+    generator,
+    judge,
+    reranker: "Reranker | None" = None,
+    thresholds=None,
+) -> AnswerDiagnosisReport:
+    """Retrieve → generate → judge baseline and intervention per answer-side case.
+
+    Skips cases where answer_label_expected is "" (silent, no warning).
+    When case.baseline_answer/case.intervention_answer is non-empty, uses
+    those strings directly and skips the generator call for that side.
+    Raises ValueError if embedder is None and any active case uses dense or
+    hybrid retrieval.
+    """
+    from tiny_rag_lab.bm25 import BM25Retriever
+    from tiny_rag_lab.hybrid import retrieve_hybrid
+    from tiny_rag_lab.judge import detect_answer_failure_label
+    from tiny_rag_lab.prompting import assemble_prompt
+    from tiny_rag_lab.retrieval import retrieve_by_vector
+
+    citation_re = re.compile(r"\[Source: ([^\]]+)\]")
+
+    active_cases = [c for c in cases if c.answer_label_expected != ""]
+    if not active_cases:
+        return AnswerDiagnosisReport(n_cases=0)
+
+    needs_embedder = any(
+        c.baseline.retriever in ("dense", "hybrid") or
+        c.intervention.retriever in ("dense", "hybrid")
+        for c in active_cases
+    )
+    if needs_embedder and embedder is None:
+        raise ValueError(
+            "embedder must not be None when any active case uses dense or hybrid retrieval"
+        )
+
+    needs_bm25 = any(
+        c.baseline.retriever in ("bm25", "hybrid") or
+        c.intervention.retriever in ("bm25", "hybrid")
+        for c in active_cases
+    )
+    bm25_retriever = BM25Retriever(index.chunks) if needs_bm25 else None
+
+    needs_reranker = any(
+        config.reranker != "none"
+        for c in active_cases
+        for config in (c.baseline, c.intervention)
+    )
+    if needs_reranker and reranker is None:
+        raise ValueError(
+            "reranker must not be None when any active case uses a non-none reranker"
+        )
+
+    def _retrieve(question: str, config: RetrieverConfig):
+        retrieval_k = (
+            config.rerank_top_n
+            if config.reranker != "none" and reranker is not None and config.rerank_top_n is not None
+            else config.top_k
+        )
+        if config.retriever == "bm25":
+            results = bm25_retriever.retrieve(question, top_k=retrieval_k)
+        elif config.retriever == "hybrid":
+            results = retrieve_hybrid(
+                question, index, embedder, top_k=retrieval_k,
+                bm25_retriever=bm25_retriever,
+            )
+        else:
+            query_vec = embedder.embed([question])[0]
+            results = retrieve_by_vector(query_vec, index, top_k=retrieval_k)
+        if config.reranker != "none" and reranker is not None:
+            from tiny_rag_lab.reranker import apply_reranker
+            results, _audit = apply_reranker(question, results, reranker, config.top_k)
+        return results
+
+    per_case: list[AnswerDiagnosisResult] = []
+    for case in active_cases:
+        baseline_results = _retrieve(case.question, case.baseline)
+        baseline_context = [r.chunk.text for r in baseline_results]
+        if case.baseline_answer:
+            baseline_answer = case.baseline_answer
+        else:
+            prompt = assemble_prompt(case.question, baseline_results)
+            baseline_answer = generator.generate(prompt)
+        baseline_citations = citation_re.findall(baseline_answer) or None
+        baseline_verdict = judge.judge(
+            query=case.question,
+            context=baseline_context,
+            answer=baseline_answer,
+            citations=baseline_citations,
+        )
+        baseline_label = detect_answer_failure_label(baseline_verdict, thresholds)
+
+        intervention_results = _retrieve(case.question, case.intervention)
+        intervention_context = [r.chunk.text for r in intervention_results]
+        if case.intervention_answer:
+            intervention_answer = case.intervention_answer
+        else:
+            prompt = assemble_prompt(case.question, intervention_results)
+            intervention_answer = generator.generate(prompt)
+        intervention_citations = citation_re.findall(intervention_answer) or None
+        intervention_verdict = judge.judge(
+            query=case.question,
+            context=intervention_context,
+            answer=intervention_answer,
+            citations=intervention_citations,
+        )
+        intervention_label = detect_answer_failure_label(intervention_verdict, thresholds)
+
+        fixed = baseline_label != LABEL_NO_FAILURE and intervention_label == LABEL_NO_FAILURE
+        moved = (
+            baseline_label != LABEL_NO_FAILURE
+            and intervention_label != LABEL_NO_FAILURE
+            and baseline_label != intervention_label
+        )
+
+        per_case.append(AnswerDiagnosisResult(
+            case_id=case.case_id,
+            question=case.question,
+            expected_label=case.answer_label_expected,
+            baseline_label=baseline_label,
+            intervention_label=intervention_label,
+            baseline_verdict=baseline_verdict,
+            intervention_verdict=intervention_verdict,
+            fixed=fixed,
+            moved=moved,
+        ))
+
+    return AnswerDiagnosisReport(
+        n_cases=len(per_case),
+        n_fixed=sum(r.fixed for r in per_case),
+        n_moved=sum(r.moved for r in per_case),
+        n_confirmed=sum(r.baseline_label == r.expected_label for r in per_case),
+        per_case=per_case,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Answer diagnosis report formatter (Phase 2.0)
+# ---------------------------------------------------------------------------
+
+def format_answer_diagnosis_report(report: AnswerDiagnosisReport) -> str:
+    """Return a plain-text summary of the answer diagnosis report.
+
+    No ANSI escape codes. Float values at 3 decimal places.
+    Outcome word per case: FIXED, MOVED, CONFIRMED, or UNCHANGED.
+    """
+    lines = [
+        f"Answer diagnosis report  (n={report.n_cases})",
+        _SEPARATOR,
+        f"  Confirmed  : {report.n_confirmed}",
+        f"  Fixed      : {report.n_fixed}",
+        f"  Moved      : {report.n_moved}",
+        _SEPARATOR,
+    ]
+    for dr in report.per_case:
+        lines.append(f"Case {dr.case_id}  expected={dr.expected_label}")
+        bv = dr.baseline_verdict
+        bfaith = bv.faithfulness if bv is not None else 0.0
+        bcit = bv.citation_support if bv is not None else 0.0
+        lines.append(
+            f"  baseline   : {dr.baseline_label:<24}"
+            f"  faith={bfaith:.3f}  cit={bcit:.3f}"
+        )
+        iv = dr.intervention_verdict
+        ifaith = iv.faithfulness if iv is not None else 0.0
+        icit = iv.citation_support if iv is not None else 0.0
+        lines.append(
+            f"  interv.    : {dr.intervention_label:<24}"
+            f"  faith={ifaith:.3f}  cit={icit:.3f}"
         )
         if dr.fixed:
             outcome = "FIXED"

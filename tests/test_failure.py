@@ -18,15 +18,21 @@ from tiny_rag_lab.failure import (
     load_failure_cases,
     detect_failure_label,
     run_diagnosis,
+    run_answer_diagnosis,
     format_diagnosis_report,
+    format_answer_diagnosis_report,
     LABEL_DISTRACTOR_EVIDENCE,
     LABEL_MISSING_EVIDENCE,
     LABEL_LOW_RANK_EVIDENCE,
     LABEL_NO_FAILURE,
     LABEL_UNANSWERABLE,
+    LABEL_UNSUPPORTED_ANSWER,
+    LABEL_CITATION_MISMATCH,
     DetectionThresholds,
     DiagnosisReport,
     DiagnosisResult,
+    AnswerDiagnosisResult,
+    AnswerDiagnosisReport,
     FailureCase,
     RetrieverConfig,
 )
@@ -248,9 +254,9 @@ FIXTURE_CASES = Path(__file__).parent / "fixtures" / "failure" / "cases.jsonl"
 # T02 — load_failure_cases
 # ---------------------------------------------------------------------------
 
-def test_load_returns_six_cases():
+def test_load_returns_nine_cases():
     cases = load_failure_cases(FIXTURE_CASES)
-    assert len(cases) == 7
+    assert len(cases) == 9
 
 
 def test_load_all_are_failure_case_instances():
@@ -374,10 +380,11 @@ def test_load_failure_cases_answer_fields_default_to_empty(tmp_path):
 
 
 def test_load_failure_cases_existing_fixture_still_loads():
-    """Existing cases.jsonl rows without answer fields load with back-compat defaults."""
+    """fc001-fc007 rows without answer fields load with back-compat defaults."""
     cases = load_failure_cases(FIXTURE_CASES)
     assert len(cases) > 0
-    for c in cases:
+    retrieval_cases = [c for c in cases if c.case_id.startswith("fc00") and c.case_id <= "fc007"]
+    for c in retrieval_cases:
         assert c.answer_label_expected == ""
         assert c.baseline_answer == ""
         assert c.intervention_answer == ""
@@ -561,7 +568,7 @@ def test_runner_n_cases_equals_fixture_count(loaded_index):
     from tiny_rag_lab.embeddings import FakeEmbedder
     cases = load_failure_cases(FIXTURE_CASES)
     report = run_diagnosis(cases, loaded_index, FakeEmbedder(dim=8), reranker=FakeReranker())
-    assert report.n_cases == 7
+    assert report.n_cases == 9
 
 
 def test_runner_per_case_length_matches_n_cases(loaded_index):
@@ -881,3 +888,308 @@ def test_runner_noop_vs_boosting_reranker_proves_fix(loaded_index):
     assert dr_boost.intervention_label == LABEL_NO_FAILURE
     # Boosting reranker DOES fix the case.
     assert dr_boost.fixed is True
+
+
+# ---------------------------------------------------------------------------
+# P2.0-T05 — answer-side diagnosis: dataclasses, run_answer_diagnosis,
+#             format_answer_diagnosis_report
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.judge import JudgeVerdict, FakeJudge
+
+# Pre-scripted answer strings matching fc008/fc009 in cases.jsonl
+FC008_BASELINE_ANSWER = "The document covers Roman history and medieval castles."
+FC008_INTERVENTION_ANSWER = "The document covers the topics described in the sample corpus."
+FC009_BASELINE_ANSWER = "The nested document lives in the root directory [Source: with_h1.md]."
+FC009_INTERVENTION_ANSWER = "The nested document lives in a subdirectory [Source: subdir/nested.md]."
+
+_LOW_FAITH_VERDICT = JudgeVerdict(
+    faithfulness=0.1, answer_relevance=0.8, citation_support=0.9,
+    answer_correctness=None, judge_name="fake", latency=0.0,
+)
+_LOW_CIT_VERDICT = JudgeVerdict(
+    faithfulness=0.9, answer_relevance=0.8, citation_support=0.2,
+    answer_correctness=None, judge_name="fake", latency=0.0,
+)
+_PASS_VERDICT = JudgeVerdict(
+    faithfulness=0.9, answer_relevance=0.8, citation_support=0.9,
+    answer_correctness=None, judge_name="fake", latency=0.0,
+)
+
+
+def _answer_judge():
+    return FakeJudge(verdict_map={
+        FC008_BASELINE_ANSWER: _LOW_FAITH_VERDICT,
+        FC008_INTERVENTION_ANSWER: _PASS_VERDICT,
+        FC009_BASELINE_ANSWER: _LOW_CIT_VERDICT,
+        FC009_INTERVENTION_ANSWER: _PASS_VERDICT,
+    })
+
+
+# --- Dataclass tests ---
+
+def test_answer_diagnosis_result_fields():
+    adr = AnswerDiagnosisResult(
+        case_id="fc008",
+        question="Q?",
+        expected_label=LABEL_UNSUPPORTED_ANSWER,
+        baseline_label=LABEL_UNSUPPORTED_ANSWER,
+        intervention_label=LABEL_NO_FAILURE,
+        baseline_verdict=_LOW_FAITH_VERDICT,
+        intervention_verdict=_PASS_VERDICT,
+        fixed=True,
+    )
+    assert adr.case_id == "fc008"
+    assert adr.fixed is True
+    assert adr.moved is False
+
+
+def test_answer_diagnosis_result_defaults():
+    adr = AnswerDiagnosisResult(
+        case_id="x", question="q",
+        expected_label=LABEL_NO_FAILURE,
+        baseline_label=LABEL_NO_FAILURE,
+        intervention_label=LABEL_NO_FAILURE,
+        baseline_verdict=None,
+        intervention_verdict=None,
+    )
+    assert adr.fixed is False
+    assert adr.moved is False
+
+
+def test_answer_diagnosis_report_defaults():
+    report = AnswerDiagnosisReport(n_cases=0)
+    assert report.n_fixed == 0
+    assert report.n_moved == 0
+    assert report.n_confirmed == 0
+    assert report.per_case == []
+
+
+def test_label_constants_unsupported_and_citation():
+    assert LABEL_UNSUPPORTED_ANSWER == "unsupported_answer"
+    assert LABEL_CITATION_MISMATCH == "citation_mismatch"
+    assert LABEL_UNSUPPORTED_ANSWER != LABEL_CITATION_MISMATCH
+
+
+# --- run_answer_diagnosis tests ---
+
+def test_run_answer_diagnosis_skips_non_answer_cases(loaded_index):
+    """fc001-fc007 (answer_label_expected=="") are silently skipped."""
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    retrieval_only_cases = [c for c in load_failure_cases(FIXTURE_CASES) if c.case_id <= "fc007"]
+    report = run_answer_diagnosis(
+        retrieval_only_cases, loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=_answer_judge(),
+    )
+    assert report.n_cases == 0
+    assert report.per_case == []
+
+
+def test_run_answer_diagnosis_empty_cases(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    report = run_answer_diagnosis(
+        [], loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=_answer_judge(),
+    )
+    assert report.n_cases == 0
+
+
+def test_run_answer_diagnosis_fc008_fc009_fixed(loaded_index):
+    """fc008 baseline=unsupported_answer, fc009 baseline=citation_mismatch; both fixed."""
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_answer_diagnosis(
+        cases, loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=_answer_judge(),
+    )
+    assert report.n_cases == 2
+    assert report.n_confirmed == 2
+    assert report.n_fixed == 2
+
+
+def test_run_answer_diagnosis_fc008_baseline_label(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_answer_diagnosis(
+        cases, loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=_answer_judge(),
+    )
+    fc008 = next(r for r in report.per_case if r.case_id == "fc008")
+    assert fc008.baseline_label == LABEL_UNSUPPORTED_ANSWER
+    assert fc008.intervention_label == LABEL_NO_FAILURE
+    assert fc008.fixed is True
+
+
+def test_run_answer_diagnosis_fc009_baseline_label(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_answer_diagnosis(
+        cases, loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=_answer_judge(),
+    )
+    fc009 = next(r for r in report.per_case if r.case_id == "fc009")
+    assert fc009.baseline_label == LABEL_CITATION_MISMATCH
+    assert fc009.intervention_label == LABEL_NO_FAILURE
+    assert fc009.fixed is True
+
+
+def test_run_answer_diagnosis_returns_verdicts(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_answer_diagnosis(
+        cases, loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=_answer_judge(),
+    )
+    for dr in report.per_case:
+        assert dr.baseline_verdict is not None
+        assert dr.intervention_verdict is not None
+
+
+def test_run_answer_diagnosis_none_embedder_dense_raises(loaded_index):
+    from tiny_rag_lab.failure import FailureCase, RetrieverConfig
+    cases = [FailureCase(
+        case_id="x", question="Q?",
+        answer_label_expected=LABEL_UNSUPPORTED_ANSWER,
+        baseline_answer="b", intervention_answer="i",
+        baseline=RetrieverConfig(retriever="dense", top_k=3),
+        intervention=RetrieverConfig(retriever="dense", top_k=3),
+    )]
+    with pytest.raises(ValueError, match="embedder"):
+        run_answer_diagnosis(cases, loaded_index, embedder=None, generator=None, judge=_answer_judge())
+
+
+def test_run_answer_diagnosis_n_fixed_matches_per_case(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_answer_diagnosis(
+        cases, loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=_answer_judge(),
+    )
+    assert report.n_fixed == sum(r.fixed for r in report.per_case)
+
+
+def test_run_answer_diagnosis_n_confirmed_matches_per_case(loaded_index):
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    cases = load_failure_cases(FIXTURE_CASES)
+    report = run_answer_diagnosis(
+        cases, loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=_answer_judge(),
+    )
+    assert report.n_confirmed == sum(r.baseline_label == r.expected_label for r in report.per_case)
+
+
+def test_run_answer_diagnosis_extracts_and_passes_citations(loaded_index):
+    """Verify citations are extracted from [Source: ...] markers and passed to judge."""
+    from tiny_rag_lab.embeddings import FakeEmbedder
+    from unittest.mock import MagicMock
+
+    cases = load_failure_cases(FIXTURE_CASES)
+    spy_judge = MagicMock()
+    spy_judge.judge.return_value = _PASS_VERDICT
+
+    run_answer_diagnosis(
+        cases, loaded_index, FakeEmbedder(dim=8),
+        generator=None, judge=spy_judge,
+    )
+
+    # fc009 has answers with [Source: ...] markers; verify citations were extracted.
+    calls = spy_judge.judge.call_args_list
+    fc009_calls = [c for c in calls if "nested document" in c.kwargs.get("answer", "")]
+
+    assert len(fc009_calls) >= 2, "Should have at least 2 calls for fc009 (baseline + intervention)"
+
+    # Baseline call should have [with_h1.md] in citations
+    baseline_call = next((c for c in fc009_calls if "with_h1.md" in c.kwargs.get("answer", "")), None)
+    assert baseline_call is not None
+    assert baseline_call.kwargs.get("citations") == ["with_h1.md"]
+
+    # Intervention call should have [subdir/nested.md] in citations
+    intervention_call = next((c for c in fc009_calls if "subdir/nested.md" in c.kwargs.get("answer", "")), None)
+    assert intervention_call is not None
+    assert intervention_call.kwargs.get("citations") == ["subdir/nested.md"]
+
+
+# --- format_answer_diagnosis_report tests ---
+
+def _make_answer_report() -> AnswerDiagnosisReport:
+    fc008 = AnswerDiagnosisResult(
+        case_id="fc008",
+        question="Q1?",
+        expected_label=LABEL_UNSUPPORTED_ANSWER,
+        baseline_label=LABEL_UNSUPPORTED_ANSWER,
+        intervention_label=LABEL_NO_FAILURE,
+        baseline_verdict=_LOW_FAITH_VERDICT,
+        intervention_verdict=_PASS_VERDICT,
+        fixed=True,
+    )
+    fc009 = AnswerDiagnosisResult(
+        case_id="fc009",
+        question="Q2?",
+        expected_label=LABEL_CITATION_MISMATCH,
+        baseline_label=LABEL_CITATION_MISMATCH,
+        intervention_label=LABEL_NO_FAILURE,
+        baseline_verdict=_LOW_CIT_VERDICT,
+        intervention_verdict=_PASS_VERDICT,
+        fixed=True,
+    )
+    return AnswerDiagnosisReport(
+        n_cases=2, n_fixed=2, n_moved=0, n_confirmed=2,
+        per_case=[fc008, fc009],
+    )
+
+
+def test_format_answer_report_contains_n_cases():
+    report = _make_answer_report()
+    out = format_answer_diagnosis_report(report)
+    assert "n=2" in out
+
+
+def test_format_answer_report_contains_fixed_count():
+    report = _make_answer_report()
+    out = format_answer_diagnosis_report(report)
+    assert "Fixed" in out
+    assert "2" in out
+
+
+def test_format_answer_report_contains_confirmed_count():
+    report = _make_answer_report()
+    out = format_answer_diagnosis_report(report)
+    assert "Confirmed" in out
+
+
+def test_format_answer_report_contains_case_ids():
+    report = _make_answer_report()
+    out = format_answer_diagnosis_report(report)
+    assert "fc008" in out
+    assert "fc009" in out
+
+
+def test_format_answer_report_shows_faith_and_cit():
+    report = _make_answer_report()
+    out = format_answer_diagnosis_report(report)
+    assert "faith=" in out
+    assert "cit=" in out
+
+
+def test_format_answer_report_outcome_word_fixed():
+    report = _make_answer_report()
+    out = format_answer_diagnosis_report(report)
+    assert "FIXED" in out
+
+
+def test_format_answer_report_no_ansi_codes():
+    report = _make_answer_report()
+    out = format_answer_diagnosis_report(report)
+    assert "\x1b" not in out
+
+
+def test_format_answer_report_empty():
+    report = AnswerDiagnosisReport(n_cases=0)
+    out = format_answer_diagnosis_report(report)
+    assert "n=0" in out
+
+
+def test_format_answer_report_header_text():
+    report = _make_answer_report()
+    out = format_answer_diagnosis_report(report)
+    assert "Answer diagnosis report" in out

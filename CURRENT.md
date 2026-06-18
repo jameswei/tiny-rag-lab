@@ -1,58 +1,56 @@
 # Current Task
 
-Task:         P2.0-T04
+Task:         P2.0-T05
 Phase:        Phase 2.0 — Answer Quality Judging
 Spec:         docs/phases/phase-2.0-answer-quality-judging.md
 Taskboard:    docs/phases/phase-2.0-taskboard.md
 Owner:        Claude Sonnet 4.6
-Status:       done
+Status:       review
 Review Result: signed_off
 Reviewer:     codex
-Last Updated: 2026-06-17
+Last Updated: 2026-06-18
 Updated By:   codex
 
 ## Findings From Last Review
 
-No remaining T04 findings.
+- [Blocking] ✅ fc009 now includes source markers: baseline `[Source: with_h1.md]`, intervention `[Source: subdir/nested.md]`
+- [Blocking] ✅ `run_answer_diagnosis` extracts citations from `[Source: ...]` markers and passes them to judge via `citations=...` parameter; added focused spy-judge test `test_run_answer_diagnosis_extracts_and_passes_citations` to prevent regression
+
+No remaining T05 findings.
 
 ## Latest Review Result
 
-Signed off by codex on 2026-06-17.
+Signed off by codex on 2026-06-18.
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_trace.py tests/test_cmd_ask.py --tb=short -q`: 73 passed
-- `uv run pytest --tb=short -q`: 618 passed, 2 skipped
-- CLI smoke with fixture index and `--trace-out`:
-  - `--judge none --generator fake`: no `Judge verdict` text; JSON `verdict` is `null`
-  - `--judge fake --generator fake`: prints `Judge verdict`; JSON `verdict.judge_name` is `fake`
-
-## Blocker
-
-- none
+- `uv run pytest tests/test_failure.py tests/test_cmd_diagnose.py --tb=short -q`: 118 passed
+- `uv run pytest --tb=short -q`: 649 passed, 2 skipped
+- New regression test: `test_run_answer_diagnosis_extracts_and_passes_citations` verifies citations are extracted and passed to judge
+- CLI smoke with fixture index:
+  - `--judge none`: no answer diagnosis section
+  - `--judge fake --generator fake`: answer diagnosis section present; `n=2`; fc008/fc009 labels present
 
 ## Notes
 
 ### Files Changed
 
-- `tiny_rag_lab/trace.py`: `AskTrace.verdict: JudgeVerdict | None = None` (default
-  None, serializes as null via dataclasses.asdict()); `format_ask_trace` appends
-  Judge verdict block after citations when verdict is not None; verdict block
-  shows Faithfulness/Answer Relevance/Citation Support, optional Answer Correctness
-  (omitted when None), optional Notes (omitted when empty)
-- `tiny_rag_lab/cli.py`: `cmd_ask` reads `--judge`/`--generator` flags, calls
-  `_make_judge` and `_make_generator_from_flag`; judge called after generation,
-  verdict stored in AskTrace; `build_parser` adds `--judge` and `--generator`
-  to `p_ask`
-- `tests/test_trace.py`: AskTrace.verdict serialization (None→null, populated→all
-  fields), format_ask_trace verdict block (no block when None, header/scores/
-  correctness/notes when set)
-- `tests/test_cmd_ask.py`: parser defaults, `--judge none` no verdict block,
-  `--judge fake` shows verdict block after Answer section
+- `tiny_rag_lab/failure.py`:
+  - Added `import re` for citation extraction
+  - `run_answer_diagnosis`: extracts citations from `[Source: ...]` markers using regex; passes `citations=...` to judge.judge()
+- `tests/fixtures/failure/cases.jsonl`:
+  - fc009: updated baseline_answer to include `[Source: with_h1.md]` (wrong citation)
+  - fc009: updated intervention_answer to include `[Source: subdir/nested.md]` (correct citation)
+- `tests/test_failure.py`:
+  - Updated FC009_BASELINE_ANSWER and FC009_INTERVENTION_ANSWER constants to include source markers
+  - Added new test `test_run_answer_diagnosis_extracts_and_passes_citations` using spy judge to verify citations are extracted and passed
+- `tests/test_cmd_diagnose.py`:
+  - Updated fc009_baseline and fc009_intervention in `test_diagnose_judge_fake_prints_answer_diagnosis_section` to include source markers
 
 ### Design Decisions
 
-- `--judge none` path is byte-identical to Phase 1.9 — verdict is None, no block
-- `verdict` field is last in AskTrace so existing positional consumers are unaffected
-- `JudgeVerdict` is a dataclass with JSON-native fields; `dataclasses.asdict()`
-  nests it cleanly under the `verdict` key with no custom encoder needed
+- run_answer_diagnosis skips cases where answer_label_expected == "" (silent, no warning)
+- FakeJudge.verdict_map keyed by answer string; fc008/fc009 pre-script both sides so no generator call needed
+- fc008/fc009 expected_label stays "no_failure" (retrieval pass succeeds); only answer_label_expected triggers run_answer_diagnosis
+- format_answer_diagnosis_report shows verdict scores (faith/cit) instead of retrieval metrics
+- cmd_diagnose runs retrieval diagnosis then answer diagnosis when --judge active; n= counts are independent
