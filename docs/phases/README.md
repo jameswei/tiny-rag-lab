@@ -14,7 +14,10 @@ historical context.
      - CURRENT.md is created or reset only when a concrete task is claimed or
        ready for review -->
 
-**No active phase.**
+**Phase 2.1: Context Budget And Structured Answers**
+
+- Spec: `docs/phases/phase-2.1-context-budget-structured-answers.md`
+- Taskboard: `docs/phases/phase-2.1-taskboard.md`
 
 Phase 2.0 is complete:
 
@@ -80,7 +83,6 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 2.1 | Context budget and structured answers | Directional; draft after Phase 2.0 |
 | Phase 2.2 | Structural and semantic chunking | Directional; draft after Phase 2.1 |
 | Later | Agentic RAG | Deferred |
 
