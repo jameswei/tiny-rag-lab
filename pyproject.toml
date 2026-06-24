@@ -19,6 +19,9 @@ rag = "tiny_rag_lab.cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[project.optional-dependencies]
+tiktoken = ["tiktoken"]
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",

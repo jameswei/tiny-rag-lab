@@ -1,6 +1,6 @@
 # Phase 2.1 Spec: Context Budget And Structured Answers
 
-**Status:** Draft
+**Status:** Active
 **Authors:** Claude Code
 **Based on:** `docs/phases/phase-1.9-2.2-final-roadmap.md`
 **Taskboard:** `docs/phases/phase-2.1-taskboard.md`
