@@ -18,6 +18,7 @@ directory. Start at the top and work down.
 | 7 | [Observability and Debugging](observability-and-debugging.md) | Per-run traces that explain one retrieve or ask command |
 | 8 | [RAG Failure Lab](rag-failure-lab.md) | Curated failure cases that compare baseline and intervention retrieval |
 | 9 | [Answer Quality Judging](answer-quality-judging.md) | Measuring generated answers and answer-side failures with a fakeable judge |
+| 10 | [Context Budget and Structured Answers](context-budget-and-structured-answers.md) | Token-budget context packing, inspectable omitted chunks, and JSON answer output |
 
 ---
 
@@ -163,3 +164,4 @@ quality. `diagnose` studies curated failure cases.
 | Observability and Debugging | Per-run trace records and JSON artifacts | `trace.py`, `cli.py` |
 | RAG Failure Lab | Failure case diagnosis | `failure.py`, `cli.py` |
 | Answer Quality Judging | Answer metrics, judge verdicts, answer-side diagnosis | `judge.py`, `eval.py`, `trace.py`, `failure.py`, `cli.py` |
+| Context Budget and Structured Answers | Token-budget context packing, structured JSON output | `context.py`, `trace.py`, `eval.py`, `failure.py`, `cli.py` |

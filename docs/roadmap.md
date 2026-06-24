@@ -208,6 +208,9 @@ Expected capabilities:
 - optional structured JSON answer output
 - plain-text answer output remains the default
 
+Status: Complete; see `docs/phases/phase-2.1-context-budget-structured-answers.md`
+and `docs/phases/phase-2.1-taskboard.md`.
+
 ### Phase 2.2: Structural And Semantic Chunking
 
 Goal: compare fixed-character chunking with chunking strategies that better

@@ -10,7 +10,7 @@ evaluation, and failure inspection.
 
 ## Current Status
 
-Phase 1 through Phase 2.0 are complete. No phase is currently active.
+Phase 1 through Phase 2.1 are complete. No phase is currently active.
 
 - **Phase 1 — Naive Classic RAG**: full pipeline from corpus to grounded answers with citations
 - **Phase 1.5 — Retrieval Mechanics**: BM25 keyword retrieval, hybrid retrieval, and retriever comparison flags
@@ -19,6 +19,7 @@ Phase 1 through Phase 2.0 are complete. No phase is currently active.
 - **Phase 1.8 — RAG Failure Lab**: curated failure cases and `rag diagnose` for baseline vs. intervention retrieval
 - **Phase 1.9 — Reranking**: fake and cross-encoder reranker interfaces with retrieve/eval/ask/diagnose integration
 - **Phase 2.0 — Answer Quality Judging**: fake and OpenAI-compatible judge paths for answer metrics and answer-side failure diagnosis
+- **Phase 2.1 — Context Budget And Structured Answers**: token-budget context packing, inspectable omitted chunks, and optional JSON answer output
 
 Completed phase contracts:
 
@@ -30,6 +31,7 @@ Completed phase contracts:
 - [Phase 1.8 spec](docs/phases/phase-1.8-failure-lab.md) · [taskboard](docs/phases/phase-1.8-taskboard.md)
 - [Phase 1.9 spec](docs/phases/phase-1.9-reranking.md) · [taskboard](docs/phases/phase-1.9-taskboard.md)
 - [Phase 2.0 spec](docs/phases/phase-2.0-answer-quality-judging.md) · [taskboard](docs/phases/phase-2.0-taskboard.md)
+- [Phase 2.1 spec](docs/phases/phase-2.1-context-budget-structured-answers.md) · [taskboard](docs/phases/phase-2.1-taskboard.md)
 
 ## Phase 1 Result
 
@@ -120,6 +122,20 @@ retrieved context + generated answer -> judge verdict
 -> answer metrics, trace verdicts, and answer-side diagnosis
 ```
 
+## Phase 2.1 Result
+
+Phase 2.1 adds generation-side context budgeting and optional structured JSON
+output. A token budget controls which retrieved chunks actually reach the
+prompt; omitted chunks are recorded in the trace so budget pressure is visible
+and debuggable. The default path (no `--context-budget` flag) is identical to
+Phase 2.0.
+
+```text
+retrieved chunks -> pack_context (greedy by token count)
+-> selected chunks in prompt, omitted chunks in trace
+-> optional --output-format json prints full AskTrace as JSON
+```
+
 ## CLI
 
 ```bash
@@ -128,12 +144,16 @@ rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever d
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever bm25
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
 rag ask "question text" --index-dir .tiny-rag/index --top-k 5
+rag ask "question text" --index-dir .tiny-rag/index --context-budget 8192
+rag ask "question text" --index-dir .tiny-rag/index --context-budget 8192 --output-format json
 rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever dense
 rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever bm25
 rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
 rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --judge fake --generator fake
+rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --judge fake --generator fake --context-budget 8192
 rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-rag/index
 rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-rag/index --judge fake --generator fake
+rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-rag/index --judge fake --generator fake --context-budget 8192
 ```
 
 Help is available for each command:

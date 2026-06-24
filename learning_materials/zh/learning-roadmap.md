@@ -17,6 +17,7 @@
 | 7 | [可观测性与调试](observability-and-debugging.md) | 用单次运行 trace 解释一次 retrieve 或 ask 命令 |
 | 8 | [RAG 失败实验室](rag-failure-lab.md) | 用策划好的失败案例比较 baseline 和 intervention 检索 |
 | 9 | [答案质量评判](answer-quality-judging.md) | 用可替换的 judge 衡量生成答案和答案侧失败 |
+| 10 | [上下文预算与结构化答案](context-budget-and-structured-answers.md) | Token 预算打包、可检查的被排除 chunk，以及 JSON 答案输出 |
 
 ---
 
@@ -157,3 +158,4 @@ rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-r
 | 可观测性与调试 | 单次运行 trace 记录和 JSON 产物 | `trace.py`, `cli.py` |
 | RAG 失败实验室 | 失败案例诊断 | `failure.py`, `cli.py` |
 | 答案质量评判 | 答案指标、judge verdict、答案侧诊断 | `judge.py`, `eval.py`, `trace.py`, `failure.py`, `cli.py` |
+| 上下文预算与结构化答案 | Token 预算打包、结构化 JSON 输出 | `context.py`, `trace.py`, `eval.py`, `failure.py`, `cli.py` |

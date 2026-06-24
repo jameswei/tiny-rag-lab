@@ -25,18 +25,19 @@ docs/architecture.md               conceptual RAG planes and interfaces
 
 ## Implementation Layout
 
-Phase 1 through 2.0 implementation files:
+Phase 1 through 2.1 implementation files:
 
 ```text
 tiny_rag_lab/
   __init__.py
   bm25.py             (Phase 1.5: BM25Retriever and visible tokenization)
-  cli.py
+  cli.py              (Phase 2.1: _make_token_counter, --context-budget, --output-format on ask/eval/diagnose)
+  context.py          (Phase 2.1: TokenCounter protocol, FakeTokenCounter, TiktokenCounter, pack_context, ContextPackResult)
   documents.py
   chunking.py
   embeddings.py
-  eval.py              (Phase 1.6 + 1.5: metrics and retriever-aware eval runner)
-  failure.py           (Phase 1.8 + 2.0: retrieval and answer-side diagnosis)
+  eval.py              (Phase 1.6 + 1.5 + 2.1: metrics, retriever-aware eval runner, context budget support)
+  failure.py           (Phase 1.8 + 2.0 + 2.1: retrieval and answer-side diagnosis, context budget support)
   hybrid.py           (Phase 1.5: RRF and dense+BM25 retrieval)
   index_loader.py
   index_writer.py
@@ -46,7 +47,7 @@ tiny_rag_lab/
   retrieval.py
   prompting.py
   generation.py
-  trace.py             (Phase 1.7 + 2.0: retrieve/ask trace records, verdict trace)
+  trace.py             (Phase 1.7 + 2.0 + 2.1: retrieve/ask trace records, verdict trace, context_pack trace)
 scripts/
   prepare_watsonx_docsqa.py
 tests/
