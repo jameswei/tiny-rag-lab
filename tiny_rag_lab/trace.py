@@ -2,14 +2,15 @@
 
 Phase 1.7 scope: per-query trace records for the retrieve and ask flows.
 Phase 2.0: AskTrace gains an optional verdict field (JudgeVerdict | None).
+Phase 2.1: AskTrace gains an optional context_pack field (ContextPackResult | None).
 
 Serialization and formatters live in the same module to keep the observability
 mechanics visible in one place.
 
 All dataclass fields are JSON-native types (str, int, float, list, dict, None)
 so dataclasses.asdict() + json.dumps() serializes any trace without a custom
-encoder. JudgeVerdict is also a dataclass with JSON-native fields — it nests
-cleanly under the verdict key.
+encoder. JudgeVerdict and ContextPackResult are also dataclasses with JSON-native
+fields — they nest cleanly under their respective keys.
 """
 from __future__ import annotations
 
@@ -18,6 +19,8 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from tiny_rag_lab.context import ContextPackResult
 
 if TYPE_CHECKING:
     from tiny_rag_lab.judge import JudgeVerdict
@@ -96,6 +99,7 @@ class AskTrace:
     reranker: str = "none"          # Phase 1.9
     rerank_top_n: int | None = None # Phase 1.9
     verdict: "JudgeVerdict | None" = None  # Phase 2.0
+    context_pack: ContextPackResult | None = None  # Phase 2.1
 
 
 # ---------------------------------------------------------------------------
@@ -221,6 +225,26 @@ def format_ask_trace(trace: AskTrace) -> str:
                 f"  pre     : rank={c.pre_rerank_rank}  score={c.pre_rerank_score:.4f}"
             )
         lines.append(f"  preview : {c.text_preview}")
+        lines.append("")
+    if trace.context_pack is not None:
+        cp = trace.context_pack
+        n_selected = len(cp.selected)
+        n_omitted = len(cp.omitted)
+        lines.append(
+            f"Context packing  (budget={cp.budget}, counter={cp.counter_name})"
+        )
+        lines.append(
+            f"  Selected  : {n_selected} chunk{'s' if n_selected != 1 else ''}"
+            f"   (~{cp.estimated_tokens} tokens used)"
+        )
+        if n_omitted == 0:
+            lines.append("  Omitted   : 0 chunks")
+        else:
+            lines.append(
+                f"  Omitted   : {n_omitted} chunk{'s' if n_omitted != 1 else ''}"
+            )
+            for cid in cp.omitted:
+                lines.append(f"    - {cid}")
         lines.append("")
     lines.append(_SEP)
     lines.append("Answer:")

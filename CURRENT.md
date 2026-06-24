@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P2.1-T01
+Task:         P2.1-T02
 Phase:        Phase 2.1
 Spec:         docs/phases/phase-2.1-context-budget-structured-answers.md
 Taskboard:    docs/phases/phase-2.1-taskboard.md
@@ -13,18 +13,17 @@ Updated By:   Codex
 
 ## Findings From Last Review
 
-- [Non-blocking] `docs/phases/phase-2.1-context-budget-structured-answers.md`
-  still says `Status: Draft` even though `docs/phases/README.md` names Phase
-  2.1 as the current active phase. This is activation metadata cleanup, not a
-  P2.1-T01 implementation blocker.
+- none
+
+Previous blocking finding is fixed: `Context packing` now renders after the
+retrieved chunk list and before `Answer:`, with an order-sensitive regression
+test.
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_context.py --tb=short -q`: 18 passed, 5 skipped
-  (tiktoken not installed)
-- `uv run python -c "import tiny_rag_lab.context; import sys; print('tiktoken' in sys.modules)"`:
-  printed `False`
-- `uv run pytest --tb=short -q`: 667 passed, 7 skipped
+- `uv run pytest tests/test_trace.py --tb=short -q`: 56 passed
+- manual formatter smoke confirmed `Context packing` appears before `Answer:`
+- `uv run pytest --tb=short -q`: 679 passed, 7 skipped
 
 ## Blocker
 
@@ -32,14 +31,11 @@ Updated By:   Codex
 
 ## Notes
 
-Implementation complete. Files changed:
-- `tiny_rag_lab/context.py` (new): PROMPT_OVERHEAD, ContextPackResult, TokenCounter,
-  FakeTokenCounter, TiktokenCounter, pack_context
-- `tests/test_context.py` (new): 23 tests covering all spec requirements
-- `pyproject.toml`: tiktoken added to [project.optional-dependencies]
+Files changed (addressing Codex finding):
+- `tiny_rag_lab/trace.py`: moved context packing block rendering in
+  `format_ask_trace` to appear after chunk list and before answer separator
+- `tests/test_trace.py`: added `test_format_ask_trace_context_pack_appears_before_answer`
+  (order-sensitive test; asserts `pack_pos < answer_pos`)
 
-Review notes: P2.1-T01 is accepted. `pack_context` imports
-`_format_context_block` from `prompting.py` so token counts use the exact same
-block format as `assemble_prompt`. `budget=0` selects all chunks (unlimited).
-`budget<0` raises `ValueError`. TiktokenCounter tests gate with
-`pytest.importorskip("tiktoken")` inside each test function.
+Output order is now:
+  chunks loop → [context packing block] → _SEP → Answer → Citations → [verdict block]

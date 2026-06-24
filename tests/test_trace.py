@@ -449,3 +449,138 @@ def test_format_ask_trace_verdict_omits_notes_when_empty():
     out = format_ask_trace(t)
     assert "Notes" not in out
     assert "\x1b" not in out
+
+
+# ---------------------------------------------------------------------------
+# P2.1-T02 — AskTrace.context_pack field and format_ask_trace packing block
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.context import ContextPackResult
+
+
+def _pack_result(
+    selected: list[str] | None = None,
+    omitted: list[str] | None = None,
+    estimated_tokens: int = 120,
+    budget: int = 8192,
+    counter_name: str = "char",
+) -> ContextPackResult:
+    return ContextPackResult(
+        selected=selected or ["chunk0000000001", "chunk0000000002"],
+        omitted=omitted or [],
+        estimated_tokens=estimated_tokens,
+        budget=budget,
+        counter_name=counter_name,
+    )
+
+
+def test_ask_trace_context_pack_defaults_to_none():
+    t = AskTrace(query="q", retriever="dense", top_k=3)
+    assert t.context_pack is None
+
+
+def test_ask_trace_context_pack_none_serializes_as_null():
+    t = AskTrace(query="q", retriever="dense", top_k=3)
+    d = dataclasses.asdict(t)
+    assert d["context_pack"] is None
+    assert json.dumps(d)  # no encoder error
+
+
+def test_ask_trace_context_pack_populated_serializes_all_fields():
+    t = AskTrace(query="q", retriever="dense", top_k=3,
+                 context_pack=_pack_result(
+                     selected=["aaa", "bbb"], omitted=["ccc"],
+                     estimated_tokens=200, budget=500, counter_name="char",
+                 ))
+    d = dataclasses.asdict(t)
+    cp = d["context_pack"]
+    assert cp["selected"] == ["aaa", "bbb"]
+    assert cp["omitted"] == ["ccc"]
+    assert cp["estimated_tokens"] == 200
+    assert cp["budget"] == 500
+    assert cp["counter_name"] == "char"
+    assert json.dumps(d)  # no encoder error
+
+
+def test_ask_trace_context_pack_all_fields_json_native():
+    t = AskTrace(query="q", retriever="dense", top_k=3,
+                 context_pack=_pack_result())
+    serialized = json.dumps(dataclasses.asdict(t))
+    parsed = json.loads(serialized)
+    assert isinstance(parsed["context_pack"]["selected"], list)
+    assert isinstance(parsed["context_pack"]["estimated_tokens"], int)
+    assert isinstance(parsed["context_pack"]["budget"], int)
+    assert isinstance(parsed["context_pack"]["counter_name"], str)
+
+
+def test_format_ask_trace_context_pack_none_has_no_packing_block():
+    t = _ask_trace()
+    assert t.context_pack is None
+    out = format_ask_trace(t)
+    assert "Context packing" not in out
+
+
+def test_format_ask_trace_context_pack_shows_header():
+    t = _ask_trace()
+    t.context_pack = _pack_result(budget=8192, counter_name="tiktoken-gpt-4o-mini")
+    out = format_ask_trace(t)
+    assert "Context packing" in out
+    assert "budget=8192" in out
+    assert "tiktoken-gpt-4o-mini" in out
+
+
+def test_format_ask_trace_context_pack_shows_selected_count():
+    t = _ask_trace()
+    t.context_pack = _pack_result(selected=["a", "b", "c"], estimated_tokens=300)
+    out = format_ask_trace(t)
+    assert "Selected" in out
+    assert "3 chunks" in out
+    assert "300" in out
+
+
+def test_format_ask_trace_context_pack_zero_omitted():
+    t = _ask_trace()
+    t.context_pack = _pack_result(omitted=[])
+    out = format_ask_trace(t)
+    assert "Omitted" in out
+    assert "0 chunks" in out
+
+
+def test_format_ask_trace_context_pack_lists_omitted_chunk_ids():
+    t = _ask_trace()
+    t.context_pack = _pack_result(
+        selected=["chunk0000000001"],
+        omitted=["chunk0000000002", "chunk0000000003"],
+    )
+    out = format_ask_trace(t)
+    assert "2 chunks" in out
+    assert "chunk0000000002" in out
+    assert "chunk0000000003" in out
+
+
+def test_format_ask_trace_context_pack_no_ansi_codes():
+    t = _ask_trace()
+    t.context_pack = _pack_result()
+    out = format_ask_trace(t)
+    assert "\x1b" not in out
+
+
+def test_format_ask_trace_context_pack_and_verdict_both_render():
+    t = _ask_trace()
+    t.context_pack = _pack_result()
+    t.verdict = _verdict()
+    out = format_ask_trace(t)
+    assert "Context packing" in out
+    assert "Judge verdict" in out
+
+
+def test_format_ask_trace_context_pack_appears_before_answer():
+    """Context packing block must appear after chunks, before the answer separator."""
+    t = _ask_trace()
+    t.context_pack = _pack_result()
+    out = format_ask_trace(t)
+    pack_pos = out.index("Context packing")
+    answer_pos = out.index("Answer:")
+    assert pack_pos < answer_pos, (
+        "Context packing block must appear before 'Answer:' section"
+    )
