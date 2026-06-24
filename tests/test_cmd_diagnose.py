@@ -260,3 +260,75 @@ def test_diagnose_judge_fake_answer_report_n2(diagnose_setup, capsys):
         cmd_diagnose(_diagnose_judge_args(FIXTURE_CASES, diagnose_setup, judge="fake"))
     out = capsys.readouterr().out
     assert "Answer diagnosis report  (n=2)" in out
+
+
+# ---------------------------------------------------------------------------
+# P2.1-T04 — --context-budget flag on rag diagnose
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.judge import FakeJudge
+
+
+def test_diagnose_parser_context_budget_default_is_zero():
+    args = build_parser().parse_args(["diagnose", "--cases-file", "c.jsonl", "--index-dir", "d"])
+    assert args.context_budget == 0
+
+
+def test_diagnose_help_shows_context_budget_flag(capsys):
+    try:
+        build_parser().parse_args(["diagnose", "--help"])
+    except SystemExit:
+        pass
+    out = capsys.readouterr().out
+    assert "--context-budget" in out
+
+
+def test_diagnose_context_budget_8192_with_judge_exits_zero(diagnose_setup, capsys):
+    """--context-budget 8192 --judge fake exits 0 and shows answer diagnosis."""
+    args = build_parser().parse_args([
+        "diagnose",
+        "--cases-file", str(FIXTURE_CASES),
+        "--index-dir", str(diagnose_setup),
+        "--judge", "fake",
+        "--generator", "fake",
+        "--context-budget", "8192",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()), \
+         patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=None):
+        cmd_diagnose(args)
+    out = capsys.readouterr().out
+    assert "Answer diagnosis report" in out
+
+
+def test_diagnose_negative_context_budget_raises(diagnose_setup):
+    """--context-budget -1 raises ValueError (with --judge fake)."""
+    args = build_parser().parse_args([
+        "diagnose",
+        "--cases-file", str(FIXTURE_CASES),
+        "--index-dir", str(diagnose_setup),
+        "--judge", "fake",
+        "--generator", "fake",
+        "--context-budget", "-1",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()), \
+         patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=None), \
+         pytest.raises(ValueError, match="context-budget"):
+        cmd_diagnose(args)
+
+
+def test_diagnose_negative_context_budget_raises_without_judge(diagnose_setup):
+    """--context-budget -1 raises ValueError even with default --judge none."""
+    args = build_parser().parse_args([
+        "diagnose",
+        "--cases-file", str(FIXTURE_CASES),
+        "--index-dir", str(diagnose_setup),
+        "--context-budget", "-1",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_reranker", return_value=FakeReranker()), \
+         pytest.raises(ValueError, match="context-budget"):
+        cmd_diagnose(args)

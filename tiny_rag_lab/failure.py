@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from tiny_rag_lab.context import TokenCounter
     from tiny_rag_lab.embeddings import Embedder
     from tiny_rag_lab.index_loader import LoadedIndex
     from tiny_rag_lab.judge import JudgeVerdict
@@ -519,6 +520,8 @@ def run_answer_diagnosis(
     judge,
     reranker: "Reranker | None" = None,
     thresholds=None,
+    counter: "TokenCounter | None" = None,
+    context_budget: int | None = None,
 ) -> AnswerDiagnosisReport:
     """Retrieve → generate → judge baseline and intervention per answer-side case.
 
@@ -527,7 +530,13 @@ def run_answer_diagnosis(
     those strings directly and skips the generator call for that side.
     Raises ValueError if embedder is None and any active case uses dense or
     hybrid retrieval.
+    When counter and context_budget > 0 are both provided, applies pack_context
+    before assemble_prompt on each side (Phase 2.1). counter=None or budget=0
+    reproduces Phase 2.0 behaviour exactly.
     """
+    if context_budget is not None and context_budget < 0:
+        raise ValueError(f"context_budget must be >= 0, got {context_budget!r}")
+
     from tiny_rag_lab.bm25 import BM25Retriever
     from tiny_rag_lab.hybrid import retrieve_hybrid
     from tiny_rag_lab.judge import detect_answer_failure_label
@@ -591,6 +600,11 @@ def run_answer_diagnosis(
     per_case: list[AnswerDiagnosisResult] = []
     for case in active_cases:
         baseline_results = _retrieve(case.question, case.baseline)
+        if counter is not None and context_budget and context_budget > 0:
+            from tiny_rag_lab.context import pack_context
+            pack_result = pack_context(baseline_results, context_budget, counter, question=case.question)
+            selected_ids = set(pack_result.selected)
+            baseline_results = [r for r in baseline_results if r.chunk.chunk_id in selected_ids]
         baseline_context = [r.chunk.text for r in baseline_results]
         if case.baseline_answer:
             baseline_answer = case.baseline_answer
@@ -607,6 +621,11 @@ def run_answer_diagnosis(
         baseline_label = detect_answer_failure_label(baseline_verdict, thresholds)
 
         intervention_results = _retrieve(case.question, case.intervention)
+        if counter is not None and context_budget and context_budget > 0:
+            from tiny_rag_lab.context import pack_context
+            pack_result = pack_context(intervention_results, context_budget, counter, question=case.question)
+            selected_ids = set(pack_result.selected)
+            intervention_results = [r for r in intervention_results if r.chunk.chunk_id in selected_ids]
         intervention_context = [r.chunk.text for r in intervention_results]
         if case.intervention_answer:
             intervention_answer = case.intervention_answer

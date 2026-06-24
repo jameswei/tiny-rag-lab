@@ -1,6 +1,6 @@
 # Current Task
 
-Task:         P2.1-T03
+Task:         P2.1-T04
 Phase:        Phase 2.1
 Spec:         docs/phases/phase-2.1-context-budget-structured-answers.md
 Taskboard:    docs/phases/phase-2.1-taskboard.md
@@ -15,12 +15,16 @@ Updated By:   Codex
 
 - none
 
+Previous blocking finding is fixed: negative `--context-budget` is now
+validated before the answer-side judge branch in both `cmd_eval` and
+`cmd_diagnose`, with tests for the default `--judge none` path.
+
 ## Tests Reviewed
 
-- `uv run pytest tests/test_cmd_ask.py --tb=short -q`: 45 passed
-- manual JSON smoke for `rag ask --context-budget 8192 --output-format json`:
-  valid JSON trace; `context_pack` populated; answer contained 3 source markers
-- `uv run pytest --tb=short -q`: 695 passed, 7 skipped
+- `uv run pytest tests/test_eval_runner.py tests/test_cmd_eval.py tests/test_cmd_diagnose.py --tb=short -q`: 115 passed
+- manual CLI smoke confirmed `cmd_eval` and `cmd_diagnose` both raise
+  `ValueError` for `--context-budget -1` with default `--judge none`
+- `uv run pytest --tb=short -q`: 710 passed, 7 skipped
 
 ## Blocker
 
@@ -28,23 +32,6 @@ Updated By:   Codex
 
 ## Notes
 
-Files changed:
-- `tiny_rag_lab/cli.py`: added `_make_token_counter()` factory; added
-  `--context-budget INT` (default 0 = unlimited) and `--output-format text|json`
-  (default text) to `cmd_ask`; pipeline applies `pack_context` when
-  `context_budget > 0`, filters results to selected chunk_ids, attaches
-  `pack_result` to `AskTrace.context_pack`; `--output-format json` prints
-  `json.dumps(trace_to_dict(trace), indent=2)` to stdout; `--trace-out` still
-  writes JSON regardless of `--output-format`; `--context-budget -1` raises
-  `ValueError`
-- `tests/test_cmd_ask.py`: 20 new tests for T03 acceptance criteria
-
-Key behaviours verified:
-- Default output (budget=0) is identical to Phase 2.0 (no Context packing block)
-- budget=8192 shows Context packing block before Answer: in text output
-- --output-format json produces valid JSON with answer + context_pack keys
-- context_pack=null in JSON when budget=0
-- verdict in JSON when --judge fake active
-- --trace-out writes JSON file even with --output-format json
-- Tight budget (budget=1) filters all chunks → fewer source markers than budget=8192
-- --context-budget -1 raises ValueError
+Fix: in `tiny_rag_lab/cli.py`, `context_budget = getattr(args, "context_budget", 0)`
+and `if context_budget < 0: raise ValueError(...)` now appear immediately after
+`load_index`/`load_failure_cases`, before any conditional branches.

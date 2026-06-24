@@ -600,3 +600,58 @@ def test_run_answer_eval_with_reranker_succeeds():
                              generator=FakeGenerator(), judge=_make_fake_judge(),
                              reranker=FakeReranker(), rerank_top_n=5)
     assert isinstance(report, AnswerEvalReport)
+
+
+# ---------------------------------------------------------------------------
+# P2.1-T04 — run_answer_eval context budget
+# ---------------------------------------------------------------------------
+
+from tiny_rag_lab.context import FakeTokenCounter
+
+
+def test_run_answer_eval_counter_none_is_phase20_behaviour():
+    """counter=None skips packing; Phase 2.0 behaviour preserved."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge(),
+                             counter=None, context_budget=8192)
+    assert isinstance(report, AnswerEvalReport)
+    assert report.n_questions == len(samples)
+
+
+def test_run_answer_eval_budget_zero_is_phase20_behaviour():
+    """context_budget=0 skips packing; Phase 2.0 behaviour preserved."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge(),
+                             counter=FakeTokenCounter(), context_budget=0)
+    assert isinstance(report, AnswerEvalReport)
+    assert report.n_questions == len(samples)
+
+
+def test_run_answer_eval_with_large_budget_returns_report():
+    """counter + large budget produces a valid AnswerEvalReport."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    report = run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                             generator=FakeGenerator(), judge=_make_fake_judge(),
+                             counter=FakeTokenCounter(), context_budget=8192)
+    assert isinstance(report, AnswerEvalReport)
+    assert report.n_questions == len(samples)
+
+
+def test_run_answer_eval_negative_budget_raises():
+    """context_budget=-1 raises ValueError."""
+    index = _build_index()
+    embedder = FakeEmbedder(dim=8)
+    samples = load_eval_samples(FIXTURE_QA)
+    import pytest
+    with pytest.raises(ValueError, match="context_budget"):
+        run_answer_eval(samples, index, embedder, top_k=3, retriever="dense",
+                        generator=FakeGenerator(), judge=_make_fake_judge(),
+                        counter=FakeTokenCounter(), context_budget=-1)

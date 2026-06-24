@@ -267,3 +267,98 @@ def test_eval_judge_fake_answer_section_contains_metrics(eval_setup, capsys):
     assert "Faithfulness" in out
     assert "Answer Relevance" in out
     assert "Citation Support" in out
+
+
+# ---------------------------------------------------------------------------
+# P2.1-T04 — --context-budget flag on rag eval
+# ---------------------------------------------------------------------------
+
+def test_eval_parser_context_budget_default_is_zero():
+    args = build_parser().parse_args(["eval", "--qa-file", "q.jsonl", "--index-dir", "d"])
+    assert args.context_budget == 0
+
+
+def test_eval_help_shows_context_budget_flag(capsys):
+    try:
+        build_parser().parse_args(["eval", "--help"])
+    except SystemExit:
+        pass
+    out = capsys.readouterr().out
+    assert "--context-budget" in out
+
+
+def test_eval_context_budget_8192_with_judge_exits_zero(eval_setup, capsys):
+    """--context-budget 8192 --judge fake --generator fake exits 0."""
+    args = build_parser().parse_args([
+        "eval",
+        "--qa-file", str(FIXTURE_QA),
+        "--index-dir", str(eval_setup),
+        "--judge", "fake",
+        "--generator", "fake",
+        "--context-budget", "8192",
+    ])
+    with (
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()),
+        patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()),
+        patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()),
+    ):
+        cmd_eval(args)
+    out = capsys.readouterr().out
+    assert "Answer quality report" in out
+
+
+def test_eval_context_budget_zero_output_identical_to_no_budget(eval_setup, capsys):
+    """--context-budget 0 output identical to Phase 2.0 (no packing)."""
+    def _run(budget_args):
+        args = build_parser().parse_args([
+            "eval",
+            "--qa-file", str(FIXTURE_QA),
+            "--index-dir", str(eval_setup),
+            "--judge", "fake",
+            "--generator", "fake",
+        ] + budget_args)
+        with (
+            patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()),
+            patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()),
+            patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()),
+        ):
+            cmd_eval(args)
+        return capsys.readouterr().out
+
+    out_default = _run([])
+    out_zero = _run(["--context-budget", "0"])
+    assert out_default == out_zero
+
+
+def test_eval_negative_context_budget_raises(eval_setup):
+    """--context-budget -1 raises ValueError (with --judge fake)."""
+    args = build_parser().parse_args([
+        "eval",
+        "--qa-file", str(FIXTURE_QA),
+        "--index-dir", str(eval_setup),
+        "--judge", "fake",
+        "--generator", "fake",
+        "--context-budget", "-1",
+    ])
+    with (
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()),
+        patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()),
+        patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()),
+        pytest.raises(ValueError, match="context-budget"),
+    ):
+        cmd_eval(args)
+
+
+def test_eval_negative_context_budget_raises_without_judge(eval_setup):
+    """--context-budget -1 raises ValueError even with default --judge none."""
+    args = build_parser().parse_args([
+        "eval",
+        "--qa-file", str(FIXTURE_QA),
+        "--index-dir", str(eval_setup),
+        "--context-budget", "-1",
+    ])
+    with (
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()),
+        pytest.raises(ValueError, match="context-budget"),
+    ):
+        cmd_eval(args)

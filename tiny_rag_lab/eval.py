@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from tiny_rag_lab.context import TokenCounter
     from tiny_rag_lab.embeddings import Embedder
     from tiny_rag_lab.index_loader import LoadedIndex
     from tiny_rag_lab.judge import JudgeVerdict
@@ -358,17 +359,25 @@ def run_answer_eval(
     judge,
     reranker: "Reranker | None" = None,
     rerank_top_n: int | None = None,
+    counter: "TokenCounter | None" = None,
+    context_budget: int | None = None,
 ) -> AnswerEvalReport:
     """Retrieve → generate → judge per sample. Returns AnswerEvalReport.
 
     Raises ValueError if retriever in ("dense","hybrid") and embedder is None.
     Raises ValueError if reranker is not None and rerank_top_n is None.
     mean_answer_correctness is None when no sample has reference_answer set.
+    When counter and context_budget > 0 are both provided, applies pack_context
+    per sample before assemble_prompt (Phase 2.1). counter=None or budget=0
+    reproduces Phase 2.0 behaviour exactly.
     """
     from tiny_rag_lab.bm25 import BM25Retriever
     from tiny_rag_lab.hybrid import retrieve_hybrid
     from tiny_rag_lab.prompting import assemble_prompt
     from tiny_rag_lab.retrieval import retrieve_by_vector
+
+    if context_budget is not None and context_budget < 0:
+        raise ValueError(f"context_budget must be >= 0, got {context_budget!r}")
 
     _VALID_RETRIEVERS = {"dense", "bm25", "hybrid"}
     if retriever not in _VALID_RETRIEVERS:
@@ -404,6 +413,12 @@ def run_answer_eval(
         if reranker is not None:
             from tiny_rag_lab.reranker import apply_reranker
             results, _audit = apply_reranker(sample.question, results, reranker, top_k)
+
+        if counter is not None and context_budget and context_budget > 0:
+            from tiny_rag_lab.context import pack_context
+            pack_result = pack_context(results, context_budget, counter, question=sample.question)
+            selected_ids = set(pack_result.selected)
+            results = [r for r in results if r.chunk.chunk_id in selected_ids]
 
         prompt = assemble_prompt(sample.question, results)
         answer = generator.generate(prompt)

@@ -395,6 +395,10 @@ def cmd_eval(args):
     rerank_top_n = getattr(args, "rerank_top_n", 20)
     reranker_model = getattr(args, "reranker_model", None)
     judge_name = getattr(args, "judge", "none")
+    context_budget = getattr(args, "context_budget", 0)
+
+    if context_budget < 0:
+        raise ValueError(f"--context-budget must be >= 0, got {context_budget}")
 
     # Validate reranker flags.
     if reranker_name == "none" and reranker_model is not None:
@@ -434,11 +438,14 @@ def cmd_eval(args):
         generator_name = getattr(args, "generator", "openai")
         judge = _make_judge(judge_name, model, api_key, base_url)
         generator = _make_generator_from_flag(generator_name, args)
+        counter = _make_token_counter() if context_budget > 0 else None
         answer_report = run_answer_eval(
             samples, index, embedder, top_k=args.top_k, retriever=retriever,
             generator=generator, judge=judge,
             reranker=reranker,
             rerank_top_n=rerank_top_n if reranker else None,
+            counter=counter,
+            context_budget=context_budget if context_budget > 0 else None,
         )
         print()
         print(format_answer_eval_report(answer_report))
@@ -456,6 +463,10 @@ def cmd_diagnose(args):
 
     index = load_index(Path(args.index_dir))
     cases = load_failure_cases(Path(args.cases_file))
+    context_budget = getattr(args, "context_budget", 0)
+
+    if context_budget < 0:
+        raise ValueError(f"--context-budget must be >= 0, got {context_budget}")
 
     needs_embedder = any(
         c.baseline.retriever in ("dense", "hybrid") or
@@ -487,8 +498,11 @@ def cmd_diagnose(args):
         generator_flag = getattr(args, "generator", "openai")
         judge = _make_judge(judge_name, model, api_key, base_url)
         generator = _make_generator_from_flag(generator_flag, args)
+        counter = _make_token_counter() if context_budget > 0 else None
         answer_report = run_answer_diagnosis(
             cases, index, embedder, generator, judge, reranker=reranker,
+            counter=counter,
+            context_budget=context_budget if context_budget > 0 else None,
         )
         print()
         print(format_answer_diagnosis_report(answer_report))
@@ -683,6 +697,10 @@ def build_parser():
         "--base-url", default=None, metavar="URL",
         help="base URL for OpenAI-compatible endpoint (default: OpenAI)",
     )
+    p_eval.add_argument(
+        "--context-budget", type=int, default=0, metavar="INT", dest="context_budget",
+        help="token budget for context packing when --judge active (default: 0 = unlimited)",
+    )
     p_eval.set_defaults(func=cmd_eval)
 
     # rag diagnose
@@ -717,6 +735,10 @@ def build_parser():
     p_diagnose.add_argument(
         "--base-url", default=None, metavar="URL",
         help="base URL for OpenAI-compatible endpoint (default: OpenAI)",
+    )
+    p_diagnose.add_argument(
+        "--context-budget", type=int, default=0, metavar="INT", dest="context_budget",
+        help="token budget for context packing when --judge active (default: 0 = unlimited)",
     )
     p_diagnose.set_defaults(func=cmd_diagnose)
 
