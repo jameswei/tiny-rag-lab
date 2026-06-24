@@ -83,6 +83,16 @@ def _make_reranker(name: str, model: str | None):
     raise ValueError(f"unknown reranker: {name!r}")
 
 
+def _make_token_counter():
+    """Return TiktokenCounter if tiktoken is installed, else FakeTokenCounter."""
+    try:
+        from tiny_rag_lab.context import TiktokenCounter
+        return TiktokenCounter()
+    except ImportError:
+        from tiny_rag_lab.context import FakeTokenCounter
+        return FakeTokenCounter()
+
+
 _CITATION_RE = re.compile(r"\[Source: ([^\]]+)\]")
 
 
@@ -236,9 +246,15 @@ def cmd_ask(args):
     from tiny_rag_lab.prompting import assemble_prompt
     from tiny_rag_lab.retrieval import retrieve_by_vector
     from tiny_rag_lab.reranker import chunk_traces_from_rerank
-    from tiny_rag_lab.trace import AskTrace, ChunkTrace, format_ask_trace, write_trace_json
+    from tiny_rag_lab.trace import AskTrace, ChunkTrace, format_ask_trace, trace_to_dict, write_trace_json
+    import json as _json
     judge_name = getattr(args, "judge", "none")
     generator_flag = getattr(args, "generator", "openai")
+    context_budget = getattr(args, "context_budget", 0)
+    output_format = getattr(args, "output_format", "text")
+
+    if context_budget < 0:
+        raise ValueError(f"--context-budget must be >= 0, got {context_budget}")
 
     t0 = time.perf_counter()
     index = load_index(Path(args.index_dir))
@@ -287,6 +303,15 @@ def cmd_ask(args):
             args.query, results, reranker, args.top_k,
         )
         t_rerank = time.perf_counter() - t0
+
+    # Phase 2.1: apply context budget when requested.
+    pack_result = None
+    if context_budget > 0:
+        from tiny_rag_lab.context import pack_context
+        counter = _make_token_counter()
+        pack_result = pack_context(results, context_budget, counter, question=args.query)
+        selected_ids = set(pack_result.selected)
+        results = [r for r in results if r.chunk.chunk_id in selected_ids]
 
     t0 = time.perf_counter()
     prompt = assemble_prompt(args.query, results)
@@ -339,9 +364,13 @@ def cmd_ask(args):
         reranker=reranker.name if reranker else "none",
         rerank_top_n=rerank_top_n if reranker else None,
         verdict=verdict,
+        context_pack=pack_result,
     )
 
-    print(format_ask_trace(trace))
+    if output_format == "json":
+        print(_json.dumps(trace_to_dict(trace), indent=2))
+    else:
+        print(format_ask_trace(trace))
 
     trace_out = getattr(args, "trace_out", None)
     if trace_out:
@@ -587,6 +616,14 @@ def build_parser():
     p_ask.add_argument(
         "--generator", choices=["fake", "openai"], default="openai",
         help="generator backend (default: openai)",
+    )
+    p_ask.add_argument(
+        "--context-budget", type=int, default=0, metavar="INT", dest="context_budget",
+        help="token budget for context packing (default: 0 = unlimited)",
+    )
+    p_ask.add_argument(
+        "--output-format", choices=["text", "json"], default="text", dest="output_format",
+        help="output format: human-readable text or JSON trace (default: text)",
     )
     p_ask.set_defaults(func=cmd_ask)
 

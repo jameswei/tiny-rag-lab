@@ -417,3 +417,205 @@ def test_ask_judge_fake_verdict_block_after_answer(ask_setup, capsys):
         cmd_ask(args)
     out = capsys.readouterr().out
     assert out.index("Answer:") < out.index("Judge verdict")
+
+
+# ---------------------------------------------------------------------------
+# P2.1-T03 — --context-budget and --output-format flags on rag ask
+# ---------------------------------------------------------------------------
+
+def _ask_args_with_budget(index_dir, budget, output_format="text", top_k=3, generator="fake"):
+    argv = [
+        "ask", "sample document",
+        "--index-dir", str(index_dir),
+        "--top-k", str(top_k),
+        "--generator", generator,
+        "--context-budget", str(budget),
+        "--output-format", output_format,
+    ]
+    return build_parser().parse_args(argv)
+
+
+def test_ask_parser_context_budget_default_is_zero():
+    args = build_parser().parse_args(["ask", "q", "--index-dir", "d"])
+    assert args.context_budget == 0
+
+
+def test_ask_parser_output_format_default_is_text():
+    args = build_parser().parse_args(["ask", "q", "--index-dir", "d"])
+    assert args.output_format == "text"
+
+
+def test_ask_parser_context_budget_flag():
+    args = build_parser().parse_args(["ask", "q", "--index-dir", "d", "--context-budget", "8192"])
+    assert args.context_budget == 8192
+
+
+def test_ask_parser_output_format_json():
+    args = build_parser().parse_args(["ask", "q", "--index-dir", "d", "--output-format", "json"])
+    assert args.output_format == "json"
+
+
+def test_ask_help_shows_context_budget_flag(capsys):
+    try:
+        build_parser().parse_args(["ask", "--help"])
+    except SystemExit:
+        pass
+    out = capsys.readouterr().out
+    assert "--context-budget" in out
+
+
+def test_ask_help_shows_output_format_flag(capsys):
+    try:
+        build_parser().parse_args(["ask", "--help"])
+    except SystemExit:
+        pass
+    out = capsys.readouterr().out
+    assert "--output-format" in out
+
+
+def test_ask_context_budget_zero_has_no_packing_block(ask_setup, capsys):
+    """--context-budget 0 (default) produces no Context packing line."""
+    args = _ask_args_with_budget(ask_setup, budget=0)
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    assert "Context packing" not in out
+
+
+def test_ask_context_budget_nonzero_shows_packing_block(ask_setup, capsys):
+    """--context-budget 8192 shows Context packing block in text output."""
+    args = _ask_args_with_budget(ask_setup, budget=8192)
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    assert "Context packing" in out
+    assert "budget=8192" in out
+
+
+def test_ask_context_budget_packing_block_before_answer(ask_setup, capsys):
+    """Context packing block appears before the answer section."""
+    args = _ask_args_with_budget(ask_setup, budget=8192)
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    assert out.index("Context packing") < out.index("Answer:")
+
+
+def test_ask_output_format_json_is_valid_json(ask_setup, capsys):
+    """--output-format json prints valid JSON to stdout."""
+    args = _ask_args_with_budget(ask_setup, budget=8192, output_format="json")
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    parsed = json.loads(out)
+    assert isinstance(parsed, dict)
+
+
+def test_ask_output_format_json_has_answer_and_context_pack(ask_setup, capsys):
+    """JSON output includes answer and context_pack keys when budget active."""
+    args = _ask_args_with_budget(ask_setup, budget=8192, output_format="json")
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    parsed = json.loads(out)
+    assert "answer" in parsed
+    assert "context_pack" in parsed
+    assert parsed["context_pack"] is not None
+
+
+def test_ask_output_format_json_budget_zero_context_pack_null(ask_setup, capsys):
+    """JSON output has context_pack=null when budget=0."""
+    args = _ask_args_with_budget(ask_setup, budget=0, output_format="json")
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    parsed = json.loads(out)
+    assert parsed["context_pack"] is None
+
+
+def test_ask_negative_context_budget_raises(ask_setup):
+    """--context-budget -1 raises ValueError."""
+    args = build_parser().parse_args([
+        "ask", "sample document",
+        "--index-dir", str(ask_setup),
+        "--context-budget", "-1",
+        "--generator", "fake",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()), \
+         pytest.raises(ValueError, match="context-budget"):
+        cmd_ask(args)
+
+
+def test_ask_output_format_json_with_judge_includes_verdict(ask_setup, capsys):
+    """--output-format json --judge fake includes verdict field in JSON."""
+    args = build_parser().parse_args([
+        "ask", "sample document",
+        "--index-dir", str(ask_setup),
+        "--generator", "fake",
+        "--judge", "fake",
+        "--context-budget", "8192",
+        "--output-format", "json",
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_judge", return_value=FakeJudge()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    out = capsys.readouterr().out
+    parsed = json.loads(out)
+    assert "verdict" in parsed
+    assert parsed["verdict"] is not None
+
+
+def test_ask_trace_out_still_writes_json_with_json_output_format(tmp_path, ask_setup):
+    """--trace-out writes JSON file even when --output-format json."""
+    out_path = tmp_path / "trace.json"
+    args = build_parser().parse_args([
+        "ask", "sample document",
+        "--index-dir", str(ask_setup),
+        "--generator", "fake",
+        "--context-budget", "8192",
+        "--output-format", "json",
+        "--trace-out", str(out_path),
+    ])
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+         patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()):
+        cmd_ask(args)
+    assert out_path.exists()
+    loaded = json.loads(out_path.read_text())
+    assert "answer" in loaded
+
+
+def test_ask_tight_budget_filters_chunks_vs_large_budget(ask_setup):
+    """Tight budget produces fewer source markers than large budget (proves filtering)."""
+    def _run(budget):
+        args = build_parser().parse_args([
+            "ask", "sample document",
+            "--index-dir", str(ask_setup),
+            "--top-k", "3",
+            "--generator", "fake",
+            "--context-budget", str(budget),
+            "--output-format", "json",
+        ])
+        import io, sys
+        buf = io.StringIO()
+        with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()), \
+             patch("tiny_rag_lab.cli._make_generator_from_flag", return_value=FakeGenerator()), \
+             patch("sys.stdout", buf):
+            cmd_ask(args)
+        return json.loads(buf.getvalue())
+
+    large = _run(8192)
+    tight = _run(1)  # budget so small even overhead exceeds it → all omitted
+
+    large_sources = len(re.findall(r"\[Source:", large["answer"]))
+    tight_sources = len(re.findall(r"\[Source:", tight["answer"]))
+    assert tight_sources < large_sources, (
+        f"Tight budget should produce fewer source markers: {tight_sources} vs {large_sources}"
+    )
