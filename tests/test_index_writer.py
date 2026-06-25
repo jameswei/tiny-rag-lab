@@ -121,6 +121,29 @@ def test_manifest_chunking_params(small_index):
     manifest = json.loads((index_dir / "manifest.json").read_text())
     assert manifest["chunk_size"] == 800
     assert manifest["chunk_overlap"] == 120
+    assert manifest["chunking_strategy"] == "fixed_character"
+    assert manifest["chunking_params"] == {}
+
+
+def test_manifest_round_trips_semantic_chunking_fields(tmp_path):
+    index_dir = tmp_path / "index"
+    write_index(
+        index_dir,
+        docs=[_make_doc()],
+        chunks=[_make_chunk()],
+        embeddings=np.zeros((1, 8), dtype=np.float32),
+        corpus_root=Path("/corpus"),
+        embedding_backend="FakeEmbedder",
+        embedding_model="fake",
+        embedding_dim=8,
+        chunk_size=800,
+        chunk_overlap=120,
+        chunking_strategy="semantic",
+        chunking_params={"similarity_threshold": 0.7},
+    )
+    manifest = json.loads((index_dir / "manifest.json").read_text())
+    assert manifest["chunking_strategy"] == "semantic"
+    assert manifest["chunking_params"] == {"similarity_threshold": 0.7}
 
 
 def test_manifest_embedding_metadata(small_index):

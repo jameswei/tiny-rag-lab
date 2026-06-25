@@ -417,3 +417,67 @@ def chunk_document_semantic(
 
     flush()
     return chunks
+
+
+# ---------------------------------------------------------------------------
+# Phase 2.2: strategy dispatch
+# ---------------------------------------------------------------------------
+
+_STRATEGIES = ("fixed_character", "structural", "semantic")
+
+
+def chunk_document_with_strategy(
+    doc: Document,
+    strategy: str = "fixed_character",
+    chunk_size: int = 800,
+    chunk_overlap: int = 120,
+    embedder: Embedder | None = None,
+    similarity_threshold: float = 0.5,
+) -> list[Chunk]:
+    """Dispatch to chunk_document / chunk_document_structural /
+    chunk_document_semantic by strategy name.
+
+    Raises ValueError for an unrecognized strategy, and if strategy is
+    "semantic" and embedder is None.
+    """
+    if strategy == "fixed_character":
+        return chunk_document(doc, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    if strategy == "structural":
+        return chunk_document_structural(doc, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    if strategy == "semantic":
+        if embedder is None:
+            raise ValueError("embedder must not be None when strategy is 'semantic'")
+        return chunk_document_semantic(
+            doc,
+            embedder,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            similarity_threshold=similarity_threshold,
+        )
+    raise ValueError(
+        f"unknown chunking strategy {strategy!r}; choose one of {_STRATEGIES}"
+    )
+
+
+def chunk_documents_with_strategy(
+    docs: list[Document],
+    strategy: str = "fixed_character",
+    chunk_size: int = 800,
+    chunk_overlap: int = 120,
+    embedder: Embedder | None = None,
+    similarity_threshold: float = 0.5,
+) -> list[Chunk]:
+    """chunk_document_with_strategy applied to each document, in order."""
+    result: list[Chunk] = []
+    for doc in docs:
+        result.extend(
+            chunk_document_with_strategy(
+                doc,
+                strategy=strategy,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                embedder=embedder,
+                similarity_threshold=similarity_threshold,
+            )
+        )
+    return result

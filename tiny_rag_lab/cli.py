@@ -97,7 +97,7 @@ _CITATION_RE = re.compile(r"\[Source: ([^\]]+)\]")
 
 
 def cmd_index(args):
-    from tiny_rag_lab.chunking import chunk_documents
+    from tiny_rag_lab.chunking import chunk_documents_with_strategy
     from tiny_rag_lab.documents import load_documents
     from tiny_rag_lab.index_writer import write_index
 
@@ -108,19 +108,36 @@ def cmd_index(args):
     docs = load_documents(corpus_root)
     print(f"Loaded {len(docs)} document(s)")
 
-    chunks = chunk_documents(
-        docs, chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap
+    embedder = None
+    if args.chunking_strategy == "semantic":
+        embedder = _make_embedder()
+
+    chunks = chunk_documents_with_strategy(
+        docs,
+        strategy=args.chunking_strategy,
+        chunk_size=args.chunk_size,
+        chunk_overlap=args.chunk_overlap,
+        embedder=embedder,
+        similarity_threshold=args.semantic_similarity_threshold,
     )
     print(
         f"Chunked into {len(chunks)} chunk(s)"
-        f" (size={args.chunk_size}, overlap={args.chunk_overlap})"
+        f" (strategy={args.chunking_strategy}, size={args.chunk_size},"
+        f" overlap={args.chunk_overlap})"
     )
 
-    embedder = _make_embedder()
+    if embedder is None:
+        embedder = _make_embedder()
     backend = type(embedder).__name__
     model = getattr(embedder, "model_name", backend)
     print(f"Embedding with {model} (dim={embedder.dim}) ...")
     embeddings = embedder.embed([c.text for c in chunks])
+
+    chunking_params = {}
+    if args.chunking_strategy == "semantic":
+        chunking_params = {
+            "similarity_threshold": args.semantic_similarity_threshold,
+        }
 
     print(f"Writing index to {index_dir} ...")
     write_index(
@@ -134,6 +151,8 @@ def cmd_index(args):
         embedding_dim=embedder.dim,
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
+        chunking_strategy=args.chunking_strategy,
+        chunking_params=chunking_params,
     )
 
     print(
@@ -535,7 +554,24 @@ def build_parser():
     )
     p_index.add_argument(
         "--chunk-overlap", type=int, default=120, metavar="INT",
-        help="overlap between consecutive chunks in characters (default: 120)",
+        help=(
+            "overlap between consecutive chunks in characters (default: 120; "
+            "for structural and semantic chunking this only applies on the "
+            "oversized-unit fallback)"
+        ),
+    )
+    p_index.add_argument(
+        "--chunking-strategy",
+        choices=("fixed_character", "structural", "semantic"),
+        default="fixed_character",
+        help="chunking strategy to use when building the index (default: fixed_character)",
+    )
+    p_index.add_argument(
+        "--semantic-similarity-threshold",
+        type=float,
+        default=0.5,
+        metavar="FLOAT",
+        help="split semantic chunks when consecutive sentence similarity drops below this value (default: 0.5)",
     )
     p_index.set_defaults(func=cmd_index)
 

@@ -33,11 +33,17 @@ def write_index(
     embedding_dim: int,
     chunk_size: int,
     chunk_overlap: int,
+    chunking_strategy: str = "fixed_character",
+    chunking_params: dict | None = None,
 ) -> None:
     """Write manifest.json, chunks.jsonl, and embeddings.npz to index_dir.
 
     embeddings must have shape (len(chunks), embedding_dim) and dtype float32.
     Row i of embeddings corresponds to chunks[i].
+
+    chunking_strategy and chunking_params (Phase 2.2) default to
+    fixed_character/{} so every existing caller keeps producing the same
+    manifest shape as Phase 2.1, plus these two new keys at their defaults.
     """
     if embeddings.shape != (len(chunks), embedding_dim):
         raise ValueError(
@@ -58,6 +64,8 @@ def write_index(
         embedding_dim=embedding_dim,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
+        chunking_strategy=chunking_strategy,
+        chunking_params=chunking_params,
     )
     _write_chunks(index_dir, chunks)
     _write_embeddings(index_dir, chunks, embeddings)
@@ -74,6 +82,8 @@ def _write_manifest(
     embedding_dim: int,
     chunk_size: int,
     chunk_overlap: int,
+    chunking_strategy: str = "fixed_character",
+    chunking_params: dict | None = None,
 ) -> None:
     corpus_files = [
         {"doc_id": doc.doc_id, "path": doc.path, "raw_hash": doc.raw_hash}
@@ -87,6 +97,8 @@ def _write_manifest(
         "chunk_count": len(chunks),
         "chunk_size": chunk_size,
         "chunk_overlap": chunk_overlap,
+        "chunking_strategy": chunking_strategy,
+        "chunking_params": chunking_params if chunking_params is not None else {},
         "embedding_backend": embedding_backend,
         "embedding_model": embedding_model,
         "embedding_dim": embedding_dim,

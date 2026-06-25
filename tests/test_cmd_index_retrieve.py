@@ -13,6 +13,7 @@ import pytest
 
 from tiny_rag_lab.cli import build_parser, cmd_index, cmd_retrieve
 from tiny_rag_lab.embeddings import FakeEmbedder
+from tiny_rag_lab.models import Chunk, Document
 
 FIXTURE_CORPUS = Path(__file__).parent / "fixtures" / "corpus"
 
@@ -28,7 +29,14 @@ def _fake_embedder_factory(dim: int = 8):
     return _make
 
 
-def _index_args(corpus, index_dir, chunk_size=200, chunk_overlap=20):
+def _index_args(
+    corpus,
+    index_dir,
+    chunk_size=200,
+    chunk_overlap=20,
+    chunking_strategy="fixed_character",
+    semantic_similarity_threshold=0.5,
+):
     parser = build_parser()
     return parser.parse_args([
         "index",
@@ -36,6 +44,8 @@ def _index_args(corpus, index_dir, chunk_size=200, chunk_overlap=20):
         "--index-dir", str(index_dir),
         "--chunk-size", str(chunk_size),
         "--chunk-overlap", str(chunk_overlap),
+        "--chunking-strategy", chunking_strategy,
+        "--semantic-similarity-threshold", str(semantic_similarity_threshold),
     ])
 
 
@@ -96,6 +106,8 @@ def test_index_manifest_chunk_params(built_index):
     manifest = json.loads((index_dir / "manifest.json").read_text())
     assert manifest["chunk_size"] == args.chunk_size
     assert manifest["chunk_overlap"] == args.chunk_overlap
+    assert manifest["chunking_strategy"] == "fixed_character"
+    assert manifest["chunking_params"] == {}
 
 
 def test_index_embeddings_shape(built_index):
@@ -121,6 +133,7 @@ def test_index_prints_summary(tmp_path, capsys):
     assert "Documents" in out
     assert "Chunks" in out
     assert "Model" in out
+    assert "strategy=fixed_character" in out
 
 
 def test_index_creates_parent_dirs(tmp_path):
@@ -129,6 +142,160 @@ def test_index_creates_parent_dirs(tmp_path):
     with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
         cmd_index(args)
     assert (index_dir / "manifest.json").exists()
+
+
+def test_index_structural_manifest_records_strategy(tmp_path):
+    index_dir = tmp_path / "index"
+    args = _index_args(FIXTURE_CORPUS, index_dir, chunking_strategy="structural")
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+        cmd_index(args)
+    manifest = json.loads((index_dir / "manifest.json").read_text())
+    assert manifest["chunking_strategy"] == "structural"
+    assert manifest["chunking_params"] == {}
+
+
+def test_index_semantic_manifest_records_strategy_and_threshold(tmp_path):
+    index_dir = tmp_path / "index"
+    args = _index_args(
+        FIXTURE_CORPUS,
+        index_dir,
+        chunking_strategy="semantic",
+        semantic_similarity_threshold=0.7,
+    )
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+        cmd_index(args)
+    manifest = json.loads((index_dir / "manifest.json").read_text())
+    assert manifest["chunking_strategy"] == "semantic"
+    assert manifest["chunking_params"] == {"similarity_threshold": 0.7}
+
+
+def test_index_help_shows_chunking_flags(capsys):
+    parser = build_parser()
+    try:
+        parser.parse_args(["index", "--help"])
+    except SystemExit:
+        pass
+    out = capsys.readouterr().out
+    assert "--chunking-strategy" in out
+    assert "--semantic-similarity-threshold" in out
+
+
+def _make_doc(text: str, doc_id: str = "docs/test.md") -> Document:
+    return Document(
+        doc_id=doc_id,
+        path=f"/corpus/{doc_id}",
+        title="Test",
+        format="markdown",
+        raw_text=text,
+        normalized_text=text,
+        raw_hash="deadbeef",
+    )
+
+
+def _make_chunk(doc: Document) -> Chunk:
+    return Chunk(
+        chunk_id="abc123abc123abcd",
+        doc_id=doc.doc_id,
+        text=doc.normalized_text,
+        char_start=0,
+        char_end=len(doc.normalized_text),
+        metadata={
+            "title": doc.title,
+            "path": doc.path,
+            "format": doc.format,
+            "raw_hash": doc.raw_hash,
+        },
+    )
+
+
+def test_index_constructs_embedder_after_chunking_for_fixed_character(tmp_path):
+    index_dir = tmp_path / "index"
+    args = _index_args(FIXTURE_CORPUS, index_dir, chunking_strategy="fixed_character")
+    events = []
+    doc = _make_doc("Sentence one. Sentence two.")
+
+    def fake_chunk_documents_with_strategy(docs, **kwargs):
+        events.append(("chunking", kwargs["strategy"], kwargs["embedder"]))
+        return [_make_chunk(doc)]
+
+    def fake_make_embedder(model_name=None):
+        events.append(("embedder", model_name))
+        return FakeEmbedder(dim=8)
+
+    with (
+        patch("tiny_rag_lab.documents.load_documents", return_value=[doc]),
+        patch(
+            "tiny_rag_lab.chunking.chunk_documents_with_strategy",
+            side_effect=fake_chunk_documents_with_strategy,
+        ),
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=fake_make_embedder),
+    ):
+        cmd_index(args)
+
+    assert events[0] == ("chunking", "fixed_character", None)
+    assert events[1] == ("embedder", None)
+
+
+def test_index_constructs_embedder_after_chunking_for_structural(tmp_path):
+    index_dir = tmp_path / "index"
+    args = _index_args(FIXTURE_CORPUS, index_dir, chunking_strategy="structural")
+    events = []
+    doc = _make_doc("Sentence one. Sentence two.")
+
+    def fake_chunk_documents_with_strategy(docs, **kwargs):
+        events.append(("chunking", kwargs["strategy"], kwargs["embedder"]))
+        return [_make_chunk(doc)]
+
+    def fake_make_embedder(model_name=None):
+        events.append(("embedder", model_name))
+        return FakeEmbedder(dim=8)
+
+    with (
+        patch("tiny_rag_lab.documents.load_documents", return_value=[doc]),
+        patch(
+            "tiny_rag_lab.chunking.chunk_documents_with_strategy",
+            side_effect=fake_chunk_documents_with_strategy,
+        ),
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=fake_make_embedder),
+    ):
+        cmd_index(args)
+
+    assert events[0] == ("chunking", "structural", None)
+    assert events[1] == ("embedder", None)
+
+
+def test_index_constructs_embedder_before_chunking_for_semantic(tmp_path):
+    index_dir = tmp_path / "index"
+    args = _index_args(
+        FIXTURE_CORPUS,
+        index_dir,
+        chunking_strategy="semantic",
+        semantic_similarity_threshold=0.7,
+    )
+    events = []
+    doc = _make_doc("Sentence one. Sentence two.")
+
+    def fake_chunk_documents_with_strategy(docs, **kwargs):
+        events.append(("chunking", kwargs["strategy"], type(kwargs["embedder"]).__name__))
+        assert kwargs["similarity_threshold"] == 0.7
+        return [_make_chunk(doc)]
+
+    def fake_make_embedder(model_name=None):
+        events.append(("embedder", model_name))
+        return FakeEmbedder(dim=8)
+
+    with (
+        patch("tiny_rag_lab.documents.load_documents", return_value=[doc]),
+        patch(
+            "tiny_rag_lab.chunking.chunk_documents_with_strategy",
+            side_effect=fake_chunk_documents_with_strategy,
+        ),
+        patch("tiny_rag_lab.cli._make_embedder", side_effect=fake_make_embedder),
+    ):
+        cmd_index(args)
+
+    assert events[0] == ("embedder", None)
+    assert events[1] == ("chunking", "semantic", "FakeEmbedder")
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +375,25 @@ def test_retrieve_no_results_message(tmp_path, capsys):
         cmd_retrieve(args_ret)
     out = capsys.readouterr().out
     assert "No results" in out
+
+
+def test_retrieve_returns_results_from_semantic_chunked_index(tmp_path, capsys):
+    index_dir = tmp_path / "index"
+    args_idx = _index_args(
+        FIXTURE_CORPUS,
+        index_dir,
+        chunking_strategy="semantic",
+        semantic_similarity_threshold=0.7,
+    )
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+        cmd_index(args_idx)
+
+    args_ret = _retrieve_args("sample document", index_dir, top_k=2)
+    with patch("tiny_rag_lab.cli._make_embedder", side_effect=_fake_embedder_factory()):
+        cmd_retrieve(args_ret)
+
+    out = capsys.readouterr().out
+    assert "Rank 1" in out
 
 
 # ---------------------------------------------------------------------------

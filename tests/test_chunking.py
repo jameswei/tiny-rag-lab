@@ -10,7 +10,9 @@ from tiny_rag_lab.chunking import (
     chunk_document,
     chunk_document_semantic,
     chunk_document_structural,
+    chunk_document_with_strategy,
     chunk_documents,
+    chunk_documents_with_strategy,
 )
 from tiny_rag_lab.embeddings import FakeEmbedder
 from tiny_rag_lab.models import Document
@@ -481,3 +483,79 @@ def test_semantic_validation_errors_match_chunk_document():
         chunk_document_semantic(doc, embedder, chunk_size=10, chunk_overlap=10)
     with pytest.raises(ValueError, match="chunk_overlap"):
         chunk_document_semantic(doc, embedder, chunk_size=10, chunk_overlap=-1)
+
+
+# ---------------------------------------------------------------------------
+# Phase 2.2 (P2.2-T03): strategy dispatch
+# ---------------------------------------------------------------------------
+
+def test_dispatch_fixed_character_matches_chunk_document():
+    doc = _make_doc(_MARKDOWN_FIXTURE)
+    expected = chunk_document(doc, chunk_size=40, chunk_overlap=5)
+    actual = chunk_document_with_strategy(
+        doc,
+        strategy="fixed_character",
+        chunk_size=40,
+        chunk_overlap=5,
+    )
+    assert actual == expected
+
+
+def test_dispatch_structural_matches_chunk_document_structural():
+    doc = _make_doc(_MARKDOWN_FIXTURE)
+    expected = chunk_document_structural(doc, chunk_size=40, chunk_overlap=5)
+    actual = chunk_document_with_strategy(
+        doc,
+        strategy="structural",
+        chunk_size=40,
+        chunk_overlap=5,
+    )
+    assert actual == expected
+
+
+def test_dispatch_semantic_matches_chunk_document_semantic():
+    doc = _make_doc(_SENTENCES_FIXTURE)
+    embedder = FakeEmbedder(dim=8)
+    expected = chunk_document_semantic(
+        doc,
+        embedder,
+        chunk_size=50,
+        chunk_overlap=5,
+        similarity_threshold=0.7,
+    )
+    actual = chunk_document_with_strategy(
+        doc,
+        strategy="semantic",
+        chunk_size=50,
+        chunk_overlap=5,
+        embedder=FakeEmbedder(dim=8),
+        similarity_threshold=0.7,
+    )
+    assert actual == expected
+
+
+def test_dispatch_unknown_strategy_raises_value_error():
+    doc = _make_doc("text")
+    with pytest.raises(ValueError, match="unknown chunking strategy"):
+        chunk_document_with_strategy(doc, strategy="nope")
+
+
+def test_dispatch_semantic_requires_embedder():
+    doc = _make_doc("Sentence one. Sentence two.")
+    with pytest.raises(ValueError, match="embedder must not be None"):
+        chunk_document_with_strategy(doc, strategy="semantic")
+
+
+def test_chunk_documents_with_strategy_combines_all_documents():
+    docs = [_make_doc(_MARKDOWN_FIXTURE, f"docs/doc{i}.md") for i in range(2)]
+    chunks = chunk_documents_with_strategy(
+        docs,
+        strategy="structural",
+        chunk_size=40,
+        chunk_overlap=5,
+    )
+    assert chunks
+    assert [chunk.doc_id for chunk in chunks] == sorted(
+        [chunk.doc_id for chunk in chunks],
+        key=lambda doc_id: int(doc_id.removeprefix("docs/doc").removesuffix(".md")),
+    )
