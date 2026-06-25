@@ -1,6 +1,6 @@
 # Phase 2.2 Spec: Structural And Semantic Chunking
 
-**Status:** Active
+**Status:** Complete
 **Authors:** Claude Code
 **Based on:** `docs/phases/phase-1.9-2.2-final-roadmap.md`, `docs/roadmap.md`
 **Taskboard:** `docs/phases/phase-2.2-taskboard.md`

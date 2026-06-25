@@ -17,7 +17,8 @@
 | 7 | [可观测性与调试](observability-and-debugging.md) | 用单次运行 trace 解释一次 retrieve 或 ask 命令 |
 | 8 | [RAG 失败实验室](rag-failure-lab.md) | 用策划好的失败案例比较 baseline 和 intervention 检索 |
 | 9 | [答案质量评判](answer-quality-judging.md) | 用可替换的 judge 衡量生成答案和答案侧失败 |
-| 10 | [上下文预算与结构化答案](context-budget-and-structured-answers.md) | Token 预算打包、可检查的被排除 chunk，以及 JSON 答案输出 |
+| 10 | [上下文预算与结构化答案](context-budget-and-structured-answers.md) | Token 预算打包、结构化 JSON 输出 |
+| 11 | [结构化与语义分块](structural-and-semantic-chunking.md) | 三层结构化分块、基于嵌入的语义分块与策略分发 |
 
 ---
 
@@ -120,7 +121,7 @@
 | 类型 | 关键字段 | 创建者 | 消费者 |
 |---|---|---|---|
 | **Document** | `doc_id`, `normalized_text`, `raw_hash`, `title`, `format` | `documents.load_document()` | 分块器 |
-| **Chunk** | `chunk_id`, `doc_id`, `text`, `char_start`, `char_end`, `metadata` | `chunking.chunk_document()` | 嵌入器、检索器 |
+| **Chunk** | `chunk_id`, `doc_id`, `text`, `char_start`, `char_end`, `metadata` | `chunking.chunk_document()` / `chunk_document_with_strategy()` | 嵌入器、检索器 |
 | **RetrievalResult** | `chunk`, `score`, `rank`（从1开始） | `retrieval.retrieve_by_vector()` | 提示词组装 |
 | **RetrieveTrace** | `query`, `retriever`, `top_k`, `chunks`, `latency_by_stage` | `cli.cmd_retrieve()` | 终端输出，可选 JSON trace |
 | **AskTrace** | `query`, `retriever`, `top_k`, `chunks`, `prompt`, `answer`, `citations`, `latency_by_stage` | `cli.cmd_ask()` | 终端输出，可选 JSON trace |
@@ -159,3 +160,4 @@ rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-r
 | RAG 失败实验室 | 失败案例诊断 | `failure.py`, `cli.py` |
 | 答案质量评判 | 答案指标、judge verdict、答案侧诊断 | `judge.py`, `eval.py`, `trace.py`, `failure.py`, `cli.py` |
 | 上下文预算与结构化答案 | Token 预算打包、结构化 JSON 输出 | `context.py`, `trace.py`, `eval.py`, `failure.py`, `cli.py` |
+| 结构化与语义分块 | 索引平面——分块策略 | `chunking.py`, `index_writer.py`, `cli.py` |

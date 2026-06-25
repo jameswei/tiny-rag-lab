@@ -19,6 +19,7 @@ directory. Start at the top and work down.
 | 8 | [RAG Failure Lab](rag-failure-lab.md) | Curated failure cases that compare baseline and intervention retrieval |
 | 9 | [Answer Quality Judging](answer-quality-judging.md) | Measuring generated answers and answer-side failures with a fakeable judge |
 | 10 | [Context Budget and Structured Answers](context-budget-and-structured-answers.md) | Token-budget context packing, inspectable omitted chunks, and JSON answer output |
+| 11 | [Structural and Semantic Chunking](structural-and-semantic-chunking.md) | Three-tier structural chunking, embedding-based semantic chunking, and strategy dispatch |
 
 ---
 
@@ -125,7 +126,7 @@ turns command output into trace dataclasses. Each arrow is a transformation.
 | Type | Fields (key ones) | Created by | Consumed by |
 |---|---|---|---|
 | **Document** | `doc_id`, `normalized_text`, `raw_hash`, `title`, `format` | `documents.load_document()` | Chunker |
-| **Chunk** | `chunk_id`, `doc_id`, `text`, `char_start`, `char_end`, `metadata` | `chunking.chunk_document()` | Embedder, Retriever |
+| **Chunk** | `chunk_id`, `doc_id`, `text`, `char_start`, `char_end`, `metadata` | `chunking.chunk_document()` / `chunk_document_with_strategy()` | Embedder, Retriever |
 | **RetrievalResult** | `chunk`, `score`, `rank` (1-indexed) | `retrieval.retrieve_by_vector()` | Prompt assembler |
 | **RetrieveTrace** | `query`, `retriever`, `top_k`, `chunks`, `latency_by_stage` | `cli.cmd_retrieve()` | Terminal output, optional JSON trace |
 | **AskTrace** | `query`, `retriever`, `top_k`, `chunks`, `prompt`, `answer`, `citations`, `latency_by_stage` | `cli.cmd_ask()` | Terminal output, optional JSON trace |
@@ -165,3 +166,4 @@ quality. `diagnose` studies curated failure cases.
 | RAG Failure Lab | Failure case diagnosis | `failure.py`, `cli.py` |
 | Answer Quality Judging | Answer metrics, judge verdicts, answer-side diagnosis | `judge.py`, `eval.py`, `trace.py`, `failure.py`, `cli.py` |
 | Context Budget and Structured Answers | Token-budget context packing, structured JSON output | `context.py`, `trace.py`, `eval.py`, `failure.py`, `cli.py` |
+| Structural and Semantic Chunking | Indexing plane — chunking strategies | `chunking.py`, `index_writer.py`, `cli.py` |

@@ -10,7 +10,7 @@ evaluation, and failure inspection.
 
 ## Current Status
 
-Phase 1 through Phase 2.1 are complete. No phase is currently active.
+Phase 1 through Phase 2.2 are complete. No phase is currently active.
 
 - **Phase 1 — Naive Classic RAG**: full pipeline from corpus to grounded answers with citations
 - **Phase 1.5 — Retrieval Mechanics**: BM25 keyword retrieval, hybrid retrieval, and retriever comparison flags
@@ -20,6 +20,7 @@ Phase 1 through Phase 2.1 are complete. No phase is currently active.
 - **Phase 1.9 — Reranking**: fake and cross-encoder reranker interfaces with retrieve/eval/ask/diagnose integration
 - **Phase 2.0 — Answer Quality Judging**: fake and OpenAI-compatible judge paths for answer metrics and answer-side failure diagnosis
 - **Phase 2.1 — Context Budget And Structured Answers**: token-budget context packing, inspectable omitted chunks, and optional JSON answer output
+- **Phase 2.2 — Structural And Semantic Chunking**: structural (Markdown-aware three-tier) and semantic (embedding-based topic-shift) chunking alongside the existing fixed-character baseline
 
 Completed phase contracts:
 
@@ -32,6 +33,7 @@ Completed phase contracts:
 - [Phase 1.9 spec](docs/phases/phase-1.9-reranking.md) · [taskboard](docs/phases/phase-1.9-taskboard.md)
 - [Phase 2.0 spec](docs/phases/phase-2.0-answer-quality-judging.md) · [taskboard](docs/phases/phase-2.0-taskboard.md)
 - [Phase 2.1 spec](docs/phases/phase-2.1-context-budget-structured-answers.md) · [taskboard](docs/phases/phase-2.1-taskboard.md)
+- [Phase 2.2 spec](docs/phases/phase-2.2-structural-semantic-chunking.md) · [taskboard](docs/phases/phase-2.2-taskboard.md)
 
 ## Phase 1 Result
 
@@ -136,10 +138,32 @@ retrieved chunks -> pack_context (greedy by token count)
 -> optional --output-format json prints full AskTrace as JSON
 ```
 
+## Phase 2.2 Result
+
+Phase 2.2 adds two new indexing-time chunking strategies alongside the existing
+fixed-character baseline. The chunking strategy is chosen at `rag index` time
+and recorded in the manifest; all downstream commands are unchanged.
+
+- **Structural**: pack Markdown-aware blocks (headings, paragraphs, lists)
+  so chunk boundaries fall on structural boundaries instead of mid-sentence.
+  Falls back to sentence-level packing for oversized blocks.
+- **Semantic** (experimental): embed all sentences in one batch call, then
+  split where consecutive sentence cosine similarity drops below a threshold —
+  a topic-shift boundary.
+
+```text
+corpus + --chunking-strategy structural  -> blocks/sentence-aware chunks
+corpus + --chunking-strategy semantic    -> topic-shift chunks (batch embed)
+corpus + --chunking-strategy fixed_character  -> original sliding window (default)
+all three -> manifest records chunking_strategy + chunking_params
+```
+
 ## CLI
 
 ```bash
 rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-overlap 120
+rag index --corpus PATH --index-dir .tiny-rag/index --chunking-strategy structural
+rag index --corpus PATH --index-dir .tiny-rag/index --chunking-strategy semantic --semantic-similarity-threshold 0.5
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever dense
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever bm25
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever hybrid

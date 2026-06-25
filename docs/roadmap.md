@@ -16,10 +16,10 @@ Expected outputs:
 - evaluation dataset format
 - first phase spec and taskboard
 
-Status: Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, Phase 1.8, and Phase 1.9 are complete
-under `docs/phases/`. No implementation phase is currently active. The
-near-term roadmap decision is recorded in
-`docs/phases/phase-1.9-2.2-final-roadmap.md`.
+Status: Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, Phase 1.8, Phase 1.9,
+Phase 2.0, Phase 2.1, and Phase 2.2 are complete under `docs/phases/`. No
+implementation phase is currently active. The near-term roadmap decision is
+recorded in `docs/phases/phase-1.9-2.2-final-roadmap.md`.
 
 ## Phase 1: Naive Classic RAG
 
@@ -224,6 +224,9 @@ Expected capabilities:
 - add semantic chunking as an experimental mode when useful
 - record chunking strategy and parameters in the index manifest
 - evaluate chunking modes with `rag eval` and failure-lab cases
+
+Status: Complete; see `docs/phases/phase-2.2-structural-semantic-chunking.md`
+and `docs/phases/phase-2.2-taskboard.md`.
 
 ## Later: Reporting, Artifacts, And Agentic RAG
 

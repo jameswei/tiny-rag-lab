@@ -14,7 +14,9 @@ historical context.
      - CURRENT.md is created or reset only when a concrete task is claimed or
        ready for review -->
 
-**Phase 2.2: Structural And Semantic Chunking**
+**No active phase.** Phase 2.2 is complete.
+
+Phase 2.2 is complete:
 
 - Spec: `docs/phases/phase-2.2-structural-semantic-chunking.md`
 - Taskboard: `docs/phases/phase-2.2-taskboard.md`
@@ -76,6 +78,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
+| Phase 2.2 | Structural and semantic chunking | Complete; see `docs/phases/phase-2.2-taskboard.md` |
 | Phase 2.1 | Context budget and structured answers | Complete; see `docs/phases/phase-2.1-taskboard.md` |
 | Phase 2.0 | Answer quality judging | Complete; see `docs/phases/phase-2.0-taskboard.md` |
 | Phase 1.9 | Reranking | Complete; see `docs/phases/phase-1.9-taskboard.md` |
