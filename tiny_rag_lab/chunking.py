@@ -15,9 +15,12 @@ Spec invariant (must hold for every produced Chunk, regardless of strategy):
 from __future__ import annotations
 
 import re
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from tiny_rag_lab.models import Chunk, Document, make_chunk_id
+
+if TYPE_CHECKING:
+    from tiny_rag_lab.embeddings import Embedder
 
 _HEADING_RE = re.compile(r"^[ \t]*#{1,6}[ \t].*$")
 
@@ -338,3 +341,79 @@ def chunk_document_structural(
 
     blocks = _split_blocks(text)
     return _pack_units(doc, blocks, chunk_size, chunk_overlap, metadata, _pack_oversized_block)
+
+
+# ---------------------------------------------------------------------------
+# Phase 2.2: semantic chunking
+# ---------------------------------------------------------------------------
+
+def chunk_document_semantic(
+    doc: Document,
+    embedder: Embedder,
+    chunk_size: int = 800,
+    chunk_overlap: int = 120,
+    similarity_threshold: float = 0.5,
+) -> list[Chunk]:
+    """Pack sentences into chunks, splitting at topic shifts.
+
+    Splits normalized_text into sentences (_split_sentences), embeds all of
+    them in a single batch call, then packs sentences in order: a chunk
+    closes (and a new one starts) when the next sentence would exceed
+    chunk_size, or the cosine similarity between consecutive sentences'
+    embeddings drops below similarity_threshold. Embedder vectors are
+    L2-normalized, so cosine similarity is a plain dot product. A single
+    sentence that itself exceeds chunk_size falls back to
+    _chunk_oversized_span (the only place chunk_overlap is used).
+    """
+    _validate_chunk_params(chunk_size, chunk_overlap)
+    text = doc.normalized_text
+    if not text.strip():
+        return []
+
+    metadata = _chunk_metadata(doc)
+    sentence_spans = _split_sentences(text)
+    vectors = embedder.embed([text[s:e] for s, e in sentence_spans])
+
+    chunks: list[Chunk] = []
+    cur_start: int | None = None
+    cur_end: int | None = None
+
+    def flush() -> None:
+        if cur_start is None:
+            return
+        chunk_text = text[cur_start:cur_end]
+        if chunk_text.strip():
+            chunks.append(
+                Chunk(
+                    chunk_id=make_chunk_id(doc.doc_id, cur_start, chunk_text),
+                    doc_id=doc.doc_id,
+                    text=chunk_text,
+                    char_start=cur_start,
+                    char_end=cur_end,
+                    metadata=metadata,
+                )
+            )
+
+    for i, (s_start, s_end) in enumerate(sentence_spans):
+        s_len = s_end - s_start
+        if s_len > chunk_size:
+            flush()
+            cur_start = cur_end = None
+            chunks.extend(_chunk_oversized_span(doc, s_start, s_end, chunk_size, chunk_overlap))
+            continue
+
+        if cur_start is None:
+            cur_start, cur_end = s_start, s_end
+            continue
+
+        similarity = float(vectors[i - 1] @ vectors[i])
+        fits_budget = (cur_end - cur_start) + s_len <= chunk_size
+        topic_shift = similarity < similarity_threshold
+        if fits_budget and not topic_shift:
+            cur_end = s_end
+        else:
+            flush()
+            cur_start, cur_end = s_start, s_end
+
+    flush()
+    return chunks
