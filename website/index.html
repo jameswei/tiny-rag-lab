@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tiny-rag-lab — A Learning-First RAG Laboratory</title>
+  <meta name="description" content="tiny-rag-lab is a learning-first RAG engine built in Python to make the retrieval-augmented generation lifecycle visible and inspectable." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ─────────────────────────── NAV ─────────────────────────── -->
+  <header class="site-header">
+    <nav class="nav-inner">
+      <a href="#" class="nav-logo">tiny-rag-lab</a>
+      <ul class="nav-links">
+        <li><a href="#about"        data-i18n="nav.about">About</a></li>
+        <li><a href="#pipeline"     data-i18n="nav.pipeline">Pipeline</a></li>
+        <li><a href="#capabilities" data-i18n="nav.capabilities">Capabilities</a></li>
+        <li><a href="#stack"        data-i18n="nav.stack">Stack</a></li>
+        <li><a href="#cli"          data-i18n="nav.cli">CLI</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button id="lang-toggle" class="btn btn-lang" aria-label="Switch language">中文</button>
+        <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-outline nav-github" data-i18n="nav.github">View on GitHub</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ─────────────────────────── HERO ─────────────────────────── -->
+    <section class="hero">
+      <div class="container">
+        <h1 class="hero-title">tiny-rag-lab</h1>
+        <p class="hero-tagline" data-i18n="hero.tagline">
+          A learning-first RAG laboratory — building retrieval-augmented generation
+          from scratch to make the full pipeline visible and inspectable.
+        </p>
+        <div class="hero-actions">
+          <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-primary" data-i18n="hero.cta.github">View on GitHub</a>
+          <a href="#about" class="btn btn-secondary" data-i18n="hero.cta.learn">Learn more ↓</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── ABOUT ─────────────────────────── -->
+    <section id="about" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title" data-i18n="about.title">About this project</h2>
+        <div class="about-grid">
+          <div class="about-text">
+            <p data-i18n-html="about.p1">
+              RAG (retrieval-augmented generation) is a foundational pattern behind many AI tools
+              and assistants — but most tutorials hide the interesting parts behind framework calls.
+              <strong>tiny-rag-lab</strong> is my attempt to build every stage by hand: document loading,
+              chunking, embedding, local vector search, retrieval, prompt assembly, answer generation,
+              evaluation, and failure diagnosis.
+            </p>
+            <p data-i18n="about.p2">
+              The goal is not a production platform. The goal is deep, inspectable understanding —
+              readable code over framework magic, evaluation before optimization, failure analysis
+              before advanced features.
+            </p>
+            <p data-i18n="about.p3">
+              Built across nine incremental phases, the project now covers classic dense retrieval,
+              BM25 keyword search, hybrid fusion, reranking, answer quality judging, context budgeting,
+              and structural/semantic chunking — all wired through a clean Python CLI with trace output
+              at every stage.
+            </p>
+            <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="text-link" data-i18n="about.cta">
+              Explore the source on GitHub →
+            </a>
+          </div>
+        </div>
+        <div class="about-stats">
+          <div class="stat-card">
+            <span class="stat-number">4</span>
+            <span class="stat-label" data-i18n="stat.planes">RAG Architecture Planes</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">5</span>
+            <span class="stat-label" data-i18n="stat.commands">CLI Commands</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">3</span>
+            <span class="stat-label" data-i18n="stat.retrievers">Retrieval Strategies</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-number">3</span>
+            <span class="stat-label" data-i18n="stat.chunking">Chunking Strategies</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── PIPELINE ─────────────────────────── -->
+    <section id="pipeline" class="section">
+      <div class="container">
+        <h2 class="section-title" data-i18n="pipeline.title">The RAG pipeline</h2>
+        <p class="section-subtitle" data-i18n="pipeline.subtitle">
+          Every stage is implemented directly — no framework wrapper, no hidden magic.
+        </p>
+
+        <div class="pipeline-diagram" role="img" aria-label="Classic RAG pipeline: Corpus to Chunks to Embeddings to Vector Index, then Query to Retrieve to Prompt to Answer and Citations">
+          <svg viewBox="0 0 1020 230" xmlns="http://www.w3.org/2000/svg" class="pipeline-svg">
+            <defs>
+              <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#2563eb" />
+              </marker>
+            </defs>
+
+            <!-- ── Lane labels ── -->
+            <text x="250" y="22" text-anchor="middle" class="svg-lane-label" data-i18n="svg.indexing">Indexing</text>
+            <line x1="20" y1="28" x2="490" y2="28" stroke="#e2e8f0" stroke-width="1" />
+
+            <text x="760" y="22" text-anchor="middle" class="svg-lane-label" data-i18n="svg.querytime">Query time</text>
+            <line x1="520" y1="28" x2="1000" y2="28" stroke="#e2e8f0" stroke-width="1" />
+
+            <!-- Corpus -->
+            <rect x="20"  y="70" width="140" height="60" rx="8" class="svg-node" />
+            <text x="90"  y="94"  text-anchor="middle" class="svg-node-title" data-i18n="svg.corpus">Corpus</text>
+            <text x="90"  y="111" text-anchor="middle" class="svg-node-sub" data-i18n="svg.corpus.sub">docs / Markdown</text>
+
+            <line x1="161" y1="100" x2="178" y2="100" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+
+            <!-- Chunks -->
+            <rect x="180" y="70" width="140" height="60" rx="8" class="svg-node" />
+            <text x="250" y="94"  text-anchor="middle" class="svg-node-title" data-i18n="svg.chunks">Chunks</text>
+            <text x="250" y="109" text-anchor="middle" class="svg-node-sub" data-i18n="svg.chunks.sub1">fixed / structural</text>
+            <text x="250" y="122" text-anchor="middle" class="svg-node-sub" data-i18n="svg.chunks.sub2">/ semantic</text>
+
+            <line x1="321" y1="100" x2="338" y2="100" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+
+            <!-- Embeddings -->
+            <rect x="340" y="70" width="140" height="60" rx="8" class="svg-node svg-node-accent" />
+            <text x="410" y="94"  text-anchor="middle" class="svg-node-title svg-node-title-accent" data-i18n="svg.embeddings">Embeddings</text>
+            <text x="410" y="111" text-anchor="middle" class="svg-node-sub svg-node-sub-accent" data-i18n="svg.embeddings.sub">MiniLM vectors</text>
+
+            <line x1="410" y1="131" x2="410" y2="148" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+
+            <!-- Local Index -->
+            <rect x="340" y="150" width="140" height="48" rx="8" class="svg-node-store" />
+            <text x="410" y="171" text-anchor="middle" class="svg-node-title" data-i18n="svg.index">Local Index</text>
+            <text x="410" y="186" text-anchor="middle" class="svg-node-sub" data-i18n="svg.index.sub">NumPy · BM25</text>
+
+            <line x1="506" y1="40" x2="506" y2="218" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="6,4" />
+
+            <!-- Query -->
+            <rect x="524" y="70" width="140" height="60" rx="8" class="svg-node" />
+            <text x="594" y="94"  text-anchor="middle" class="svg-node-title" data-i18n="svg.query">Query</text>
+            <text x="594" y="111" text-anchor="middle" class="svg-node-sub" data-i18n="svg.query.sub">user question</text>
+
+            <line x1="665" y1="100" x2="682" y2="100" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+
+            <!-- Retrieve -->
+            <rect x="684" y="70" width="140" height="60" rx="8" class="svg-node svg-node-accent" />
+            <text x="754" y="94"  text-anchor="middle" class="svg-node-title svg-node-title-accent" data-i18n="svg.retrieve">Retrieve</text>
+            <text x="754" y="111" text-anchor="middle" class="svg-node-sub svg-node-sub-accent" data-i18n="svg.retrieve.sub">dense · BM25 · hybrid</text>
+
+            <path d="M 481 174 Q 582 210 683 103" stroke="#2563eb" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowhead)" />
+
+            <line x1="825" y1="100" x2="842" y2="100" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+
+            <!-- Generate -->
+            <rect x="844" y="70" width="140" height="60" rx="8" class="svg-node" />
+            <text x="914" y="94"  text-anchor="middle" class="svg-node-title" data-i18n="svg.generate">Generate</text>
+            <text x="914" y="111" text-anchor="middle" class="svg-node-sub" data-i18n="svg.generate.sub">grounded prompt → LLM</text>
+
+            <line x1="914" y1="131" x2="914" y2="148" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+
+            <!-- Answer -->
+            <rect x="844" y="150" width="140" height="48" rx="8" class="svg-node-answer" />
+            <text x="914" y="171" text-anchor="middle" class="svg-node-title svg-node-title-answer" data-i18n="svg.answer">Answer</text>
+            <text x="914" y="186" text-anchor="middle" class="svg-node-sub svg-node-sub-answer" data-i18n="svg.answer.sub">+ citations</text>
+          </svg>
+        </div>
+
+        <div class="pipeline-planes">
+          <div class="plane-tag" data-i18n="plane.indexing">Indexing plane</div>
+          <div class="plane-tag" data-i18n="plane.retrieval">Retrieval plane</div>
+          <div class="plane-tag" data-i18n="plane.generation">Generation plane</div>
+          <div class="plane-tag" data-i18n="plane.eval">Evaluation &amp; observability plane</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── CAPABILITIES ─────────────────────────── -->
+    <section id="capabilities" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title" data-i18n="cap.title">What it covers</h2>
+        <p class="section-subtitle" data-i18n="cap.subtitle">Built phase-by-phase, each capability measurable and debuggable.</p>
+        <div class="cards-grid">
+
+          <div class="card">
+            <div class="card-icon">⬡</div>
+            <h3 class="card-title" data-i18n="cap.rag.title">Classic RAG baseline</h3>
+            <p class="card-desc" data-i18n="cap.rag.desc">
+              Full pipeline: document loading, text normalization, chunking, embedding,
+              local cosine-similarity retrieval, grounded prompt assembly, answer generation,
+              and citations.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">⬡</div>
+            <h3 class="card-title" data-i18n="cap.retrieval.title">Retrieval mechanics</h3>
+            <p class="card-desc" data-i18n="cap.retrieval.desc">
+              Dense vector search, BM25 keyword retrieval, and hybrid fusion via
+              Reciprocal Rank Fusion — all configurable and comparable with a single CLI flag.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">⬡</div>
+            <h3 class="card-title" data-i18n="cap.eval.title">Evaluation harness</h3>
+            <p class="card-desc" data-i18n-html="cap.eval.desc">
+              <code>rag eval</code> measures retrieval quality (hit rate, MRR, context
+              precision/recall) and answer quality (faithfulness, relevance, correctness)
+              against a prepared QA set.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">⬡</div>
+            <h3 class="card-title" data-i18n="cap.obs.title">Observability &amp; failure lab</h3>
+            <p class="card-desc" data-i18n-html="cap.obs.desc">
+              Per-query trace output exposes retriever, scores, latency, and prompt context.
+              <code>rag diagnose</code> runs curated failure cases with baseline vs. intervention
+              comparison.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">⬡</div>
+            <h3 class="card-title" data-i18n="cap.rerank.title">Reranking &amp; answer judging</h3>
+            <p class="card-desc" data-i18n="cap.rerank.desc">
+              Optional second-pass reranking (fake or cross-encoder). LLM-as-judge interface
+              for answer-quality verdicts — both fakeable for offline testing.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-icon">⬡</div>
+            <h3 class="card-title" data-i18n="cap.budget.title">Context budget &amp; chunking</h3>
+            <p class="card-desc" data-i18n="cap.budget.desc">
+              Token-budget context packing with traceable omitted chunks. Three chunking
+              strategies: fixed-character, Markdown-structural, and experimental
+              semantic topic-shift.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── TECH STACK ─────────────────────────── -->
+    <section id="stack" class="section">
+      <div class="container">
+        <h2 class="section-title" data-i18n="stack.title">Tech stack</h2>
+        <p class="section-subtitle" data-i18n="stack.subtitle">
+          Kept deliberately minimal — every moving part is visible in the code.
+        </p>
+        <div class="stack-grid">
+          <div class="stack-item">
+            <span class="stack-label" data-i18n="stack.l.language">Language</span>
+            <span class="stack-value">Python</span>
+          </div>
+          <div class="stack-item">
+            <span class="stack-label" data-i18n="stack.l.interface">Interface</span>
+            <span class="stack-value">argparse CLI</span>
+          </div>
+          <div class="stack-item">
+            <span class="stack-label" data-i18n="stack.l.embeddings">Embeddings</span>
+            <span class="stack-value">sentence-transformers / all-MiniLM-L6-v2</span>
+          </div>
+          <div class="stack-item">
+            <span class="stack-label" data-i18n="stack.l.index">Vector index</span>
+            <span class="stack-value" data-i18n="stack.v.index">Local NumPy (no vector DB)</span>
+          </div>
+          <div class="stack-item">
+            <span class="stack-label" data-i18n="stack.l.generation">Generation</span>
+            <span class="stack-value" data-i18n="stack.v.generation">OpenAI-compatible API</span>
+          </div>
+          <div class="stack-item">
+            <span class="stack-label" data-i18n="stack.l.test">Test backends</span>
+            <span class="stack-value" data-i18n="stack.v.test">Fake embedder + fake generator (fully offline)</span>
+          </div>
+          <div class="stack-item">
+            <span class="stack-label" data-i18n="stack.l.corpus">Corpus</span>
+            <span class="stack-value">IBM watsonxDocsQA</span>
+          </div>
+          <div class="stack-item">
+            <span class="stack-label" data-i18n="stack.l.deps">Dependencies</span>
+            <span class="stack-value">uv · pyproject.toml</span>
+          </div>
+        </div>
+        <p class="stack-note" data-i18n="stack.note">
+          No LangChain, LlamaIndex, or Haystack wrapper. The core RAG mechanics are implemented directly.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── CLI TEASER ─────────────────────────── -->
+    <section id="cli" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title" data-i18n="cli.title">A clean CLI interface</h2>
+        <p class="section-subtitle" data-i18n="cli.subtitle">Index a corpus, retrieve evidence, ask a question — each step inspectable.</p>
+        <div class="cli-block">
+          <div class="cli-bar">
+            <span class="cli-dot cli-dot-red"></span>
+            <span class="cli-dot cli-dot-yellow"></span>
+            <span class="cli-dot cli-dot-green"></span>
+            <span class="cli-filename">terminal</span>
+          </div>
+          <pre class="cli-code"><code><span class="cli-comment"># Build the index from a local corpus</span>
+<span class="cli-prompt">$</span> rag index --corpus corpus/watsonx-docsqa --chunking-strategy structural
+
+<span class="cli-comment"># Retrieve top-5 chunks with hybrid search</span>
+<span class="cli-prompt">$</span> rag retrieve "What is a deployment space?" --retriever hybrid --top-k 5
+
+<span class="cli-comment"># Ask a question and get a grounded answer with citations</span>
+<span class="cli-prompt">$</span> rag ask "How do I deploy a model?" --context-budget 8192
+
+<span class="cli-comment"># Evaluate retrieval quality against a QA set</span>
+<span class="cli-prompt">$</span> rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --retriever hybrid
+
+<span class="cli-comment"># Diagnose retrieval failure cases</span>
+<span class="cli-prompt">$</span> rag diagnose --cases-file tests/fixtures/failure/cases.jsonl</code></pre>
+        </div>
+        <p class="cli-link-row">
+          <a href="https://github.com/jameswei/tiny-rag-lab#cli" target="_blank" rel="noopener" class="text-link" data-i18n="cli.link">
+            Full CLI reference and docs on GitHub →
+          </a>
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── FOOTER CTA ─────────────────────────── -->
+    <section class="section cta-section">
+      <div class="container cta-container">
+        <h2 class="cta-title" data-i18n="cta.title">Interested in the source?</h2>
+        <p class="cta-desc" data-i18n="cta.desc">All code, phase specs, and implementation notes are on GitHub.</p>
+        <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-primary btn-lg" data-i18n="cta.btn">
+          View on GitHub
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─────────────────────────── FOOTER ─────────────────────────── -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span class="footer-copy">
+        <span data-i18n="footer.built">Built by</span>
+        <a href="https://www.linkedin.com/in/jamesweipek/" target="_blank" rel="noopener" class="footer-link">James Wei</a>
+      </span>
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <a href="https://www.linkedin.com/in/jamesweipek/" target="_blank" rel="noopener" class="footer-link">LinkedIn</a>
+        <a href="https://github.com/jameswei" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 # tiny-rag-lab
 
+**Project site:** https://jameswei.github.io/tiny-rag-lab/
+
 `tiny-rag-lab` is a learning-first RAG engine/laboratory for understanding how
 classic retrieval-augmented generation works end to end.
 

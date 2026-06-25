@@ -65,3 +65,19 @@ Generated data should stay out of version control:
 corpus/
 .tiny-rag/
 ```
+
+## Project Site
+
+Static landing page deployed to GitHub Pages. Not read by agents.
+
+```text
+website/
+  index.html              single-page landing (HTML + inline SVG pipeline diagram)
+  css/
+    styles.css            layout, typography, responsive rules (light theme only)
+  js/
+    i18n.js               language switching (EN / 简体中文), translations object, localStorage preference
+.github/
+  workflows/
+    deploy-website.yml    GitHub Actions: deploy website/ to github-pages on push to main
+```
