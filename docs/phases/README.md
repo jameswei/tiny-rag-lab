@@ -14,8 +14,10 @@ historical context.
      - CURRENT.md is created or reset only when a concrete task is claimed or
        ready for review -->
 
-**No active phase.** Phase 2.1 is complete. Phase 2.2 is a candidate; its spec
-must be drafted and signed off before implementation begins.
+**Phase 2.2: Structural And Semantic Chunking**
+
+- Spec: `docs/phases/phase-2.2-structural-semantic-chunking.md`
+- Taskboard: `docs/phases/phase-2.2-taskboard.md`
 
 Phase 2.1 is complete:
 
@@ -87,7 +89,6 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Status |
 |---|---|---|
-| Phase 2.2 | Structural and semantic chunking | Directional; draft after Phase 2.1 |
 | Later | Agentic RAG | Deferred |
 
 Candidate and directional phases must not be treated as active implementation
