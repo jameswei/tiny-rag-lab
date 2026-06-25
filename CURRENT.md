@@ -1,15 +1,15 @@
 # Current Task
 
-Task:         P2.2-T02
+Task:         P2.2-T05
 Phase:        Phase 2.2
 Spec:         docs/phases/phase-2.2-structural-semantic-chunking.md
 Taskboard:    docs/phases/phase-2.2-taskboard.md
-Owner:        Claude Code
-Status:       review
-Review Result: signed_off
-Reviewer:     Codex
+Owner:        unassigned
+Status:       todo
+Review Result: pending
+Reviewer:     
 Last Updated: 2026-06-25
-Updated By:   Codex
+Updated By:   GitHub Copilot CLI
 
 ## Findings From Last Review
 
@@ -17,70 +17,66 @@ Updated By:   Codex
 
 ## Tests Reviewed
 
-- `uv run pytest tests/test_chunking.py --tb=short -q`: 44 passed
-- manual batching/packing probe: semantic chunking called `embedder.embed`
-  once with all 4 sentences, low-threshold packing produced contiguous
-  sentence chunks, and oversized-sentence fallback produced overlapping
-  windows
-- `uv run python -c "import sys; import tiny_rag_lab.chunking; print('tiny_rag_lab.embeddings' in sys.modules)"`:
-  printed `False`
-- `uv run pytest --tb=short -q`: 732 passed, 7 skipped
+- `uv run rag index --corpus tests/fixtures/chunking_corpus --index-dir .tiny-rag/fixed-chunking-demo --chunk-size 75 --chunk-overlap 0 --chunking-strategy fixed_character` — passed
+- `uv run rag index --corpus tests/fixtures/chunking_corpus --index-dir .tiny-rag/structural-chunking-demo --chunk-size 75 --chunk-overlap 0 --chunking-strategy structural` — passed
+- `uv run rag retrieve 'Before bulk import, what timeout_ms and retry_mode should I set?' --index-dir .tiny-rag/fixed-chunking-demo --retriever bm25 --top-k 2` — passed; rank 1 was `dry_run_defaults.md`
+- `uv run rag retrieve 'Before bulk import, what timeout_ms and retry_mode should I set?' --index-dir .tiny-rag/structural-chunking-demo --retriever bm25 --top-k 2` — passed; rank 1 was `bulk_import_runbook.md`
+- `uv run rag diagnose --cases-file tests/fixtures/failure/chunking_strategy_cases.jsonl --index-dir .tiny-rag/fixed-chunking-demo` — passed; case `fc010` reproduced `missing_evidence`
+- `uv run rag diagnose --cases-file tests/fixtures/failure/chunking_strategy_cases.jsonl --index-dir .tiny-rag/structural-chunking-demo` — passed; case `fc010` became `no_failure`
+- `git diff -- tiny_rag_lab/failure.py tiny_rag_lab/eval.py` — passed; no diff
+- temporary-index reproduction under `/tmp/tiny-rag-t04-review-0Uyhor` — passed; fixed-character rank 1 was `dry_run_defaults.md`, structural rank 1 was `bulk_import_runbook.md`; fixed diagnose confirmed `missing_evidence`, structural diagnose returned `no_failure`
+- `uv run pytest --tb=short -q` — passed (746 passed, 7 skipped)
 
 ## Blocker
 
 - none
 
+## Notes
+
+- Codex review signed off T04. The new fixture corpus, diagnose case, and
+  walkthrough stay within the fixture/docs-only scope and reproduce the
+  documented fixed-character versus structural behavior with the existing CLI.
+
 ## Handoff
 
 ### Task Summary
 
-Added `chunk_document_semantic`: splits `normalized_text` into sentences
-(reusing `_split_sentences` from P2.2-T01), embeds all sentences in a single
-batch call, then packs them in order — closing a chunk when the next
-sentence would exceed `chunk_size` or cosine similarity to the previous
-sentence drops below `similarity_threshold`. A single sentence that itself
-exceeds `chunk_size` falls back to `_chunk_oversized_span` (same tier-3
-fallback as structural chunking; the only place `chunk_overlap` is used).
+Completed P2.2-T04 by adding a dedicated fixture corpus, a matching diagnose
+case, and a phase-specific walkthrough that demonstrates a real before/after
+difference between fixed-character and structural chunking using only existing
+CLI commands.
 
 ### Files Changed
 
-- `tiny_rag_lab/chunking.py`: added `TYPE_CHECKING` import of `Embedder`
-  (matches the lazy-import convention already used in `eval.py`/`failure.py`
-  for cross-module type hints) and `chunk_document_semantic`.
-- `tests/test_chunking.py`: 10 new tests — slice invariant, unreachable-low
-  `similarity_threshold` (chunking driven purely by `chunk_size`),
-  unreachable-high `similarity_threshold` (every sentence its own chunk),
-  oversized-single-sentence fallback with overlap, **embedder called
-  exactly once with all sentences in one batch** (the review-sensitive
-  requirement, verified with a counting wrapper around `FakeEmbedder`),
-  determinism across repeated calls with a fresh `FakeEmbedder`,
-  metadata/`chunk_id` contract, empty/whitespace input, validation errors.
+- `tests/fixtures/chunking_corpus/bulk_import_runbook.md`: gold document whose
+  key instruction is split by fixed-character chunking at `chunk_size=75`
+- `tests/fixtures/chunking_corpus/dry_run_defaults.md`: distractor document
+  with wrong settings that can outrank the split gold instruction under BM25
+- `tests/fixtures/failure/chunking_strategy_cases.jsonl`: one reproduceable
+  diagnose case (`fc010`) using `bm25` + `top_k=1`
+- `docs/phases/phase-2.2-chunking-comparison.md`: reproducible `rag index` /
+  `rag retrieve` / `rag diagnose` walkthrough with observed results
 
 ### Design Decisions
 
-- Similarity is always computed between *consecutive sentences in the
-  original sequence* (`vectors[i-1] @ vectors[i]`), not between a sentence
-  and some representative of the currently-open chunk. This matches the
-  spec's literal wording ("the previous one") and means the topic-shift
-  decision is independent of how prior sentences happened to get packed.
-- After an oversized-sentence fallback (tier 3), the next sentence starts a
-  fresh chunk with no similarity check against the oversized sentence —
-  there's no "current chunk" embedding to compare against at that point.
-  Not explicitly tested; documented here for the next agent.
-- Did not generalize `_pack_units` to support a similarity predicate.
-  `chunk_document_semantic` has its own small packing loop because the
-  extra topic-shift condition doesn't fit `_pack_units`'s "oversized or not"
-  shape without adding a feature only this one caller needs.
-- `Embedder` is imported under `TYPE_CHECKING` only (chunking.py already has
-  `from __future__ import annotations`, so the runtime annotation is a
-  string regardless) — avoids importing `tiny_rag_lab.embeddings` at
-  runtime just for a type hint, matching `eval.py`/`failure.py`.
+- Kept the chunking demo in a dedicated fixture corpus so the long-standing
+  `tests/fixtures/corpus/` counts and semantics stay unchanged.
+- Used the same corpus, same query, same `bm25` retriever, same `top_k`, and
+  the same diagnose case across both indices so the observed difference is
+  attributable to chunk boundaries alone.
+- Used `expected_label="missing_evidence"` in the diagnose case because that is
+  the fixed-character failure we want to reproduce; running the same case
+  against the structural index then shows the failure no longer reproduces.
 
 ### Tests Run
 
-- `uv run pytest tests/test_chunking.py --tb=short -q`: 44 passed
-- `uv run pytest --tb=short -q`: 732 passed, 7 skipped (full suite, no
-  regressions)
+- `uv run rag index --corpus tests/fixtures/chunking_corpus --index-dir .tiny-rag/fixed-chunking-demo --chunk-size 75 --chunk-overlap 0 --chunking-strategy fixed_character`: passed
+- `uv run rag index --corpus tests/fixtures/chunking_corpus --index-dir .tiny-rag/structural-chunking-demo --chunk-size 75 --chunk-overlap 0 --chunking-strategy structural`: passed
+- `uv run rag retrieve 'Before bulk import, what timeout_ms and retry_mode should I set?' --index-dir .tiny-rag/fixed-chunking-demo --retriever bm25 --top-k 2`: passed
+- `uv run rag retrieve 'Before bulk import, what timeout_ms and retry_mode should I set?' --index-dir .tiny-rag/structural-chunking-demo --retriever bm25 --top-k 2`: passed
+- `uv run rag diagnose --cases-file tests/fixtures/failure/chunking_strategy_cases.jsonl --index-dir .tiny-rag/fixed-chunking-demo`: passed
+- `uv run rag diagnose --cases-file tests/fixtures/failure/chunking_strategy_cases.jsonl --index-dir .tiny-rag/structural-chunking-demo`: passed
+- `uv run pytest --tb=short -q`: passed (746 passed, 7 skipped)
 
 ### Known Gaps
 
@@ -88,17 +84,13 @@ fallback as structural chunking; the only place `chunk_overlap` is used).
 
 ### Learning Notes
 
-- `test_semantic_embedder_called_exactly_once_per_document` is the most
-  important test in this batch — it's what actually proves indexing speed
-  matches the spec's documented cost tradeoff (one embedding pass over
-  sentences, not N passes).
-- The unreachable-threshold tests (`-2.0` and `2.0`) are a clean way to
-  isolate "chunk_size-only" and "similarity-only" behavior without needing
-  a real embedding model that produces semantically meaningful similarity
-  scores — `FakeEmbedder`'s vectors are deterministic per-text but not
-  semantically related, so only the boundary thresholds are reliably
-  testable without a real model.
+- The important subtlety is that `rag diagnose` still works at the document-hit
+  level, so the fixture needs a distractor document strong enough to outrank the
+  split gold chunks under `fixed_character`; a same-doc partial-chunk failure
+  alone would not surface in diagnose metrics.
 
 ### Questions For Next Agent
 
-- None.
+- Please verify the task stayed within scope: fixtures/docs only, with no
+  production-code changes and no edits to `failure.py`, `eval.py`,
+  `FailureCase`, or `RetrieverConfig`.
