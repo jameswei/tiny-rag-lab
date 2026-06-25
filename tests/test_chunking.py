@@ -6,7 +6,11 @@ Every test that produces chunks verifies this invariant.
 """
 import pytest
 
-from tiny_rag_lab.chunking import chunk_document, chunk_documents
+from tiny_rag_lab.chunking import (
+    chunk_document,
+    chunk_document_structural,
+    chunk_documents,
+)
 from tiny_rag_lab.models import Document
 
 
@@ -221,3 +225,141 @@ def test_chunk_documents_combines_all():
     assert len(chunks) == 3
     doc_ids = [c.doc_id for c in chunks]
     assert doc_ids == ["docs/doc0.md", "docs/doc1.md", "docs/doc2.md"]
+
+
+# ---------------------------------------------------------------------------
+# Phase 2.2 (P2.2-T01): chunk_document_structural
+# ---------------------------------------------------------------------------
+
+_MARKDOWN_FIXTURE = (
+    "# Title\n\n"
+    "First paragraph here.\n\n"
+    "Second paragraph with more words in it.\n\n"
+    "- item one\n- item two\n"
+)
+
+
+def test_structural_slice_invariant_across_sizes():
+    doc = _make_doc(_MARKDOWN_FIXTURE)
+    for chunk_size in (20, 40, 60, 800):
+        chunks = chunk_document_structural(doc, chunk_size=chunk_size, chunk_overlap=5)
+        _assert_slice_invariant(doc, chunks)
+
+
+def test_structural_heading_only_block_never_stands_alone():
+    doc = _make_doc(_MARKDOWN_FIXTURE)
+    chunks = chunk_document_structural(doc, chunk_size=800, chunk_overlap=5)
+    # The heading and its body must be packed into the same chunk, not split
+    # into a heading-only chunk followed by a separate body chunk.
+    assert any("# Title" in c.text and "First paragraph" in c.text for c in chunks)
+
+
+def test_structural_consecutive_headings_never_form_a_heading_only_chunk():
+    # Regression: "# H1" merging with the immediately following "## H2"
+    # block must not stop there if "## H2" is itself heading-only too — the
+    # whole run of consecutive headings must merge through to the next body
+    # block, not surface as a heading-only chunk on its own.
+    text = "# H1\n\n## H2\n\nBody paragraph with enough words."
+    doc = _make_doc(text)
+    chunks = chunk_document_structural(doc, chunk_size=20, chunk_overlap=3)
+    _assert_slice_invariant(doc, chunks)
+    assert not any(
+        c.text.strip() in ("# H1", "## H2", "# H1\n\n## H2") for c in chunks
+    )
+
+
+def test_structural_trailing_consecutive_headings_with_no_body():
+    # Edge case: a run of consecutive headings at the very end of a
+    # document has nothing to merge into. Must not crash and must still
+    # satisfy the slice invariant.
+    doc = _make_doc("Body.\n\n# H1\n\n## H2")
+    chunks = chunk_document_structural(doc, chunk_size=10, chunk_overlap=2)
+    _assert_slice_invariant(doc, chunks)
+
+
+def test_structural_heading_with_no_body_stays_standalone():
+    # Edge case: a heading at the very end of a document has nothing to
+    # merge with at block-split time. Use a chunk_size tight enough that
+    # packing can't combine it with the preceding block either, so it
+    # surfaces as its own chunk rather than being silently absorbed.
+    doc = _make_doc("Intro paragraph.\n\n# Trailing Heading")
+    chunks = chunk_document_structural(doc, chunk_size=20, chunk_overlap=5)
+    _assert_slice_invariant(doc, chunks)
+    assert any(c.text.strip() == "# Trailing Heading" for c in chunks)
+
+
+def test_structural_oversized_block_packs_by_sentence_not_character_window():
+    # A single block (no blank line inside) made of several short sentences
+    # that together exceed chunk_size. Tier 2 (sentence packing) must produce
+    # non-overlapping chunks aligned to sentence boundaries — not tier 3
+    # (character windowing), which would overlap and ignore sentence breaks.
+    text = (
+        "Sentence one is here. Sentence two is here. "
+        "Sentence three is here. Sentence four is here."
+    )
+    doc = _make_doc(text)
+    chunks = chunk_document_structural(doc, chunk_size=50, chunk_overlap=5)
+    _assert_slice_invariant(doc, chunks)
+    assert len(chunks) > 1
+    # Tier 1/2 chunks are exactly contiguous (no overlap).
+    for i in range(len(chunks) - 1):
+        assert chunks[i].char_end == chunks[i + 1].char_start
+    # Every chunk boundary falls on a sentence boundary (ends right after
+    # ". "), not mid-sentence.
+    for c in chunks[:-1]:
+        assert c.text.endswith(". ") or c.text.endswith(".")
+
+
+def test_structural_oversized_single_sentence_falls_back_to_character_window():
+    # One run-on sentence with no internal punctuation, longer than
+    # chunk_size. Only this case may use chunk_overlap.
+    text = "word " * 40  # 200 chars, one giant "sentence" (no terminal punctuation)
+    doc = _make_doc(text.strip())
+    chunks = chunk_document_structural(doc, chunk_size=50, chunk_overlap=10)
+    _assert_slice_invariant(doc, chunks)
+    assert len(chunks) > 1
+    # The character-window fallback overlaps consecutive chunks.
+    shared = chunks[0].text[-10:]
+    next_start = chunks[1].text[:10]
+    assert shared == next_start
+
+
+def test_structural_metadata_and_chunk_id_match_chunk_document_contract():
+    doc = _make_doc(_MARKDOWN_FIXTURE, "docs/struct.md")
+    chunks = chunk_document_structural(doc, chunk_size=800, chunk_overlap=5)
+    for c in chunks:
+        assert c.doc_id == "docs/struct.md"
+        assert "title" in c.metadata
+        assert "path" in c.metadata
+        assert "format" in c.metadata
+        assert "raw_hash" in c.metadata
+        assert len(c.chunk_id) == 16
+        assert all(ch in "0123456789abcdef" for ch in c.chunk_id)
+
+
+def test_structural_empty_text_gives_no_chunks():
+    doc = _make_doc("")
+    assert chunk_document_structural(doc) == []
+
+
+def test_structural_whitespace_only_text_gives_no_chunks():
+    doc = _make_doc("   \n\n   \n")
+    assert chunk_document_structural(doc) == []
+
+
+def test_structural_validation_errors_match_chunk_document():
+    doc = _make_doc("text")
+    with pytest.raises(ValueError, match="chunk_size"):
+        chunk_document_structural(doc, chunk_size=0)
+    with pytest.raises(ValueError, match="chunk_overlap"):
+        chunk_document_structural(doc, chunk_size=10, chunk_overlap=10)
+    with pytest.raises(ValueError, match="chunk_overlap"):
+        chunk_document_structural(doc, chunk_size=10, chunk_overlap=-1)
+
+
+def test_structural_large_chunk_size_yields_single_chunk():
+    doc = _make_doc(_MARKDOWN_FIXTURE)
+    chunks = chunk_document_structural(doc, chunk_size=800, chunk_overlap=5)
+    assert len(chunks) == 1
+    assert chunks[0].char_start == 0
+    assert chunks[0].char_end == len(_MARKDOWN_FIXTURE)
