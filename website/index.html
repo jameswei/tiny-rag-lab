@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tiny-rag-lab — A Learning-First RAG Laboratory</title>
-  <meta name="description" content="tiny-rag-lab is a learning-first RAG engine built in Python to make the retrieval-augmented generation lifecycle visible and inspectable." />
+  <meta name="description" content="tiny-rag-lab is a learning-first classic RAG engine and local visual laboratory, built to make every retrieval step visible and inspectable." />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -16,6 +16,7 @@
       <ul class="nav-links">
         <li><a href="#about"        data-i18n="nav.about">About</a></li>
         <li><a href="#pipeline"     data-i18n="nav.pipeline">Pipeline</a></li>
+        <li><a href="#studio"       data-i18n="nav.studio">Visual Lab</a></li>
         <li><a href="#capabilities" data-i18n="nav.capabilities">Capabilities</a></li>
         <li><a href="#stack"        data-i18n="nav.stack">Stack</a></li>
         <li><a href="#cli"          data-i18n="nav.cli">CLI</a></li>
@@ -34,12 +35,12 @@
       <div class="container">
         <h1 class="hero-title">tiny-rag-lab</h1>
         <p class="hero-tagline" data-i18n="hero.tagline">
-          A learning-first RAG laboratory — building retrieval-augmented generation
-          from scratch to make the full pipeline visible and inspectable.
+          A learning-first classic RAG engine and local visual laboratory —
+          making every stage of retrieval-augmented generation visible and inspectable.
         </p>
         <div class="hero-actions">
           <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-primary" data-i18n="hero.cta.github">View on GitHub</a>
-          <a href="#about" class="btn btn-secondary" data-i18n="hero.cta.learn">Learn more ↓</a>
+          <a href="#studio" class="btn btn-secondary" data-i18n="hero.cta.studio">Explore the visual lab ↓</a>
         </div>
       </div>
     </section>
@@ -63,10 +64,10 @@
               before advanced features.
             </p>
             <p data-i18n="about.p3">
-              Built across nine incremental phases, the project now covers classic dense retrieval,
-              BM25 keyword search, hybrid fusion, reranking, answer quality judging, context budgeting,
-              and structural/semantic chunking — all wired through a clean Python CLI with trace output
-              at every stage.
+              Built across incremental phases, the project now covers classic dense retrieval, BM25
+              keyword search, hybrid fusion, reranking, answer quality judging, context budgeting, and
+              structural/semantic chunking. Phase 3.0 adds a local visual lab that makes those same
+              mechanics replayable and inspectable in the browser without replacing the CLI.
             </p>
             <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="text-link" data-i18n="about.cta">
               Explore the source on GitHub →
@@ -79,8 +80,8 @@
             <span class="stat-label" data-i18n="stat.planes">RAG Architecture Planes</span>
           </div>
           <div class="stat-card">
-            <span class="stat-number">5</span>
-            <span class="stat-label" data-i18n="stat.commands">CLI Commands</span>
+            <span class="stat-number">2</span>
+            <span class="stat-label" data-i18n="stat.entrypoints">Local Learning Entrypoints</span>
           </div>
           <div class="stat-card">
             <span class="stat-number">3</span>
@@ -185,8 +186,34 @@
       </div>
     </section>
 
+    <!-- ─────────────────────────── VISUAL LAB ─────────────────────────── -->
+    <section id="studio" class="section section-alt">
+      <div class="container">
+        <h2 class="section-title" data-i18n="studio.title">A local visual RAG lab</h2>
+        <p class="section-subtitle" data-i18n="studio.subtitle">Phase 3.0 turns the same teachable engine into a browser learning studio — on your own machine.</p>
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-icon">↺</div>
+            <h3 class="card-title" data-i18n="studio.replay.title">Start with a replay</h3>
+            <p class="card-desc" data-i18n="studio.replay.desc">Open an offline starter trace and follow a single run from corpus to cited answer, one visible stage at a time.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">◌</div>
+            <h3 class="card-title" data-i18n="studio.inspect.title">Inspect the mechanics</h3>
+            <p class="card-desc" data-i18n="studio.inspect.desc">Examine chunks, embedding components, ranked evidence, context packing, prompts, citations, and stage timings.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">⇄</div>
+            <h3 class="card-title" data-i18n="studio.compare.title">Learn from comparisons</h3>
+            <p class="card-desc" data-i18n="studio.compare.desc">Upload a small corpus or import watsonxDocsQA, then compare NumPy with optional Qdrant and study curated failures.</p>
+          </div>
+        </div>
+        <p class="studio-link-row"><a href="https://github.com/jameswei/tiny-rag-lab#local-visual-lab" target="_blank" rel="noopener" class="text-link" data-i18n="studio.cta">Run the local studio with Docker Compose →</a></p>
+      </div>
+    </section>
+
     <!-- ─────────────────────────── CAPABILITIES ─────────────────────────── -->
-    <section id="capabilities" class="section section-alt">
+    <section id="capabilities" class="section">
       <div class="container">
         <h2 class="section-title" data-i18n="cap.title">What it covers</h2>
         <p class="section-subtitle" data-i18n="cap.subtitle">Built phase-by-phase, each capability measurable and debuggable.</p>
@@ -268,7 +295,7 @@
           </div>
           <div class="stack-item">
             <span class="stack-label" data-i18n="stack.l.interface">Interface</span>
-            <span class="stack-value">argparse CLI</span>
+            <span class="stack-value" data-i18n="stack.v.interface">CLI + local visual lab</span>
           </div>
           <div class="stack-item">
             <span class="stack-label" data-i18n="stack.l.embeddings">Embeddings</span>
@@ -276,7 +303,7 @@
           </div>
           <div class="stack-item">
             <span class="stack-label" data-i18n="stack.l.index">Vector index</span>
-            <span class="stack-value" data-i18n="stack.v.index">Local NumPy (no vector DB)</span>
+            <span class="stack-value" data-i18n="stack.v.index">NumPy + optional local Qdrant</span>
           </div>
           <div class="stack-item">
             <span class="stack-label" data-i18n="stack.l.generation">Generation</span>

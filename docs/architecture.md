@@ -139,6 +139,21 @@ The first implementation should likely expose CLI commands before any UI:
 
 Exact flags and schemas should be decided in a phase spec before implementation.
 
+## Local Visual Lab Boundary
+
+Phase 3.0 adds a local browser client and HTTP boundary over the existing
+planes. It is not a fifth RAG plane and must not hide the four existing ones:
+the client renders artifacts produced by project-owned indexing, retrieval,
+generation, and observability services. The CLI and web API call the same
+services rather than one wrapping the other.
+
+The default index remains the inspectable NumPy/file implementation. A vector
+database may be an optional backend behind a narrow project-owned interface;
+it changes vector persistence/search execution, not chunks, embeddings,
+retrieval concepts, prompt assembly, citations, or trace vocabulary. The lab
+retains local chunk and vector inspection artifacts even when the optional
+backend is used.
+
 ## Dependency Philosophy
 
 Use dependencies for commodity primitives when they do not hide the core lesson:

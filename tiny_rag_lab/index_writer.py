@@ -18,7 +18,7 @@ import numpy as np
 
 from tiny_rag_lab.models import Chunk, Document
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "2.0"
 
 
 def write_index(
@@ -35,6 +35,9 @@ def write_index(
     chunk_overlap: int,
     chunking_strategy: str = "fixed_character",
     chunking_params: dict | None = None,
+    index_backend: str = "numpy",
+    distance_metric: str = "cosine",
+    backend_identity: str | None = None,
 ) -> None:
     """Write manifest.json, chunks.jsonl, and embeddings.npz to index_dir.
 
@@ -66,6 +69,9 @@ def write_index(
         chunk_overlap=chunk_overlap,
         chunking_strategy=chunking_strategy,
         chunking_params=chunking_params,
+        index_backend=index_backend,
+        distance_metric=distance_metric,
+        backend_identity=backend_identity,
     )
     _write_chunks(index_dir, chunks)
     _write_embeddings(index_dir, chunks, embeddings)
@@ -84,6 +90,9 @@ def _write_manifest(
     chunk_overlap: int,
     chunking_strategy: str = "fixed_character",
     chunking_params: dict | None = None,
+    index_backend: str = "numpy",
+    distance_metric: str = "cosine",
+    backend_identity: str | None = None,
 ) -> None:
     corpus_files = [
         {"doc_id": doc.doc_id, "path": doc.path, "raw_hash": doc.raw_hash}
@@ -99,6 +108,9 @@ def _write_manifest(
         "chunk_overlap": chunk_overlap,
         "chunking_strategy": chunking_strategy,
         "chunking_params": chunking_params if chunking_params is not None else {},
+        "index_backend": index_backend,
+        "distance_metric": distance_metric,
+        "backend_identity": backend_identity or index_backend,
         "embedding_backend": embedding_backend,
         "embedding_model": embedding_model,
         "embedding_dim": embedding_dim,

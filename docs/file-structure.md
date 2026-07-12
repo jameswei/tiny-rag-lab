@@ -48,6 +48,10 @@ tiny_rag_lab/
   prompting.py
   generation.py
   trace.py             (Phase 1.7 + 2.0 + 2.1: retrieve/ask trace records, verdict trace, context_pack trace)
+  index_backend.py     (Phase 3.0: visible NumPy vector-backend seam)
+  lab_trace.py         (Phase 3.0: immutable browser replay artifacts)
+  qdrant_backend.py    (Phase 3.0: optional local Qdrant adapter)
+  web_api.py           (Phase 3.0: loopback FastAPI local-lab API)
 scripts/
   prepare_watsonx_docsqa.py
 tests/
@@ -57,6 +61,15 @@ tests/
     eval/              (Phase 1.6: qa.jsonl fixture)
     failure/           (Phase 1.8: curated failure cases; Phase 2.2: chunking_strategy_cases.jsonl)
   test_*.py
+```
+
+## Local Visual Lab
+
+```text
+web/                              React + TypeScript visual learning client
+Dockerfile                        multi-stage local studio image
+compose.yaml                      loopback studio + optional Qdrant profile
+.env.example                      local provider and image-variant template
 ```
 
 Generated data should stay out of version control:

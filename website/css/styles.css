@@ -450,6 +450,10 @@ code {
   gap: 20px;
 }
 
+.studio-link-row {
+  margin-top: 28px;
+}
+
 .card {
   background:    var(--color-card-bg);
   border:        1px solid var(--color-border);

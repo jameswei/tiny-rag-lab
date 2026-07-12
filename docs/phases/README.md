@@ -14,7 +14,13 @@ historical context.
      - CURRENT.md is created or reset only when a concrete task is claimed or
        ready for review -->
 
-**No active phase.** Phase 2.2 is complete.
+No phase is currently active. Do not start implementation until the next phase
+scope proposal is reviewed, signed off, and activated here.
+
+Phase 3.0 is complete:
+
+- Spec: `docs/phases/phase-3.0-local-visual-rag-lab.md`
+- Taskboard: `docs/phases/phase-3.0-taskboard.md`
 
 Phase 2.2 is complete:
 
@@ -78,6 +84,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
+| Phase 3.0 | Local visual RAG lab | Complete; see `docs/phases/phase-3.0-taskboard.md` |
 | Phase 2.2 | Structural and semantic chunking | Complete; see `docs/phases/phase-2.2-taskboard.md` |
 | Phase 2.1 | Context budget and structured answers | Complete; see `docs/phases/phase-2.1-taskboard.md` |
 | Phase 2.0 | Answer quality judging | Complete; see `docs/phases/phase-2.0-taskboard.md` |

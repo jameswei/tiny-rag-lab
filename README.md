@@ -5,6 +5,11 @@
 `tiny-rag-lab` is a learning-first RAG engine/laboratory for understanding how
 classic retrieval-augmented generation works end to end.
 
+> **v0.2.0 / Phase 3.0 milestone:** the project now includes a local visual
+> RAG lab alongside its inspectable CLI. Learners can replay a starter run,
+> inspect chunks, vectors, retrieval and context packing, compare curated
+> failures, and run a small local corpus through the same visible mechanics.
+
 The goal is to keep the RAG lifecycle visible:
 document loading, text normalization, chunking, metadata, embeddings, local
 vector search, retrieval, prompt assembly, answer generation, citations,
@@ -111,6 +116,50 @@ Generated corpora and indexes are intentionally ignored by git:
 corpus/
 .tiny-rag/
 ```
+
+## Local Visual Lab (Phase 3.0 / v0.2.0)
+
+The CLI remains the lightweight, direct interface. The local visual lab is a
+second entrypoint that serves a React learning client and a FastAPI API from
+one `studio` service.
+
+The lab is designed for local learning, not public hosting: the UI supports
+English and Simplified Chinese while preserving the source corpus's language in
+questions, evidence, answers, and citations. It includes an offline starter
+replay, small Markdown/text uploads, watsonxDocsQA import, visual trace
+playback, curated failure lessons, and inspectable NumPy vectors. Optional
+Qdrant changes only the dense-index backend; it does not hide the conceptual
+RAG flow.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Open http://127.0.0.1:8000. The default `full` image includes the default
+embedding model; use `LAB_IMAGE_VARIANT=slim` in `.env` to defer that model
+download until a custom corpus is indexed. The optional local Qdrant backend
+is started only when requested:
+
+```bash
+docker compose --profile qdrant up --build
+```
+
+Verify the optional adapter against the same English fixture corpus through a
+temporary loopback-only test profile (the normal profile remains internal):
+
+```bash
+docker compose --profile qdrant-test up -d qdrant-test
+QDRANT_URL=http://127.0.0.1:6333 uv run --extra qdrant pytest tests/test_qdrant_integration.py -q
+docker compose --profile qdrant-test down
+```
+
+The established bare CLI stays NumPy-first in Phase 3.0; Qdrant is a local
+visual-lab comparison backend, not a CLI deployment dependency.
+
+The lab accepts up to 100 Markdown/plain-text files totalling 100 MiB. Its
+starter trace can replay offline; live Ask requires an OpenAI-compatible
+provider through `.env` or the browser's session-only Settings panel.
 
 ## Docs
 

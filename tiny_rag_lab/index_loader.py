@@ -50,6 +50,12 @@ def load_index(index_dir: Path) -> LoadedIndex:
             raise FileNotFoundError(f"Index file not found: {p}")
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    # Phase 3.0: indexes written before backend selection existed are the
+    # original inspectable NumPy/cosine format. Treating absent fields as the
+    # explicit defaults keeps those artifacts fully compatible.
+    manifest.setdefault("index_backend", "numpy")
+    manifest.setdefault("distance_metric", "cosine")
+    manifest.setdefault("backend_identity", "numpy")
 
     chunks = _load_chunks(chunks_path)
 
