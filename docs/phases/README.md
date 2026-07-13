@@ -1,113 +1,40 @@
 # Phase Index
 
-This file routes agents to the current implementation contract. It keeps the
-default reading path narrow while preserving proposal and review documents as
-historical context.
+This file is the activation switch for implementation work.
 
 ## Current Phase
 
-<!-- Activation checklist:
-     - the phase spec and taskboard are signed off
-     - this section names both active files
-     - stale Draft/Review-ready/candidate wording in the phase spec/taskboard
-       is updated
-     - CURRENT.md is created or reset only when a concrete task is claimed or
-       ready for review -->
+No phase is currently active. Do not start implementation until a new phase
+spec and taskboard are reviewed, signed off, and named here.
 
-No phase is currently active. Do not start implementation until the next phase
-scope proposal is reviewed, signed off, and activated here.
+## Completed Phase Records
 
-Phase 3.0 is complete, including its post-merge correctness repair:
+Completed phase records preserve the decisions that still matter to the
+project. Detailed task execution and review logs were consolidated after
+Phase 3.0; compatibility taskboard files remain only for links from older
+root documentation.
 
-- Spec: `docs/phases/phase-3.0-local-visual-rag-lab.md`
-- Taskboard: `docs/phases/phase-3.0-taskboard.md`
+| Phase | Delivered focus | Record |
+|---|---|---|
+| 3.0 | Local visual RAG lab | [record](phase-3.0-local-visual-rag-lab.md) |
+| 2.2 | Structural and semantic chunking | [record](phase-2.2-structural-semantic-chunking.md) |
+| 2.1 | Context budgets and structured answers | [record](phase-2.1-context-budget-structured-answers.md) |
+| 2.0 | Answer-quality judging | [record](phase-2.0-answer-quality-judging.md) |
+| 1.9 | Reranking | [record](phase-1.9-reranking.md) |
+| 1.8 | Failure lab | [record](phase-1.8-failure-lab.md) |
+| 1.7 | Observability and debugging | [record](phase-1.7-observability.md) |
+| 1.6 | Evaluation harness | [record](phase-1.6-evaluation-harness.md) |
+| 1.5 | Retrieval mechanics | [record](phase-1.5-retrieval-mechanics.md) |
+| 1 | Classic RAG baseline | [record](phase-1-naive-classic-rag.md) |
 
-P3.0-T10 (post-merge repair) addressed the accepted findings in
-`docs/phases/phase-3.0-review-findings.md` and was independently signed off
-by Claude Sonnet 5 on 2026-07-13; caching (finding 8) and a currently
-unreachable defensive footgun (finding 9) remain deliberately deferred.
+## Candidate And Deferred Direction
 
-Phase 2.2 is complete:
-
-- Spec: `docs/phases/phase-2.2-structural-semantic-chunking.md`
-- Taskboard: `docs/phases/phase-2.2-taskboard.md`
-
-Phase 2.1 is complete:
-
-- Spec: `docs/phases/phase-2.1-context-budget-structured-answers.md`
-- Taskboard: `docs/phases/phase-2.1-taskboard.md`
-
-Phase 2.0 is complete:
-
-- Spec: `docs/phases/phase-2.0-answer-quality-judging.md`
-- Taskboard: `docs/phases/phase-2.0-taskboard.md`
-
-Phase 1.9 is complete:
-
-- Spec: `docs/phases/phase-1.9-reranking.md`
-- Taskboard: `docs/phases/phase-1.9-taskboard.md`
-
-Phase 1.8 is complete:
-
-- Spec: `docs/phases/phase-1.8-failure-lab.md`
-- Taskboard: `docs/phases/phase-1.8-taskboard.md`
-
-Phase 1.7 is complete:
-
-- Spec: `docs/phases/phase-1.7-observability.md`
-- Taskboard: `docs/phases/phase-1.7-taskboard.md`
-
-Phase 1.6 is complete:
-
-- Spec: `docs/phases/phase-1.6-evaluation-harness.md`
-- Taskboard: `docs/phases/phase-1.6-taskboard.md`
-
-Phase 1.5 is complete:
-
-- Spec: `docs/phases/phase-1.5-retrieval-mechanics.md`
-- Taskboard: `docs/phases/phase-1.5-taskboard.md`
-
-Phase 1 is complete:
-
-- Spec: `docs/phases/phase-1-naive-classic-rag.md`
-- Taskboard: `docs/phases/phase-1-taskboard.md`
+Agentic RAG remains deferred. It is not an implementation contract until a
+separate phase proposal is reviewed, signed off, and activated above.
 
 ## Agent Reading Rule
 
-For normal work, agents should read:
-
-1. `AGENTS.md`
-2. `docs/file-structure.md`
-3. `docs/agent-guidelines.md`
-4. this file
-5. the active phase spec and taskboard listed in `Current Phase`
-
-Read `docs/proposal.md`, `docs/roadmap.md`, and `docs/architecture.md` when a
-task changes scope, architecture, roadmap, or public interfaces.
-
-## Completed Phases
-
-| Phase | Focus | Completion |
-|---|---|---|
-| Phase 3.0 | Local visual RAG lab | Complete, including post-merge repair; see `docs/phases/phase-3.0-taskboard.md` |
-| Phase 2.2 | Structural and semantic chunking | Complete; see `docs/phases/phase-2.2-taskboard.md` |
-| Phase 2.1 | Context budget and structured answers | Complete; see `docs/phases/phase-2.1-taskboard.md` |
-| Phase 2.0 | Answer quality judging | Complete; see `docs/phases/phase-2.0-taskboard.md` |
-| Phase 1.9 | Reranking | Complete; see `docs/phases/phase-1.9-taskboard.md` |
-| Phase 1.8 | RAG failure lab | Complete; see `docs/phases/phase-1.8-taskboard.md` |
-| Phase 1.7 | Observability and debugging | Complete; see `docs/phases/phase-1.7-taskboard.md` |
-| Phase 1.6 | Evaluation harness | Complete; see `docs/phases/phase-1.6-taskboard.md` |
-| Phase 1.5 | Retrieval mechanics | Complete; see `docs/phases/phase-1.5-taskboard.md` |
-| Phase 1 | Naive classic RAG | Complete; see `docs/phases/phase-1-taskboard.md` |
-
-## Candidate And Deferred Phases
-
-| Phase | Focus | Status |
-|---|---|---|
-| Later | Agentic RAG | Deferred |
-
-Candidate and directional phases must not be treated as active implementation
-contracts until their scope proposal is reviewed, signed off, and named under
-`Current Phase`.
-
-Near-term roadmap decision: `docs/phases/phase-1.9-2.2-final-roadmap.md`.
+For normal implementation work, read `AGENTS.md`, `docs/file-structure.md`,
+`docs/agent-guidelines.md`, this file, and then the active phase spec and
+taskboard. Read a completed record only when it provides relevant historical
+context.
