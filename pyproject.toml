@@ -1,6 +1,6 @@
 [project]
 name = "tiny-rag-lab"
-version = "0.1.0"
+version = "0.2.0"
 description = "A learning-first RAG engine and laboratory"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -10,6 +10,9 @@ dependencies = [
     "sentence-transformers",
     "datasets",
     "openai",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
 ]
 
 [project.scripts]
@@ -21,6 +24,7 @@ build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 tiktoken = ["tiktoken"]
+qdrant = ["qdrant-client>=1.12"]
 
 [dependency-groups]
 dev = [

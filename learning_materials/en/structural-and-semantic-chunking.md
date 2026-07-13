@@ -197,14 +197,56 @@ overlap at all.
 
 ## Before/After Comparison
 
-Phase 2.2 ships a concrete demonstration in
-`tests/fixtures/chunking_corpus/` and a walkthrough in
-`docs/phases/phase-2.2-chunking-comparison.md`.
+The repository includes a small, reproducible comparison in
+`tests/fixtures/chunking_corpus/`. `bulk_import_runbook.md` contains the gold
+instruction, `timeout_ms=15000` and `retry_mode=manual`; `dry_run_defaults.md`
+is a realistic distractor with different values.
 
-The key result: at `chunk_size=75`, fixed-character chunking splits the gold
-instruction across two chunks, so BM25 retrieves the distractor document
-first. Structural chunking keeps the sentence whole, and `rag diagnose` shows
-the failure stops reproducing:
+Build two indexes from exactly the same corpus. The intentionally small
+`chunk_size=75` makes the fixed-character boundary visible:
+
+```bash
+uv run rag index \
+    --corpus tests/fixtures/chunking_corpus \
+    --index-dir .tiny-rag/fixed-chunking-demo \
+    --chunk-size 75 --chunk-overlap 0 \
+    --chunking-strategy fixed_character
+
+uv run rag index \
+    --corpus tests/fixtures/chunking_corpus \
+    --index-dir .tiny-rag/structural-chunking-demo \
+    --chunk-size 75 --chunk-overlap 0 \
+    --chunking-strategy structural
+```
+
+Compare the same question with BM25 so the effect comes from chunk boundaries,
+not embedding variation:
+
+```bash
+uv run rag retrieve \
+    "Before bulk import, what timeout_ms and retry_mode should I set?" \
+    --index-dir .tiny-rag/fixed-chunking-demo --retriever bm25 --top-k 2
+
+uv run rag retrieve \
+    "Before bulk import, what timeout_ms and retry_mode should I set?" \
+    --index-dir .tiny-rag/structural-chunking-demo --retriever bm25 --top-k 2
+```
+
+Then compare the curated failure case:
+
+```bash
+uv run rag diagnose \
+    --cases-file tests/fixtures/failure/chunking_strategy_cases.jsonl \
+    --index-dir .tiny-rag/fixed-chunking-demo
+
+uv run rag diagnose \
+    --cases-file tests/fixtures/failure/chunking_strategy_cases.jsonl \
+    --index-dir .tiny-rag/structural-chunking-demo
+```
+
+At this fixture size, fixed-character chunking splits the gold instruction
+across two chunks, so BM25 ranks the distractor first. Structural chunking
+keeps the sentence whole, and the diagnosis stops reproducing the failure:
 
 | Index strategy | `rag diagnose` result |
 |---|---|

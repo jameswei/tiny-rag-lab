@@ -14,6 +14,8 @@ Three public functions:
 """
 from __future__ import annotations
 
+import re
+
 from tiny_rag_lab.models import RetrievalResult
 
 # ---------------------------------------------------------------------------
@@ -45,6 +47,11 @@ Path: {path}
 
 {chunk_text}"""
 
+# This is the source-marker contract used by prompt assembly and every answer
+# consumer. Keeping extraction next to the emitted marker prevents CLI, failure
+# diagnosis, and the browser API from silently disagreeing about citations.
+SOURCE_CITATION_RE = re.compile(r"\[Source: ([^\]]+)\]")
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -64,6 +71,11 @@ def assemble_prompt(question: str, results: list[RetrievalResult]) -> str:
         question=question,
         context_blocks=context_blocks,
     )
+
+
+def extract_source_citations(answer: str) -> list[str]:
+    """Return the source IDs cited with the prompt's visible marker format."""
+    return SOURCE_CITATION_RE.findall(answer)
 
 
 def format_source_table(results: list[RetrievalResult]) -> str:

@@ -1,0 +1,40 @@
+services:
+  studio:
+    build:
+      context: .
+      args:
+        LAB_IMAGE_VARIANT: ${LAB_IMAGE_VARIANT:-full}
+    ports:
+      - "127.0.0.1:${TINY_RAG_LAB_PORT:-8000}:8000"
+    environment:
+      TINY_RAG_LAB_DATA_DIR: /data
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      QDRANT_URL: http://qdrant:6333
+    volumes:
+      - tiny-rag-lab-data:/data
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.18.0
+    profiles: ["qdrant"]
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+
+  # Explicitly test-only profile. The normal `qdrant` profile remains
+  # internal-only; this temporary loopback mapping makes the integration smoke
+  # executable from the native test environment.
+  qdrant-test:
+    image: qdrant/qdrant:v1.18.0
+    profiles: ["qdrant-test"]
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant-test-data:/qdrant/storage
+
+volumes:
+  tiny-rag-lab-data:
+  qdrant-data:
+  qdrant-test-data:

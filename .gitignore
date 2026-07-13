@@ -24,6 +24,10 @@ env/
 # Leading slash anchors to repo root so tests/fixtures/corpus/ is not excluded
 /corpus/
 /.tiny-rag/
+/.tiny-rag-lab/
+/web/node_modules/
+/web/dist/
+/.polish/
 
 # macOS
 .DS_Store

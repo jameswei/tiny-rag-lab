@@ -183,12 +183,54 @@ rag index --corpus PATH --index-dir .tiny-rag/semantic \
 
 ## 前后对比演示
 
-Phase 2.2 在 `tests/fixtures/chunking_corpus/` 中提供了一个具体的演示，
-走查文档在 `docs/phases/phase-2.2-chunking-comparison.md`。
+仓库在 `tests/fixtures/chunking_corpus/` 中提供了一个可复现的小型对比。
+`bulk_import_runbook.md` 包含正确指令 `timeout_ms=15000` 和
+`retry_mode=manual`；`dry_run_defaults.md` 是具有不同取值的真实干扰文档。
 
-核心结论：在 `chunk_size=75` 时，固定字符分块将黄金指令拆分到两个 chunk，
-BM25 优先检索到干扰文档。结构化分块保持句子完整，`rag diagnose` 显示该失败
-不再复现：
+用完全相同的语料构建两个索引。刻意使用很小的 `chunk_size=75`，让固定字符
+边界带来的影响清晰可见：
+
+```bash
+uv run rag index \
+    --corpus tests/fixtures/chunking_corpus \
+    --index-dir .tiny-rag/fixed-chunking-demo \
+    --chunk-size 75 --chunk-overlap 0 \
+    --chunking-strategy fixed_character
+
+uv run rag index \
+    --corpus tests/fixtures/chunking_corpus \
+    --index-dir .tiny-rag/structural-chunking-demo \
+    --chunk-size 75 --chunk-overlap 0 \
+    --chunking-strategy structural
+```
+
+使用 BM25 对同一个问题进行检索比较。这样差异只来自分块边界，而不是嵌入模型
+的变化：
+
+```bash
+uv run rag retrieve \
+    "Before bulk import, what timeout_ms and retry_mode should I set?" \
+    --index-dir .tiny-rag/fixed-chunking-demo --retriever bm25 --top-k 2
+
+uv run rag retrieve \
+    "Before bulk import, what timeout_ms and retry_mode should I set?" \
+    --index-dir .tiny-rag/structural-chunking-demo --retriever bm25 --top-k 2
+```
+
+接着比较同一个预置失败案例：
+
+```bash
+uv run rag diagnose \
+    --cases-file tests/fixtures/failure/chunking_strategy_cases.jsonl \
+    --index-dir .tiny-rag/fixed-chunking-demo
+
+uv run rag diagnose \
+    --cases-file tests/fixtures/failure/chunking_strategy_cases.jsonl \
+    --index-dir .tiny-rag/structural-chunking-demo
+```
+
+在这个 fixture 尺寸下，固定字符分块将正确指令拆到两个 chunk 中，因此 BM25
+会把干扰文档排在前面。结构化分块保留完整句子，诊断结果显示失败不再复现：
 
 | 索引策略 | `rag diagnose` 结果 |
 |---|---|

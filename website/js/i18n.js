@@ -3,26 +3,27 @@ const translations = {
     // Nav
     'nav.about':        'About',
     'nav.pipeline':     'Pipeline',
+    'nav.studio':       'Visual Lab',
     'nav.capabilities': 'Capabilities',
     'nav.stack':        'Stack',
     'nav.cli':          'CLI',
     'nav.github':       'GitHub →',
 
     // Hero
-    'hero.tagline':   'A learning-first RAG laboratory — building retrieval-augmented generation from scratch to make the full pipeline visible and inspectable.',
+    'hero.tagline':   'A learning-first classic RAG engine and local visual laboratory — making every stage of retrieval-augmented generation visible and inspectable.',
     'hero.cta.github': 'View on GitHub',
-    'hero.cta.learn':  'Learn more ↓',
+    'hero.cta.studio': 'Explore the visual lab ↓',
 
     // About
     'about.title': 'About this project',
     'about.p1':    'RAG (retrieval-augmented generation) is a foundational pattern behind many AI tools and assistants — but most tutorials hide the interesting parts behind framework calls. <strong>tiny-rag-lab</strong> is my attempt to build every stage by hand: document loading, chunking, embedding, local vector search, retrieval, prompt assembly, answer generation, evaluation, and failure diagnosis.',
     'about.p2':    'The goal is not a production platform. The goal is deep, inspectable understanding — readable code over framework magic, evaluation before optimization, failure analysis before advanced features.',
-    'about.p3':    'Built across nine incremental phases, the project now covers classic dense retrieval, BM25 keyword search, hybrid fusion, reranking, answer quality judging, context budgeting, and structural/semantic chunking — all wired through a clean Python CLI with trace output at every stage.',
+    'about.p3':    'Built across incremental phases, the project now covers classic dense retrieval, BM25 keyword search, hybrid fusion, reranking, answer quality judging, context budgeting, and structural/semantic chunking. Phase 3.0 adds a local visual lab that makes those same mechanics replayable and inspectable in the browser without replacing the CLI.',
     'about.cta':   'Explore the source on GitHub →',
 
     // Stats
     'stat.planes':    'RAG Architecture Planes',
-    'stat.commands':  'CLI Commands',
+    'stat.entrypoints':'Local Learning Entrypoints',
     'stat.retrievers':'Retrieval Strategies',
     'stat.chunking':  'Chunking Strategies',
 
@@ -57,6 +58,17 @@ const translations = {
     'plane.generation': 'Generation plane',
     'plane.eval':       'Evaluation & observability plane',
 
+    // Visual lab
+    'studio.title':        'A local visual RAG lab',
+    'studio.subtitle':     'Phase 3.0 turns the same teachable engine into a browser learning studio — on your own machine.',
+    'studio.replay.title': 'Start with a replay',
+    'studio.replay.desc':  'Open an offline starter trace and follow a single run from corpus to cited answer, one visible stage at a time.',
+    'studio.inspect.title':'Inspect the mechanics',
+    'studio.inspect.desc': 'Examine chunks, embedding components, ranked evidence, context packing, prompts, citations, and stage timings.',
+    'studio.compare.title':'Learn from comparisons',
+    'studio.compare.desc': 'Upload a small corpus or import watsonxDocsQA, then compare NumPy with optional Qdrant and study curated failures.',
+    'studio.cta':         'Run the local studio with Docker Compose →',
+
     // Capabilities
     'cap.title':    'What it covers',
     'cap.subtitle': 'Built phase-by-phase, each capability measurable and debuggable.',
@@ -78,9 +90,10 @@ const translations = {
     'stack.subtitle': 'Kept deliberately minimal — every moving part is visible in the code.',
     'stack.l.language':   'Language',
     'stack.l.interface':  'Interface',
+    'stack.v.interface':  'CLI + local visual lab',
     'stack.l.embeddings': 'Embeddings',
     'stack.l.index':      'Vector index',
-    'stack.v.index':      'Local NumPy (no vector DB)',
+    'stack.v.index':      'NumPy + optional local Qdrant',
     'stack.l.generation': 'Generation',
     'stack.v.generation': 'OpenAI-compatible API',
     'stack.l.test':       'Test backends',
@@ -108,26 +121,27 @@ const translations = {
     // Nav
     'nav.about':        '关于',
     'nav.pipeline':     '流程',
+    'nav.studio':       '可视化实验室',
     'nav.capabilities': '功能',
     'nav.stack':        '技术栈',
     'nav.cli':          'CLI',
     'nav.github':       'GitHub →',
 
     // Hero
-    'hero.tagline':   '以学习为先的 RAG 实验室——从零手工实现检索增强生成的完整流程，让每个阶段清晰可见、可调试。',
+    'hero.tagline':   '以学习为先的经典 RAG 引擎和本地可视化实验室——让检索增强生成的每个阶段清晰可见、可审查。',
     'hero.cta.github': '在 GitHub 查看',
-    'hero.cta.learn':  '了解更多 ↓',
+    'hero.cta.studio': '探索可视化实验室 ↓',
 
     // About
     'about.title': '关于此项目',
     'about.p1':    'RAG（检索增强生成）是当前众多 AI 工具和助手背后的核心模式——但大多数教程将关键细节隐藏在框架调用之后。<strong>tiny-rag-lab</strong> 是我手工实现每个阶段的尝试：文档加载、分块、嵌入、本地向量检索、召回、提示词组装、答案生成、评估与失败诊断。',
     'about.p2':    '目标不是构建生产级平台，而是深入、可观察的理解——可读代码优于框架魔法，先评估再优化，先分析失败再引入高级特性。',
-    'about.p3':    '项目按九个递进阶段构建，目前已覆盖经典稠密检索、BM25 关键词搜索、混合融合、重排序、答案质量评判、上下文预算以及结构化/语义分块——全部通过简洁的 Python CLI 串联，每个阶段均有 trace 输出。',
+    'about.p3':    '项目按递进阶段构建，目前已覆盖经典稠密检索、BM25 关键词搜索、混合融合、重排序、答案质量评判、上下文预算以及结构化/语义分块。Phase 3.0 新增本地可视化实验室，在不替代 CLI 的前提下，让相同机制可在浏览器中回放和审查。',
     'about.cta':   '在 GitHub 查看源码 →',
 
     // Stats
     'stat.planes':    'RAG 架构层',
-    'stat.commands':  'CLI 命令',
+    'stat.entrypoints':'本地学习入口',
     'stat.retrievers':'检索策略',
     'stat.chunking':  '分块策略',
 
@@ -162,6 +176,17 @@ const translations = {
     'plane.generation': '生成层',
     'plane.eval':       '评估与可观测层',
 
+    // Visual lab
+    'studio.title':        '本地可视化 RAG 实验室',
+    'studio.subtitle':     'Phase 3.0 将同一套可教学的引擎带入浏览器学习工作区——完全在你的机器上运行。',
+    'studio.replay.title': '从回放开始',
+    'studio.replay.desc':  '打开离线入门 trace，按可见步骤从语料一路跟随到带引用的答案。',
+    'studio.inspect.title':'审查底层机制',
+    'studio.inspect.desc': '查看分块、嵌入分量、排序后的证据、上下文打包、提示词、引用和各阶段耗时。',
+    'studio.compare.title':'通过对比学习',
+    'studio.compare.desc': '上传小型语料或导入 watsonxDocsQA，再比较 NumPy 与可选 Qdrant，并研究精心设计的失败案例。',
+    'studio.cta':         '使用 Docker Compose 运行本地实验室 →',
+
     // Capabilities
     'cap.title':    '功能覆盖',
     'cap.subtitle': '按阶段迭代构建，每项能力均可测量和调试。',
@@ -183,9 +208,10 @@ const translations = {
     'stack.subtitle': '刻意保持精简——每个组件在代码中清晰可见。',
     'stack.l.language':   '语言',
     'stack.l.interface':  '接口',
+    'stack.v.interface':  'CLI + 本地可视化实验室',
     'stack.l.embeddings': '嵌入模型',
     'stack.l.index':      '向量索引',
-    'stack.v.index':      '本地 NumPy（不用向量数据库）',
+    'stack.v.index':      'NumPy + 可选本地 Qdrant',
     'stack.l.generation': '生成',
     'stack.v.generation': 'OpenAI 兼容 API',
     'stack.l.test':       '测试后端',

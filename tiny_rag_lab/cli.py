@@ -1,5 +1,4 @@
 import argparse
-import re
 import time
 from pathlib import Path
 
@@ -91,9 +90,6 @@ def _make_token_counter():
     except ImportError:
         from tiny_rag_lab.context import FakeTokenCounter
         return FakeTokenCounter()
-
-
-_CITATION_RE = re.compile(r"\[Source: ([^\]]+)\]")
 
 
 def cmd_index(args):
@@ -340,7 +336,8 @@ def cmd_ask(args):
     answer = generator.generate(prompt)
     t_generate = time.perf_counter() - t0
 
-    citations = _CITATION_RE.findall(answer)
+    from tiny_rag_lab.prompting import extract_source_citations
+    citations = extract_source_citations(answer)
 
     # Phase 2.0: judge the answer when --judge is active.
     verdict = None

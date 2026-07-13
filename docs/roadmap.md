@@ -17,9 +17,9 @@ Expected outputs:
 - first phase spec and taskboard
 
 Status: Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, Phase 1.8, Phase 1.9,
-Phase 2.0, Phase 2.1, and Phase 2.2 are complete under `docs/phases/`. No
-implementation phase is currently active. The near-term roadmap decision is
-recorded in `docs/phases/phase-1.9-2.2-final-roadmap.md`.
+Phase 2.0, Phase 2.1, and Phase 2.2 are complete under `docs/phases/`.
+Phase 3.0 — Local Visual RAG Lab — is complete; its implementation contract is
+`docs/phases/phase-3.0-local-visual-rag-lab.md`.
 
 ## Phase 1: Naive Classic RAG
 
@@ -228,6 +228,22 @@ Expected capabilities:
 Status: Complete; see `docs/phases/phase-2.2-structural-semantic-chunking.md`
 and `docs/phases/phase-2.2-taskboard.md`.
 
+## Phase 3.0: Local Visual RAG Lab
+
+Goal: make the classic RAG engine approachable as a local browser-based
+learning laboratory while preserving the CLI and inspectable mechanics.
+
+Capabilities:
+
+- local Docker Compose web lab with EN/ZH UI and an offline starter replay
+- custom small Markdown/text corpora plus a guided watsonxDocsQA import path
+- visual index, retrieve, ask, context-packing, and curated failure playback
+- NumPy as the default inspectable backend plus optional local Qdrant
+- full/slim images and OpenAI-compatible live generation configuration
+
+The phase deliberately leaves arbitrary batch evaluation in the CLI; a future
+interactive evaluation/reporting phase may build on Phase 3.0 run artifacts.
+
 ## Later: Reporting, Artifacts, And Agentic RAG
 
 After the near-term quality roadmap is clearer, consider broader observability
@@ -238,7 +254,7 @@ and workflow features:
 - comparison reports across chunking, retriever, prompt, and generation
   configurations
 - richer token budget estimation with explicit tokenizer/model choices
-- UI or notebook-style reports for multi-run inspection
+- browser-based evaluation reports and multi-run inspection
 
 Only after classic RAG quality and production prompt mechanics are measured,
 consider advanced agentic phases:

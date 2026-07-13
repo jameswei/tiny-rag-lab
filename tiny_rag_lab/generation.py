@@ -6,8 +6,9 @@ OpenAIGenerator calls any OpenAI-compatible chat completions endpoint.
 """
 from __future__ import annotations
 
-import re
 from abc import ABC, abstractmethod
+
+from tiny_rag_lab.prompting import extract_source_citations
 
 
 class Generator(ABC):
@@ -35,11 +36,8 @@ class FakeGenerator(Generator):
         The answer is derived from the retrieved documents. [Source: def9876543210987]
     """
 
-    # Pattern that matches [Source: <any 16-char hex chunk_id>]
-    _SOURCE_RE = re.compile(r"\[Source: ([^\]]+)\]")
-
     def generate(self, prompt: str) -> str:
-        markers = self._SOURCE_RE.findall(prompt)
+        markers = extract_source_citations(prompt)
         if not markers:
             return (
                 "Based on the provided context, "

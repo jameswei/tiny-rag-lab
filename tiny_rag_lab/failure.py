@@ -13,7 +13,6 @@ Two failure modes are documented here but not heuristically detectable:
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -540,10 +539,8 @@ def run_answer_diagnosis(
     from tiny_rag_lab.bm25 import BM25Retriever
     from tiny_rag_lab.hybrid import retrieve_hybrid
     from tiny_rag_lab.judge import detect_answer_failure_label
-    from tiny_rag_lab.prompting import assemble_prompt
+    from tiny_rag_lab.prompting import assemble_prompt, extract_source_citations
     from tiny_rag_lab.retrieval import retrieve_by_vector
-
-    citation_re = re.compile(r"\[Source: ([^\]]+)\]")
 
     active_cases = [c for c in cases if c.answer_label_expected != ""]
     if not active_cases:
@@ -611,7 +608,7 @@ def run_answer_diagnosis(
         else:
             prompt = assemble_prompt(case.question, baseline_results)
             baseline_answer = generator.generate(prompt)
-        baseline_citations = citation_re.findall(baseline_answer) or None
+        baseline_citations = extract_source_citations(baseline_answer) or None
         baseline_verdict = judge.judge(
             query=case.question,
             context=baseline_context,
@@ -632,7 +629,7 @@ def run_answer_diagnosis(
         else:
             prompt = assemble_prompt(case.question, intervention_results)
             intervention_answer = generator.generate(prompt)
-        intervention_citations = citation_re.findall(intervention_answer) or None
+        intervention_citations = extract_source_citations(intervention_answer) or None
         intervention_verdict = judge.judge(
             query=case.question,
             context=intervention_context,
