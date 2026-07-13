@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "repository": "cloudflare/cloudflare-docs",
+  "revision": "3dcb728cb29f4239e08ba894f0a40650d51ba4f6",
+  "license": "CC BY 4.0",
+  "documents": [
+    {
+      "source_path": "workers/index.mdx",
+      "path": "files/workers/index.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workers/index.mdx",
+      "sha256": "e131fc9d83bde1cdc8073f3a7f9b25082b3a153c67989c5d321e971333e99ff4"
+    },
+    {
+      "source_path": "workers/get-started/guide.mdx",
+      "path": "files/workers/get-started/guide.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workers/get-started/guide.mdx",
+      "sha256": "d92c9804e58a9eb747b4780d13543069c39cbc1a33c8dbcb1056826b1e2ccca8"
+    },
+    {
+      "source_path": "workers/runtime-apis/bindings/durable-objects.mdx",
+      "path": "files/workers/runtime-apis/bindings/durable-objects.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workers/runtime-apis/bindings/durable-objects.mdx",
+      "sha256": "8529ae13ce8b7acbdca264566f3b019803c7b75debadeb5a51c51f380264520d"
+    },
+    {
+      "source_path": "workers/runtime-apis/bindings/queues.mdx",
+      "path": "files/workers/runtime-apis/bindings/queues.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workers/runtime-apis/bindings/queues.mdx",
+      "sha256": "baded9ebba0468d738474f49995b6cf8ee867ddb56af29ccb83656258a46703c"
+    },
+    {
+      "source_path": "workers/runtime-apis/bindings/kv.mdx",
+      "path": "files/workers/runtime-apis/bindings/kv.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workers/runtime-apis/bindings/kv.mdx",
+      "sha256": "1a31963e5b0a455f49a7f1c36fc207bab7c71eac3d352d8ca5a14183d3f29f7e"
+    },
+    {
+      "source_path": "workers/runtime-apis/bindings/R2.mdx",
+      "path": "files/workers/runtime-apis/bindings/R2.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workers/runtime-apis/bindings/R2.mdx",
+      "sha256": "2841b8b9a51fa5f4c64c88594a815553940dee47a4188c159ceb45ee97117261"
+    },
+    {
+      "source_path": "durable-objects/concepts/what-are-durable-objects.mdx",
+      "path": "files/durable-objects/concepts/what-are-durable-objects.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/durable-objects/concepts/what-are-durable-objects.mdx",
+      "sha256": "fbe7af26b9e82b681625051fca7f74fb3bb1a7ab051d44efd4e6978fbebdcf25"
+    },
+    {
+      "source_path": "durable-objects/concepts/durable-object-lifecycle.mdx",
+      "path": "files/durable-objects/concepts/durable-object-lifecycle.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/durable-objects/concepts/durable-object-lifecycle.mdx",
+      "sha256": "af31e45a935651c3ddc7304ceefe8e52322859095f18f666d54dde111d132126"
+    },
+    {
+      "source_path": "durable-objects/platform/storage-options.mdx",
+      "path": "files/durable-objects/platform/storage-options.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/durable-objects/platform/storage-options.mdx",
+      "sha256": "33e8840fac344dafaf1d71dcbb6037a09674c1b004fbe840317e11db755fd98c"
+    },
+    {
+      "source_path": "durable-objects/best-practices/rules-of-durable-objects.mdx",
+      "path": "files/durable-objects/best-practices/rules-of-durable-objects.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/durable-objects/best-practices/rules-of-durable-objects.mdx",
+      "sha256": "3ed978576f738399ef03524cc3d39eebcd443e529e6fb7273d35c96055cbebc9"
+    },
+    {
+      "source_path": "durable-objects/best-practices/create-durable-object-stubs-and-send-requests.mdx",
+      "path": "files/durable-objects/best-practices/create-durable-object-stubs-and-send-requests.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/durable-objects/best-practices/create-durable-object-stubs-and-send-requests.mdx",
+      "sha256": "c07b6d64e9a2c785c9554bc007070241ce50f0ee6d1bba28479213920b961518"
+    },
+    {
+      "source_path": "durable-objects/api/state.mdx",
+      "path": "files/durable-objects/api/state.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/durable-objects/api/state.mdx",
+      "sha256": "6c632f536f2a288f4ac240764543587d8ed323cd3d86f665b032ec5c50a156f5"
+    },
+    {
+      "source_path": "durable-objects/api/alarms.mdx",
+      "path": "files/durable-objects/api/alarms.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/durable-objects/api/alarms.mdx",
+      "sha256": "063f8929d14c667be965d3834e7aecdaa1f91cca11f4537fda4587ecd5737b3f"
+    },
+    {
+      "source_path": "durable-objects/examples/build-a-counter.mdx",
+      "path": "files/durable-objects/examples/build-a-counter.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/durable-objects/examples/build-a-counter.mdx",
+      "sha256": "230f4451f61befd0171d39b64b33c9f8fbb16e4f4cc920f6fa67cf6e9c5d5bd4"
+    },
+    {
+      "source_path": "queues/index.mdx",
+      "path": "files/queues/index.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/queues/index.mdx",
+      "sha256": "7ca76e34b7712d7ea2fb558cd572d8994848a8e4cecfdf412ae59aa6082aa778"
+    },
+    {
+      "source_path": "queues/get-started.mdx",
+      "path": "files/queues/get-started.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/queues/get-started.mdx",
+      "sha256": "1d76fd7578dca3ae85f01f0966b9eb54f3d6d1765c8bf08459d88bc4e222bc6a"
+    },
+    {
+      "source_path": "queues/reference/how-queues-works.mdx",
+      "path": "files/queues/reference/how-queues-works.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/queues/reference/how-queues-works.mdx",
+      "sha256": "4e3366cdcb99727ddcb513527be60f1ae229b15158a3221894a38b6d8903450c"
+    },
+    {
+      "source_path": "queues/reference/delivery-guarantees.mdx",
+      "path": "files/queues/reference/delivery-guarantees.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/queues/reference/delivery-guarantees.mdx",
+      "sha256": "ed989b394791a8bf6c450e1f8f7fcfa3d13a0e1a4d43586a84edbe7087a2f222"
+    },
+    {
+      "source_path": "queues/configuration/batching-retries.mdx",
+      "path": "files/queues/configuration/batching-retries.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/queues/configuration/batching-retries.mdx",
+      "sha256": "08c6bb19d1da1e14f6ca92a887d48dfdcec1a08d5ae6e5903a64782ce680d2ce"
+    },
+    {
+      "source_path": "queues/configuration/consumer-concurrency.mdx",
+      "path": "files/queues/configuration/consumer-concurrency.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/queues/configuration/consumer-concurrency.mdx",
+      "sha256": "38840a0c80ab54537d097fd83bfc3cf857281518f1954457f23410587fc58a08"
+    },
+    {
+      "source_path": "queues/examples/use-queues-with-durable-objects.mdx",
+      "path": "files/queues/examples/use-queues-with-durable-objects.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/queues/examples/use-queues-with-durable-objects.mdx",
+      "sha256": "87d96a040e3d09162fd56b45734cd9200d94443bbd53ef0c153a826192aa1288"
+    },
+    {
+      "source_path": "kv/index.mdx",
+      "path": "files/kv/index.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/kv/index.mdx",
+      "sha256": "a81a34094b9c21adc877b4d2beff4c5f49f4298f48af98b0d3cd6210c13ab761"
+    },
+    {
+      "source_path": "kv/concepts/how-kv-works.mdx",
+      "path": "files/kv/concepts/how-kv-works.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/kv/concepts/how-kv-works.mdx",
+      "sha256": "625231b9623c31fa6182dfd0cb28f639fca55425c6cc48374f42b91c0de3a321"
+    },
+    {
+      "source_path": "kv/concepts/kv-bindings.mdx",
+      "path": "files/kv/concepts/kv-bindings.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/kv/concepts/kv-bindings.mdx",
+      "sha256": "4b2e3aab23c1fd867578d7704c16f19cdc8231d4ebe1e8623e32022799144d78"
+    },
+    {
+      "source_path": "kv/concepts/kv-namespaces.mdx",
+      "path": "files/kv/concepts/kv-namespaces.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/kv/concepts/kv-namespaces.mdx",
+      "sha256": "2f64b8fb39ce55bc43d5a6f7e36d5af10e672f9e9ec64d1f1e918258ad7ddbfc"
+    },
+    {
+      "source_path": "kv/examples/distributed-configuration-with-workers-kv.mdx",
+      "path": "files/kv/examples/distributed-configuration-with-workers-kv.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/kv/examples/distributed-configuration-with-workers-kv.mdx",
+      "sha256": "6b710f0c40f7008ad75ecd695275ea19a9d6085ebacbfba1a43493c8035f94dc"
+    },
+    {
+      "source_path": "kv/examples/cache-data-with-workers-kv.mdx",
+      "path": "files/kv/examples/cache-data-with-workers-kv.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/kv/examples/cache-data-with-workers-kv.mdx",
+      "sha256": "9778396309a311641b5ba383e4c8a7e1f845e5c95b8c364305ab38dcb2770a87"
+    },
+    {
+      "source_path": "r2/index.mdx",
+      "path": "files/r2/index.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/r2/index.mdx",
+      "sha256": "7e6bac2d545167b29be0e3b51617553f991edc15c97276ee890bfeca1ee90560"
+    },
+    {
+      "source_path": "r2/how-r2-works.mdx",
+      "path": "files/r2/how-r2-works.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/r2/how-r2-works.mdx",
+      "sha256": "2a30a4e06f6f754bcfa17f613e78721ede05769d39b1d3440f534ef48e6f2c18"
+    },
+    {
+      "source_path": "r2/reference/consistency.mdx",
+      "path": "files/r2/reference/consistency.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/r2/reference/consistency.mdx",
+      "sha256": "9a81de17feab5f955b8eb8269769e3ad1a9a936d17e967e2590d2c9c3c32f2cf"
+    },
+    {
+      "source_path": "r2/reference/durability.mdx",
+      "path": "files/r2/reference/durability.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/r2/reference/durability.mdx",
+      "sha256": "4837c8a21782dd5eb6ba73f9faf2d44de5460c634aa525f363453cf2858835ba"
+    },
+    {
+      "source_path": "r2/api/workers/workers-api-reference.mdx",
+      "path": "files/r2/api/workers/workers-api-reference.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/r2/api/workers/workers-api-reference.mdx",
+      "sha256": "0f224d0db2410eca79296590c6d1b23444ae54170d9b66609fb5358f49b46ee4"
+    },
+    {
+      "source_path": "r2/buckets/create-buckets.mdx",
+      "path": "files/r2/buckets/create-buckets.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/r2/buckets/create-buckets.mdx",
+      "sha256": "fcb5cebd61d6e44db103ad8cbee20718ee6e48389ec3193ab5297216cce117ac"
+    },
+    {
+      "source_path": "workflows/index.mdx",
+      "path": "files/workflows/index.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workflows/index.mdx",
+      "sha256": "e5085051e7fbe06c7d8e499f7931496f213a53d9af57e9a42e11324e1defb297"
+    },
+    {
+      "source_path": "workflows/get-started/guide.mdx",
+      "path": "files/workflows/get-started/guide.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workflows/get-started/guide.mdx",
+      "sha256": "27a68cf2a46cd3cd09f2ab5d5899d2abdf5601e028d88ccf95af58af1b018bd3"
+    },
+    {
+      "source_path": "workflows/build/rules-of-workflows.mdx",
+      "path": "files/workflows/build/rules-of-workflows.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workflows/build/rules-of-workflows.mdx",
+      "sha256": "c4afdb4d4c69060d6e922eac7614c7761b0ee8146d3bd19d225baa8dfc695821"
+    },
+    {
+      "source_path": "workflows/build/sleeping-and-retrying.mdx",
+      "path": "files/workflows/build/sleeping-and-retrying.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workflows/build/sleeping-and-retrying.mdx",
+      "sha256": "ac769f4c35114837e37e45c92506a5fbfd6c50add67e54fc29748d9a9f5e5c88"
+    },
+    {
+      "source_path": "workflows/build/step-context.mdx",
+      "path": "files/workflows/build/step-context.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workflows/build/step-context.mdx",
+      "sha256": "a934968a160eee5c0b0e967ebc029fd9af9ea65b1dbc9579c30874772b2cdfc3"
+    },
+    {
+      "source_path": "workflows/build/trigger-workflows.mdx",
+      "path": "files/workflows/build/trigger-workflows.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workflows/build/trigger-workflows.mdx",
+      "sha256": "f7ce1c403648fa892e9ca7770d9909e2c328978ec71912569adfcf5e431d3fcb"
+    },
+    {
+      "source_path": "workflows/build/workers-api.mdx",
+      "path": "files/workflows/build/workers-api.md",
+      "source_url": "https://github.com/cloudflare/cloudflare-docs/blob/3dcb728cb29f4239e08ba894f0a40650d51ba4f6/src/content/docs/workflows/build/workers-api.mdx",
+      "sha256": "278a4d46ae81252043c3a52a84cfcda69e1b475f5f514f85093e76317c680535"
+    }
+  ]
+}

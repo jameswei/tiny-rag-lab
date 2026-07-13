@@ -4,8 +4,9 @@ This file is the activation switch for implementation work.
 
 ## Current Phase
 
-No phase is currently active. Do not start implementation until a new phase
-spec and taskboard are reviewed, signed off, and named here.
+[Phase 3.2 — Real-Corpus Guided Learning](phase-3.2-real-corpus-guided-learning.md)
+is active. Its implementation tasks are in the
+[Phase 3.2 taskboard](phase-3.2-taskboard.md).
 
 ## Completed Phase Records
 

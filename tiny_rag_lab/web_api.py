@@ -36,6 +36,7 @@ from tiny_rag_lab.index_loader import load_index
 from tiny_rag_lab.index_writer import write_index
 from tiny_rag_lab.lab_trace import EvidenceSnapshot, build_lab_run, load_lab_run, write_lab_run
 from tiny_rag_lab.prompting import assemble_prompt, extract_source_citations
+from tiny_rag_lab.seed_assets import SeedAssetError, seed_bundled_assets
 from tiny_rag_lab.trace import AskTrace, ChunkTrace, RetrieveTrace
 
 MAX_UPLOAD_FILES = 100
@@ -124,6 +125,14 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
     jobs_dir = root / "jobs"
     for directory in (corpora_dir, indexes_dir, runs_dir, jobs_dir):
         directory.mkdir(parents=True, exist_ok=True)
+    seed_root = Path(os.environ.get("TINY_RAG_LAB_SEED_DIR", "/opt/tiny-rag-lab/seeds/v1"))
+    try:
+        seed_results = seed_bundled_assets(root, seed_root)
+    except SeedAssetError as exc:
+        # The lab still starts so custom local work remains accessible, while
+        # health makes an image-seed problem explicit instead of hiding it.
+        logger.exception("Bundled seed assets are unavailable")
+        seed_results = [{"status": "error", "detail": str(exc)}]
     # FastAPI BackgroundTasks are process-bound. A persisted queued/running
     # record after restart cannot resume safely, so expose a clear retryable
     # failure instead of leaving the local UI polling forever.
@@ -262,7 +271,9 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "data_dir": str(root)}
+        return {"status": "ok", "data_dir": str(root), "seed_assets": [
+            asdict(result) if hasattr(result, "asset_id") else result for result in seed_results
+        ]}
 
     @app.get("/api/provider-status")
     def get_provider_status():

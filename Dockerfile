@@ -15,6 +15,7 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY tiny_rag_lab ./tiny_rag_lab
 COPY scripts ./scripts
+COPY assets/seed/v1 /opt/tiny-rag-lab/seeds/v1
 COPY docker-entrypoint.sh /usr/local/bin/tiny-rag-lab-entrypoint
 RUN chmod +x /usr/local/bin/tiny-rag-lab-entrypoint
 RUN pip install --no-cache-dir '.[qdrant]'

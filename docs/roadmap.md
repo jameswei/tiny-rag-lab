@@ -259,6 +259,25 @@ Expected capabilities:
 
 Status: Complete; see `docs/phases/phase-3.1-field-guide-visual-foundation.md`.
 
+## Proposed Phase 3.2: Real-Corpus Guided Learning
+
+Goal: replace the synthetic starter replay with a real, bundled technical
+documentation corpus and a provider-free guided classic-RAG learning path.
+
+Expected capabilities:
+
+- a separate Learn area with four sequenced saved replays over a pinned
+  Cloudflare State & Coordination corpus
+- ready structural and fixed-character NumPy indexes for the bundled corpus
+- complete visible artifacts for corpus, chunks, embeddings, retrieval,
+  context packing, answer, and citations
+- watsonxDocsQA bundled source data, background indexing, and question-library
+  exploration with gold-source reveal
+- explicit provider gating for Live Ask and idempotent local seed assets
+
+Status: Candidate; owner content approval is recorded. Architecture review and
+activation are still required.
+
 ## Later: Reporting, Artifacts, And Agentic RAG
 
 After the near-term quality roadmap is clearer, consider broader observability
