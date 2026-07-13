@@ -14,6 +14,10 @@ from tiny_rag_lab.index_loader import LoadedIndex, load_index
 from tiny_rag_lab.models import RetrievalResult
 
 
+class QdrantBackendError(RuntimeError):
+    """A non-secret failure that a local-lab learner can act on."""
+
+
 class QdrantIndexBackend:
     name = "qdrant"
     score_semantics = "qdrant_cosine_similarity"
@@ -54,16 +58,25 @@ class QdrantIndexBackend:
         collection = index.manifest.get("backend_identity")
         if not collection:
             raise ValueError("Qdrant index manifest has no collection identity")
-        response = self._client.query_points(
-            collection_name=collection,
-            query=[float(value) for value in query_vector],
-            limit=top_k,
-            with_payload=True,
-        )
+        try:
+            response = self._client.query_points(
+                collection_name=collection,
+                query=[float(value) for value in query_vector],
+                limit=top_k,
+                with_payload=True,
+            )
+        except Exception as exc:
+            raise QdrantBackendError(
+                "Qdrant search is unavailable. Start the optional Qdrant profile or rebuild this index."
+            ) from exc
         by_id = {chunk.chunk_id: chunk for chunk in index.chunks}
         hits = []
         for rank, point in enumerate(response.points, start=1):
-            chunk_id = str(point.payload["chunk_id"])
+            chunk_id = str((point.payload or {}).get("chunk_id", ""))
+            if chunk_id not in by_id:
+                raise QdrantBackendError(
+                    "Qdrant collection does not match this local index. Rebuild the index before searching."
+                )
             hits.append(VectorSearchHit(
                 result=RetrievalResult(chunk=by_id[chunk_id], score=float(point.score), rank=rank),
                 backend=self.name,

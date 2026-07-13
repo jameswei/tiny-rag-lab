@@ -1,6 +1,6 @@
 # Phase 3.0 Spec: Local Visual RAG Lab
 
-**Status:** Complete — implementation, post-review polish, and release preparation independently signed off by Kuhn on 2026-07-13
+**Status:** Complete — post-merge correctness repair (P3.0-T10) independently signed off by Claude Sonnet 5 on 2026-07-13
 **Authors:** Codex + owner decisions
 **Based on:** `docs/proposal.md`, `docs/architecture.md`, `docs/roadmap.md`
 **Taskboard:** `docs/phases/phase-3.0-taskboard.md`

@@ -6,6 +6,7 @@ does not parse CLI output or invent browser-specific RAG mechanics.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -30,17 +31,19 @@ from tiny_rag_lab.documents import load_documents
 from tiny_rag_lab.embeddings import SentenceTransformerEmbedder
 from tiny_rag_lab.generation import OpenAIGenerator
 from tiny_rag_lab.hybrid import reciprocal_rank_fusion
-from tiny_rag_lab.index_backend import NumpyIndexBackend
+from tiny_rag_lab.index_backend import NumpyIndexBackend, backend_from_manifest
 from tiny_rag_lab.index_loader import load_index
 from tiny_rag_lab.index_writer import write_index
 from tiny_rag_lab.lab_trace import EvidenceSnapshot, build_lab_run, load_lab_run, write_lab_run
-from tiny_rag_lab.prompting import assemble_prompt
+from tiny_rag_lab.prompting import assemble_prompt, extract_source_citations
 from tiny_rag_lab.trace import AskTrace, ChunkTrace, RetrieveTrace
 
 MAX_UPLOAD_FILES = 100
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
+UPLOAD_READ_BYTES = 1024 * 1024
 ALLOWED_SUFFIXES = {".md", ".txt"}
 _job_lock = threading.Lock()
+logger = logging.getLogger(__name__)
 
 
 class ProviderOverride(BaseModel):
@@ -135,6 +138,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             _write_json(job_path, job)
 
     app = FastAPI(title="tiny-rag-lab local API", docs_url=None, redoc_url=None)
+    job_admission_lock = threading.Lock()
     # The packaged browser client uses the same origin. This only helps native
     # development and deliberately does not open the server beyond loopback.
     app.add_middleware(
@@ -162,16 +166,38 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
         write_lab_run(run, path)
         return load_lab_run(path)
 
+    def admit_job(kind: str, **fields: str) -> tuple[str, Path]:
+        """Persist one visible queued job or reject a concurrent request."""
+        with job_admission_lock:
+            for existing_path in jobs_dir.glob("*.json"):
+                try:
+                    existing = _read_json(existing_path)
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if existing.get("status") in {"queued", "running"}:
+                    raise HTTPException(
+                        409,
+                        f"Local job {existing.get('id', existing_path.stem)} is {existing['status']}. Wait for it before starting another job.",
+                    )
+            job_id = f"{kind}-{uuid4().hex[:12]}"
+            job_path = jobs_dir / f"{job_id}.json"
+            _write_json(job_path, {"id": job_id, "status": "queued", "kind": kind, **fields})
+            return job_id, job_path
+
     def resolve_index(index_id: str):
         index_id = _safe_id(index_id, "index")
         index_dir = indexes_dir / index_id
         if not index_dir.exists():
             raise HTTPException(404, "Index not found")
         index = NumpyIndexBackend().open(index_dir)
-        if index.manifest.get("index_backend", "numpy") == "qdrant":
-            from tiny_rag_lab.qdrant_backend import QdrantIndexBackend
-            return index_id, index, QdrantIndexBackend(os.environ.get("QDRANT_URL", "http://127.0.0.1:6333"))
-        return index_id, index, NumpyIndexBackend()
+        try:
+            backend = backend_from_manifest(
+                index.manifest,
+                qdrant_url=os.environ.get("QDRANT_URL", "http://127.0.0.1:6333"),
+            )
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        return index_id, index, backend
 
     def run_retrieval(request: RunRequest):
         index_id, index, vector_backend = resolve_index(request.index_id)
@@ -195,7 +221,13 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             query_vector = [float(value) for value in query_vec]
             latency["embed"] = time.perf_counter() - t0
             t0 = time.perf_counter()
-            dense_hits = vector_backend.search(query_vec, index, request.top_k)
+            try:
+                dense_hits = vector_backend.search(query_vec, index, request.top_k)
+            except Exception as exc:
+                from tiny_rag_lab.qdrant_backend import QdrantBackendError
+                if isinstance(exc, QdrantBackendError):
+                    raise HTTPException(503, str(exc)) from exc
+                raise
             dense_results = [hit.result for hit in dense_hits]
             semantics = dense_hits[0].score_semantics if dense_hits else vector_backend.score_semantics
             if request.retriever == "hybrid":
@@ -244,9 +276,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
     def download_default_model(background_tasks: BackgroundTasks):
         if model_status()["ready"]:
             return {"id": "embedding-model-ready", "status": "complete"}
-        job_id = f"model-{uuid4().hex[:12]}"
-        job_path = jobs_dir / f"{job_id}.json"
-        _write_json(job_path, {"id": job_id, "status": "queued", "kind": "embedding-model"})
+        job_id, job_path = admit_job("embedding-model")
 
         def download_job():
             with _job_lock:
@@ -255,6 +285,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
                     SentenceTransformerEmbedder()
                     _write_json(job_path, {"id": job_id, "status": "complete", "kind": "embedding-model"})
                 except Exception:
+                    logger.exception("Embedding-model job %s failed", job_id)
                     _write_json(job_path, {"id": job_id, "status": "failed", "kind": "embedding-model", "error": "Model download failed. Check your network and try again."})
 
         background_tasks.add_task(download_job)
@@ -347,11 +378,12 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
                 if Path(filename).suffix.lower() not in ALLOWED_SUFFIXES:
                     raise HTTPException(422, "Only Markdown and plain-text files are supported")
                 filenames.add(filename)
-                payload = await upload.read()
-                total += len(payload)
-                if total > MAX_UPLOAD_BYTES:
-                    raise HTTPException(422, "Upload exceeds the 100 MiB corpus limit")
-                (target / filename).write_bytes(payload)
+                with (target / filename).open("wb") as destination:
+                    while payload := await upload.read(UPLOAD_READ_BYTES):
+                        if total + len(payload) > MAX_UPLOAD_BYTES:
+                            raise HTTPException(422, "Upload exceeds the 100 MiB corpus limit")
+                        destination.write(payload)
+                        total += len(payload)
         except Exception:
             shutil.rmtree(corpora_dir / corpus_id, ignore_errors=True)
             raise
@@ -365,9 +397,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
         corpus_id = "watsonxdocsqa"
         if (corpora_dir / corpus_id / "corpus.json").exists():
             return {"id": "watsonxdocsqa-ready", "status": "complete", "corpus_id": corpus_id}
-        job_id = f"corpus-{uuid4().hex[:12]}"
-        job_path = jobs_dir / f"{job_id}.json"
-        _write_json(job_path, {"id": job_id, "status": "queued", "kind": "watsonxDocsQA"})
+        job_id, job_path = admit_job("watsonxDocsQA")
 
         def import_job():
             with _job_lock:
@@ -385,6 +415,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
                     _write_json(corpora_dir / corpus_id / "corpus.json", corpus)
                     _write_json(job_path, {"id": job_id, "status": "complete", "kind": "watsonxDocsQA", "corpus_id": corpus_id})
                 except Exception:
+                    logger.exception("watsonxDocsQA import job %s failed", job_id)
                     _write_json(job_path, {"id": job_id, "status": "failed", "kind": "watsonxDocsQA", "error": "Corpus import failed. Check the local server logs and try again."})
 
         background_tasks.add_task(import_job)
@@ -398,9 +429,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             raise HTTPException(404, "Corpus not found")
         if not model_status()["ready"]:
             raise HTTPException(409, "Download the default embedding model before indexing this corpus")
-        job_id = f"index-{uuid4().hex[:12]}"
-        job_path = jobs_dir / f"{job_id}.json"
-        _write_json(job_path, {"id": job_id, "status": "queued", "kind": "index", "corpus_id": corpus_id})
+        job_id, job_path = admit_job("index", corpus_id=corpus_id)
 
         def index_job():
             with _job_lock:
@@ -428,14 +457,17 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
                         index_backend=request.index_backend,
                         backend_identity=collection if request.index_backend == "qdrant" else "numpy",
                     )
+                    staged_index = load_index(staging_dir)
+                    vector_backend = backend_from_manifest(
+                        staged_index.manifest,
+                        qdrant_url=os.environ.get("QDRANT_URL", "http://127.0.0.1:6333"),
+                    )
                     if request.index_backend == "qdrant":
-                        from tiny_rag_lab.qdrant_backend import QdrantIndexBackend
-                        QdrantIndexBackend(os.environ.get("QDRANT_URL", "http://127.0.0.1:6333")).build(
-                            collection, load_index(staging_dir)
-                        )
+                        vector_backend.build(collection, staged_index)
                     staging_dir.replace(indexes_dir / index_id)
                     _write_json(job_path, {"id": job_id, "status": "complete", "kind": "index", "index_id": index_id})
                 except Exception:
+                    logger.exception("Index job %s failed", job_id)
                     shutil.rmtree(locals().get("staging_dir", indexes_dir / ".missing"), ignore_errors=True)
                     _write_json(job_path, {"id": job_id, "status": "failed", "kind": "index", "error": "Indexing failed. Check the local server logs and try again."})
 
@@ -492,10 +524,32 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             base_url=base_url,
         )
         t0 = time.perf_counter()
-        answer = generator.generate(prompt)
-        citations = []
-        import re
-        citations = re.findall(r"\[Source: ([^\]]+)\]", answer)
+        try:
+            answer = generator.generate(prompt)
+        except Exception:
+            logger.exception("Live generation failed for index %s", index_id)
+            failed_trace = AskTrace(
+                query=request.query, retriever=request.retriever, top_k=request.top_k,
+                chunks=[_chunk_trace(result) for result in results], prompt=prompt,
+                latency_by_stage={**retrieve_trace.latency_by_stage, "generate": time.perf_counter() - t0},
+                context_pack=packed,
+            )
+            return save_run(build_lab_run(
+                failed_trace, index_id=index_id, manifest=index.manifest,
+                document_count=index.manifest.get("document_count", 0),
+                evidence=[
+                    _evidence(
+                        result, semantics,
+                        score_components=components.get(result.chunk.chunk_id),
+                        selected_for_context=result.chunk.chunk_id in selected,
+                    )
+                    for result in candidate_results
+                ],
+                query_vector=query_vector,
+                config={"retriever": request.retriever, "top_k": request.top_k, "context_budget": request.context_budget},
+                error="Live generation failed. Check your provider settings and try again.",
+            ))
+        citations = extract_source_citations(answer)
         trace = AskTrace(
             query=request.query, retriever=request.retriever, top_k=request.top_k,
             chunks=[_chunk_trace(result) for result in results], prompt=prompt,

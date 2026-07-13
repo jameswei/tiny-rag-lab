@@ -110,6 +110,21 @@ def test_manifest_embedding_backend(written_index):
     assert result.manifest["embedding_backend"] == "FakeEmbedder"
 
 
+def test_legacy_manifest_backfills_numpy_backend_defaults(written_index):
+    index_dir, *_ = written_index
+    manifest_path = index_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    for key in ("index_backend", "distance_metric", "backend_identity"):
+        manifest.pop(key, None)
+    manifest_path.write_text(json.dumps(manifest))
+
+    loaded = load_index(index_dir)
+
+    assert loaded.manifest["index_backend"] == "numpy"
+    assert loaded.manifest["distance_metric"] == "cosine"
+    assert loaded.manifest["backend_identity"] == "numpy"
+
+
 # ---------------------------------------------------------------------------
 # Chunks
 # ---------------------------------------------------------------------------

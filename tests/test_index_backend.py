@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from tiny_rag_lab.embeddings import FakeEmbedder
 from tiny_rag_lab.index_backend import NumpyIndexBackend, backend_from_manifest
@@ -35,3 +36,8 @@ def test_numpy_backend_search_has_explicit_score_semantics(tmp_path):
 
 def test_old_manifest_defaults_to_numpy_backend():
     assert type(backend_from_manifest({})).__name__ == "NumpyIndexBackend"
+
+
+def test_qdrant_manifest_requires_explicit_connection_configuration():
+    with pytest.raises(ValueError, match="QDRANT_URL"):
+        backend_from_manifest({"index_backend": "qdrant"})

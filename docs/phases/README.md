@@ -17,10 +17,15 @@ historical context.
 No phase is currently active. Do not start implementation until the next phase
 scope proposal is reviewed, signed off, and activated here.
 
-Phase 3.0 is complete:
+Phase 3.0 is complete, including its post-merge correctness repair:
 
 - Spec: `docs/phases/phase-3.0-local-visual-rag-lab.md`
 - Taskboard: `docs/phases/phase-3.0-taskboard.md`
+
+P3.0-T10 (post-merge repair) addressed the accepted findings in
+`docs/phases/phase-3.0-review-findings.md` and was independently signed off
+by Claude Sonnet 5 on 2026-07-13; caching (finding 8) and a currently
+unreachable defensive footgun (finding 9) remain deliberately deferred.
 
 Phase 2.2 is complete:
 
@@ -84,7 +89,7 @@ task changes scope, architecture, roadmap, or public interfaces.
 
 | Phase | Focus | Completion |
 |---|---|---|
-| Phase 3.0 | Local visual RAG lab | Complete; see `docs/phases/phase-3.0-taskboard.md` |
+| Phase 3.0 | Local visual RAG lab | Complete, including post-merge repair; see `docs/phases/phase-3.0-taskboard.md` |
 | Phase 2.2 | Structural and semantic chunking | Complete; see `docs/phases/phase-2.2-taskboard.md` |
 | Phase 2.1 | Context budget and structured answers | Complete; see `docs/phases/phase-2.1-taskboard.md` |
 | Phase 2.0 | Answer quality judging | Complete; see `docs/phases/phase-2.0-taskboard.md` |

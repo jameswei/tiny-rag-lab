@@ -89,6 +89,36 @@ def test_upload_rejects_duplicate_filenames(tmp_path):
     assert response.status_code == 422
 
 
+def test_upload_rejects_oversized_corpus_without_preserving_partial_files(tmp_path, monkeypatch):
+    monkeypatch.setattr("tiny_rag_lab.web_api.MAX_UPLOAD_BYTES", 5)
+    client = TestClient(create_app(tmp_path))
+
+    response = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("notes.md", b"six-bytes", "text/markdown"))],
+    )
+
+    assert response.status_code == 422
+    assert list((tmp_path / "corpora").iterdir()) == []
+
+
+def test_job_admission_rejects_a_visible_queued_job(tmp_path, monkeypatch):
+    class _MissingEmbedder:
+        def __init__(self, **_kwargs):
+            raise OSError("model is not cached")
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _MissingEmbedder)
+    client = TestClient(create_app(tmp_path))
+    (tmp_path / "jobs" / "already-queued.json").write_text(
+        '{"id":"already-queued","status":"queued","kind":"index"}'
+    )
+
+    response = client.post("/api/models/default/download")
+
+    assert response.status_code == 409
+    assert "already-queued" in response.json()["detail"]
+
+
 def test_index_and_retrieve_persist_a_replayable_run(tmp_path, monkeypatch):
     monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
     client = TestClient(create_app(tmp_path))
@@ -107,6 +137,32 @@ def test_index_and_retrieve_persist_a_replayable_run(tmp_path, monkeypatch):
     assert run["index"]["manifest"]["index_backend"] == "numpy"
     assert run["evidence"][0]["text"] == "# Alpha\nalpha evidence"
     assert client.get(f"/api/runs/{run['run_id']}").json()["run_id"] == run["run_id"]
+
+
+def test_qdrant_search_failure_is_a_non_secret_service_error(tmp_path, monkeypatch):
+    from tiny_rag_lab.qdrant_backend import QdrantBackendError
+
+    class _UnavailableBackend:
+        name = "qdrant"
+        score_semantics = "qdrant_cosine_similarity"
+
+        def search(self, *_args, **_kwargs):
+            raise QdrantBackendError("Qdrant search is unavailable. Start the optional Qdrant profile or rebuild this index.")
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr("tiny_rag_lab.web_api.backend_from_manifest", lambda *_args, **_kwargs: _UnavailableBackend())
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("alpha.md", b"alpha evidence", "text/markdown"))],
+    ).json()
+    index_job = client.post("/api/indexes", json={"corpus_id": corpus["id"]}).json()
+    index_id = client.get(f"/api/jobs/{index_job['id']}").json()["index_id"]
+
+    response = client.post("/api/runs/retrieve", json={"index_id": index_id, "query": "alpha"})
+
+    assert response.status_code == 503
+    assert "Qdrant search is unavailable" in response.json()["detail"]
 
 
 def test_index_requires_explicit_model_download(tmp_path, monkeypatch):
@@ -154,3 +210,50 @@ def test_ask_trace_preserves_context_omissions_for_replay(tmp_path, monkeypatch)
     assert len(run["evidence"]) == 2
     assert {item["selected_for_context"] for item in run["evidence"]} == {True, False}
     assert run["trace"]["context_pack"]["omitted"]
+
+
+def test_live_ask_generation_failure_is_saved_as_a_replayable_error(tmp_path, monkeypatch):
+    class _FailingGenerator:
+        def __init__(self, **_kwargs):
+            pass
+
+        def generate(self, _prompt):
+            raise ConnectionError("provider unavailable")
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr("tiny_rag_lab.web_api.OpenAIGenerator", _FailingGenerator)
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("alpha.md", b"alpha evidence", "text/markdown"))],
+    ).json()
+    index_job = client.post("/api/indexes", json={"corpus_id": corpus["id"]}).json()
+    index_id = client.get(f"/api/jobs/{index_job['id']}").json()["index_id"]
+
+    response = client.post("/api/runs/ask", json={
+        "index_id": index_id, "query": "alpha",
+        "provider": {"base_url": "http://local-provider/v1"},
+    })
+
+    assert response.status_code == 201
+    run = response.json()
+    assert run["error"] == "Live generation failed. Check your provider settings and try again."
+    assert run["trace"]["prompt"]
+    assert client.get(f"/api/runs/{run['run_id']}").json()["error"] == run["error"]
+
+
+def test_index_failure_is_logged_and_exposed_as_a_non_secret_job_error(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr("tiny_rag_lab.web_api.load_documents", lambda _path: (_ for _ in ()).throw(ValueError("bad corpus")))
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("alpha.md", b"alpha evidence", "text/markdown"))],
+    ).json()
+
+    job = client.post("/api/indexes", json={"corpus_id": corpus["id"]}).json()
+    state = client.get(f"/api/jobs/{job['id']}").json()
+
+    assert state["status"] == "failed"
+    assert state["error"] == "Indexing failed. Check the local server logs and try again."
+    assert "Index job" in caplog.text

@@ -72,17 +72,23 @@ class NumpyIndexBackend:
         ]
 
 
-def backend_from_manifest(manifest: dict) -> VectorIndexBackend:
-    """Return the default backend for a persisted index.
+def backend_from_manifest(
+    manifest: dict, *, qdrant_url: str | None = None,
+) -> VectorIndexBackend:
+    """Return the configured vector backend for a persisted index.
 
-    Qdrant is intentionally not silently selected here: callers must opt in
-    and provide its connection configuration.  This protects old CLI flows
-    from gaining an implicit network/service dependency.
+    Old manifests remain NumPy by default. A Qdrant manifest still requires an
+    explicit URL, so bare CLI flows never gain an implicit service dependency.
     """
 
     backend = manifest.get("index_backend", "numpy")
     if backend == "numpy":
         return NumpyIndexBackend()
+    if backend == "qdrant":
+        if not qdrant_url:
+            raise ValueError("Qdrant index needs an explicitly configured QDRANT_URL")
+        from tiny_rag_lab.qdrant_backend import QdrantIndexBackend
+        return QdrantIndexBackend(qdrant_url)
     raise ValueError(
-        f"Index backend {backend!r} needs an explicitly configured adapter"
+        f"Unsupported index backend {backend!r}"
     )
