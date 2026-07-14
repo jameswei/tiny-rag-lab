@@ -1,6 +1,12 @@
+import hashlib
+import json
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 import numpy as np
 
+from tiny_rag_lab.index_writer import write_index
+from tiny_rag_lab.models import Chunk, Document, make_chunk_id
 from tiny_rag_lab.web_api import create_app
 
 
@@ -13,6 +19,36 @@ class _Embedder:
         return np.array([[1.0, 0.0] if "alpha" in text.lower() else [0.0, 1.0] for text in texts], dtype=np.float32)
 
 
+def _seeded_client(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        "TINY_RAG_LAB_SEED_DIR",
+        str(Path("assets/seed/v1").resolve()),
+    )
+    return TestClient(create_app(tmp_path))
+
+
+def _write_catalog_index(root, *, source_corpus_id="watsonxdocsqa-v1", index_id="catalog-index"):
+    question = json.loads((root / "corpora" / "watsonxdocsqa-v1" / "questions.jsonl").read_text().splitlines()[0])
+    text = "catalog evidence"
+    doc_id = question["gold_doc_ids"][0]
+    document = Document(
+        doc_id=doc_id, path=f"/data/corpora/watsonxdocsqa-v1/files/{doc_id}",
+        title="Catalog evidence", format="markdown", raw_text=text,
+        normalized_text=text, raw_hash=hashlib.sha256(text.encode()).hexdigest(),
+    )
+    chunk = Chunk(
+        chunk_id=make_chunk_id(doc_id, 0, text), doc_id=doc_id, text=text,
+        char_start=0, char_end=len(text),
+        metadata={"title": document.title, "path": document.path, "format": "markdown", "raw_hash": document.raw_hash},
+    )
+    write_index(
+        root / "indexes" / index_id, [document], [chunk], np.array([[0.0, 1.0]], dtype=np.float32),
+        corpus_root=root / "corpora" / "watsonxdocsqa-v1" / "files",
+        embedding_backend="test", embedding_model="test-embedder", embedding_dim=2,
+        chunk_size=800, chunk_overlap=120, source_corpus_id=source_corpus_id,
+    )
+
+
 def test_health_and_provider_status_are_non_secret(tmp_path):
     client = TestClient(create_app(tmp_path))
     assert client.get("/api/health").json()["status"] == "ok"
@@ -20,11 +56,126 @@ def test_health_and_provider_status_are_non_secret(tmp_path):
     assert "api_key" not in status
 
 
+def test_backend_status_reports_numpy_and_optional_qdrant_readiness(tmp_path, monkeypatch):
+    monkeypatch.setattr("tiny_rag_lab.web_api.qdrant_is_available", lambda _url: True)
+
+    items = TestClient(create_app(tmp_path)).get("/api/backends").json()["items"]
+
+    assert items == [
+        {"id": "numpy", "available": True},
+        {"id": "qdrant", "available": True},
+    ]
+
+
 def test_starter_run_is_an_offline_replay_artifact(tmp_path):
     run = TestClient(create_app(tmp_path)).get("/api/starter-run").json()
     assert run["mode"] == "replay"
     assert run["trace"]["query"]
     assert run["evidence"][0]["text"]
+
+
+def test_saved_lessons_are_complete_offline_artifacts(tmp_path, monkeypatch):
+    client = _seeded_client(tmp_path, monkeypatch)
+
+    listing = client.get("/api/lessons").json()["items"]
+    assert [item["id"] for item in listing] == [
+        "cloudflare-do-coordinator-v1", "cloudflare-queues-retries-v1",
+        "cloudflare-kv-r2-choice-v1", "cloudflare-workflows-resume-v1",
+    ]
+    lesson = client.get("/api/lessons/cloudflare-do-coordinator-v1").json()
+    assert lesson["lesson"]["answer_provenance"] == "recorded_lesson_result"
+    assert lesson["lesson"]["source_snapshot"]["source_revision"] == "3dcb728cb29f4239e08ba894f0a40650d51ba4f6"
+    assert len(lesson["lesson"]["source_snapshot"]["corpus_digest"]) == 64
+    assert len(lesson["lesson"]["source_snapshot"]["index_digest"]) == 64
+    run = lesson["run"]
+    assert run["mode"] == "saved_lesson"
+    assert run["query_vector"] and run["evidence"]
+    assert run["trace"]["prompt"] and run["trace"]["context_pack"]
+    assert run["config"]["answer_provenance"] == "recorded_lesson_result"
+    for item in listing:
+        saved = client.get(f"/api/lessons/{item['id']}").json()
+        lesson = saved["lesson"]
+        run = saved["run"]
+        selected = {entry["chunk_id"]: entry for entry in run["evidence"] if entry["selected_for_context"]}
+        assert selected and run["trace"]["context_pack"]["omitted"]
+        supporting = set(lesson["answer_supporting_chunk_ids"])
+        assert supporting <= set(selected)
+        assert {selected[chunk_id]["doc_id"] for chunk_id in supporting} >= set(lesson["required_supporting_document_ids"])
+        assert set(run["trace"]["citations"]) <= set(selected)
+
+
+def test_provider_test_accepts_environment_configuration_and_disables_sdk_retries(tmp_path, monkeypatch):
+    captured = {}
+
+    class _Generator:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        def generate(self, _prompt, **_kwargs):
+            return "OK"
+
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://local-provider/v1")
+    monkeypatch.setattr("tiny_rag_lab.web_api.OpenAIGenerator", _Generator)
+    response = TestClient(create_app(tmp_path)).post("/api/provider/test")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "message": "Provider connection verified"}
+    assert captured["timeout"] == 10.0
+    assert captured["max_retries"] == 0
+
+
+def test_catalog_hides_gold_until_validated_run_and_persists_check(tmp_path, monkeypatch):
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    client = _seeded_client(tmp_path, monkeypatch)
+    listing = client.get("/api/corpora/watsonxdocsqa-v1/questions")
+    assert listing.status_code == 200
+    questions = listing.json()["items"]
+    assert len(questions) == 75
+    assert all(set(item) == {"id", "question", "featured"} for item in questions)
+
+    _write_catalog_index(tmp_path)
+    response = client.post("/api/runs/retrieve", json={
+        "index_id": "catalog-index", "catalog_question_id": "train_1", "query": "browser text is ignored",
+    })
+    assert response.status_code == 201
+    run = response.json()
+    assert run["trace"]["query"] == questions[0]["question"]
+    assert run["catalog_check"]["question_id"] == "train_1"
+    assert run["catalog_check"]["hit"] is True
+    assert client.get(f"/api/runs/{run['run_id']}").json()["catalog_check"] == run["catalog_check"]
+    # Restart reads the durable source_corpus_id from manifest rather than a
+    # browser-only association.
+    restarted = TestClient(create_app(tmp_path))
+    assert restarted.get(f"/api/runs/{run['run_id']}").json()["catalog_check"]["hit"] is True
+
+
+def test_catalog_question_rejects_wrong_or_legacy_index_but_free_query_remains_valid(tmp_path, monkeypatch):
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    client = _seeded_client(tmp_path, monkeypatch)
+    _write_catalog_index(tmp_path, source_corpus_id="another-corpus", index_id="wrong-index")
+    _write_catalog_index(tmp_path, source_corpus_id=None, index_id="legacy-index")
+
+    assert client.post("/api/runs/retrieve", json={"index_id": "wrong-index", "catalog_question_id": "train_1"}).status_code == 409
+    assert client.post("/api/runs/retrieve", json={"index_id": "legacy-index", "catalog_question_id": "train_1"}).status_code == 409
+    free = client.post("/api/runs/retrieve", json={"index_id": "legacy-index", "query": "alpha"})
+    assert free.status_code == 201
+    assert free.json()["catalog_check"] is None
+
+
+def test_slim_model_gate_keeps_bm25_available_but_blocks_dense_and_hybrid(tmp_path, monkeypatch):
+    class _MissingEmbedder:
+        def __init__(self, **_kwargs):
+            raise OSError("model is not cached")
+
+    client = _seeded_client(tmp_path, monkeypatch)
+    _write_catalog_index(tmp_path, index_id="slim-index")
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _MissingEmbedder)
+
+    assert client.post("/api/runs/retrieve", json={"index_id": "slim-index", "query": "catalog", "retriever": "bm25"}).status_code == 201
+    for retriever in ("dense", "hybrid"):
+        response = client.post("/api/runs/retrieve", json={"index_id": "slim-index", "query": "catalog", "retriever": retriever})
+        assert response.status_code == 409
+        assert "Download the default embedding model" in response.json()["detail"]
 
 
 def test_failure_lessons_include_localized_explanation_and_trace_artifacts(tmp_path):
@@ -135,8 +286,12 @@ def test_index_and_retrieve_persist_a_replayable_run(tmp_path, monkeypatch):
         "index_id": completed["index_id"], "query": "alpha", "top_k": 1,
     }).json()
     assert run["index"]["manifest"]["index_backend"] == "numpy"
+    assert run["index"]["manifest"]["source_corpus_id"] == corpus["id"]
     assert run["evidence"][0]["text"] == "# Alpha\nalpha evidence"
     assert client.get(f"/api/runs/{run['run_id']}").json()["run_id"] == run["run_id"]
+    inspection = client.get(f"/api/indexes/{completed['index_id']}").json()
+    assert inspection["document_count"] == 1
+    assert inspection["chunk_count"] == 1
 
 
 def test_qdrant_search_failure_is_a_non_secret_service_error(tmp_path, monkeypatch):
@@ -178,6 +333,21 @@ def test_index_requires_explicit_model_download(tmp_path, monkeypatch):
     ).json()
     assert client.get("/api/models/default/status").json()["ready"] is False
     assert client.post("/api/indexes", json={"corpus_id": corpus["id"]}).status_code == 409
+
+
+def test_qdrant_index_requires_a_ready_local_service(tmp_path, monkeypatch):
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr("tiny_rag_lab.web_api.qdrant_is_available", lambda _url: False)
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("notes.md", b"# Notes", "text/markdown"))],
+    ).json()
+
+    response = client.post("/api/indexes", json={"corpus_id": corpus["id"], "index_backend": "qdrant"})
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Qdrant is not ready. Start the optional Qdrant service, then try building again."
 
 
 def test_ask_trace_preserves_context_omissions_for_replay(tmp_path, monkeypatch):

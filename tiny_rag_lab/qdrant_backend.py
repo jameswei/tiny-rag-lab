@@ -6,6 +6,7 @@ directory remains the canonical source for chunks and inspectable vectors.
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.request import urlopen
 
 import numpy as np
 
@@ -16,6 +17,21 @@ from tiny_rag_lab.models import RetrievalResult
 
 class QdrantBackendError(RuntimeError):
     """A non-secret failure that a local-lab learner can act on."""
+
+
+def qdrant_is_available(url: str) -> bool:
+    """Return whether the optional local service can answer a small request.
+
+    This is deliberately a readiness check, not an attempt to hide Qdrant
+    behind a managed abstraction.  The browser uses it to avoid offering an
+    unavailable backend, while the actual build and search still use the same
+    visible ``QdrantIndexBackend`` below.
+    """
+    try:
+        with urlopen(f"{url.rstrip('/')}/healthz", timeout=0.75) as response:  # noqa: S310 - local configured service
+            return 200 <= response.status < 300
+    except OSError:
+        return False
 
 
 class QdrantIndexBackend:

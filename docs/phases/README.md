@@ -4,9 +4,8 @@ This file is the activation switch for implementation work.
 
 ## Current Phase
 
-[Phase 3.2 — Real-Corpus Guided Learning](phase-3.2-real-corpus-guided-learning.md)
-is active. Its implementation tasks are in the
-[Phase 3.2 taskboard](phase-3.2-taskboard.md).
+No phase is active. A new proposal must be reviewed, signed off, and activated
+here before implementation begins.
 
 ## Completed Phase Records
 
@@ -17,6 +16,7 @@ root documentation.
 
 | Phase | Delivered focus | Record |
 |---|---|---|
+| 3.2 | Real-corpus guided learning | [record](phase-3.2-real-corpus-guided-learning.md) |
 | 3.0 | Local visual RAG lab | [record](phase-3.0-local-visual-rag-lab.md) |
 | 3.1 | Field-guide visual foundation | [record](phase-3.1-field-guide-visual-foundation.md) |
 | 2.2 | Structural and semantic chunking | [record](phase-2.2-structural-semantic-chunking.md) |

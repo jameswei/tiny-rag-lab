@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>tiny-rag-lab — A Learning-First RAG Laboratory</title>
-  <meta name="description" content="tiny-rag-lab is a learning-first classic RAG engine and local visual laboratory, built to make every retrieval step visible and inspectable." />
+  <title>tiny-rag-lab — An Inspectable Classic RAG Learning Lab</title>
+  <meta name="description" content="A learning-first, inspectable RAG lab: study classic RAG in code, then experiment with it in a rich local visual workspace." />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -32,48 +32,49 @@
 
     <!-- ─────────────────────────── HERO ─────────────────────────── -->
     <section class="hero">
-      <div class="container">
-        <h1 class="hero-title">tiny-rag-lab</h1>
-        <p class="hero-tagline" data-i18n="hero.tagline">
-          A learning-first classic RAG engine and local visual laboratory —
-          making every stage of retrieval-augmented generation visible and inspectable.
-        </p>
-        <div class="hero-actions">
-          <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-primary" data-i18n="hero.cta.github">View on GitHub</a>
-          <a href="#studio" class="btn btn-secondary" data-i18n="hero.cta.studio">Explore the visual lab ↓</a>
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <h1 class="hero-title">tiny-rag-lab</h1>
+          <p class="hero-tagline" data-i18n="hero.tagline">Learn classic RAG by inspecting real evidence.</p>
+          <div class="hero-actions">
+            <a href="#studio" class="btn btn-primary" data-i18n="hero.cta.studio">Explore the visual lab ↓</a>
+            <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-secondary" data-i18n="hero.cta.github">View on GitHub</a>
+          </div>
         </div>
+        <aside class="hero-trace" aria-label="Example guided RAG trace">
+          <div class="trace-topline"><span class="trace-pulse"></span><span data-i18n="trace.label">Follow one grounded answer</span></div>
+          <div class="trace-step trace-question"><span class="trace-step-label" data-i18n="trace.question">Corpus</span><strong data-i18n="trace.question.value">Real technical documents</strong></div>
+          <div class="trace-flow" aria-hidden="true"></div>
+          <div class="trace-step trace-evidence"><span class="trace-step-label" data-i18n="trace.retrieval">Retrieve</span><strong data-i18n="trace.retrieval.value">Ranked chunks</strong></div>
+          <div class="trace-flow" aria-hidden="true"></div>
+          <div class="trace-step trace-context"><span class="trace-step-label" data-i18n="trace.context">Context</span><strong data-i18n="trace.context.value">Selected evidence</strong></div>
+          <div class="trace-flow" aria-hidden="true"></div>
+          <div class="trace-step trace-answer"><span class="trace-step-label" data-i18n="trace.answer">Answer</span><strong data-i18n="trace.answer.value">Grounded with citations</strong></div>
+        </aside>
       </div>
     </section>
 
     <!-- ─────────────────────────── ABOUT ─────────────────────────── -->
     <section id="about" class="section section-alt">
       <div class="container">
-        <h2 class="section-title" data-i18n="about.title">About this project</h2>
-        <div class="about-grid">
-          <div class="about-text">
-            <p data-i18n-html="about.p1">
-              RAG (retrieval-augmented generation) is a foundational pattern behind many AI tools
-              and assistants — but most tutorials hide the interesting parts behind framework calls.
-              <strong>tiny-rag-lab</strong> is my attempt to build every stage by hand: document loading,
-              chunking, embedding, local vector search, retrieval, prompt assembly, answer generation,
-              evaluation, and failure diagnosis.
-            </p>
-            <p data-i18n="about.p2">
-              The goal is not a production platform. The goal is deep, inspectable understanding —
-              readable code over framework magic, evaluation before optimization, failure analysis
-              before advanced features.
-            </p>
-            <p data-i18n="about.p3">
-              Built across incremental phases, the project now covers classic dense retrieval, BM25
-              keyword search, hybrid fusion, reranking, answer quality judging, context budgeting, and
-              structural/semantic chunking. Phase 3.0 adds a local visual lab that makes those same
-              mechanics replayable and inspectable in the browser without replacing the CLI.
-            </p>
-            <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="text-link" data-i18n="about.cta">
-              Explore the source on GitHub →
-            </a>
-          </div>
+        <p class="section-label" data-i18n="about.label">ONE CORE · TWO WAYS TO LEARN</p>
+        <h2 class="section-title about-title" data-i18n="about.title">Learn the mechanics, then make them move.</h2>
+        <p class="section-subtitle about-subtitle" data-i18n="about.subtitle">The visual workspace and CLI expose the same project-owned RAG artifacts. Start guided; go deeper when you are ready.</p>
+        <div class="entrypoint-grid">
+          <article class="entrypoint-card entrypoint-web">
+            <p class="entrypoint-label" data-i18n="about.web.label">START HERE</p>
+            <h3 data-i18n="about.web.title">Visual workspace</h3>
+            <p data-i18n="about.web.body">Replay real-corpus lessons, inspect every decision, and run your own retrieval, index, and provider experiments.</p>
+            <a href="#studio" class="text-link" data-i18n="about.web.cta">Explore the learning workspace →</a>
+          </article>
+          <article class="entrypoint-card entrypoint-cli">
+            <p class="entrypoint-label" data-i18n="about.cli.label">GO DEEPER</p>
+            <h3 data-i18n="about.cli.title">Direct CLI</h3>
+            <p data-i18n="about.cli.body">Repeat configurations, compare results, inspect raw output, and follow the same mechanics command by command.</p>
+            <a href="#cli" class="text-link" data-i18n="about.cli.cta">See the CLI path →</a>
+          </article>
         </div>
+        <p class="about-distinct" data-i18n="about.p4">What makes the lab distinct is that the artifacts are the lesson: real-corpus replay shows the evidence and decisions behind an answer, then lets learners experiment with the same mechanics and study curated failures rather than only a happy-path chat response.</p>
         <div class="about-stats">
           <div class="stat-card">
             <span class="stat-number">4</span>
@@ -189,13 +190,13 @@
     <!-- ─────────────────────────── VISUAL LAB ─────────────────────────── -->
     <section id="studio" class="section section-alt">
       <div class="container">
-        <h2 class="section-title" data-i18n="studio.title">A local visual RAG lab</h2>
-        <p class="section-subtitle" data-i18n="studio.subtitle">Phase 3.0 turns the same teachable engine into a browser learning studio — on your own machine.</p>
+        <h2 class="section-title" data-i18n="studio.title">A rich local workspace for learning RAG</h2>
+        <p class="section-subtitle" data-i18n="studio.subtitle">Learn through real documents: start with four guided replays, inspect every artifact, then run retrieval experiments of your own.</p>
         <div class="cards-grid">
           <div class="card">
             <div class="card-icon">↺</div>
             <h3 class="card-title" data-i18n="studio.replay.title">Start with a replay</h3>
-            <p class="card-desc" data-i18n="studio.replay.desc">Open an offline starter trace and follow a single run from corpus to cited answer, one visible stage at a time.</p>
+            <p class="card-desc" data-i18n="studio.replay.desc">Follow a recorded real-corpus lesson from source documents to a cited answer, one visible stage at a time.</p>
           </div>
           <div class="card">
             <div class="card-icon">◌</div>
@@ -205,8 +206,18 @@
           <div class="card">
             <div class="card-icon">⇄</div>
             <h3 class="card-title" data-i18n="studio.compare.title">Learn from comparisons</h3>
-            <p class="card-desc" data-i18n="studio.compare.desc">Upload a small corpus or import watsonxDocsQA, then compare NumPy with optional Qdrant and study curated failures.</p>
+            <p class="card-desc" data-i18n="studio.compare.desc">Start with bundled Cloudflare lessons, then build watsonxDocsQA or a small upload, compare NumPy with optional Qdrant, and study curated failures.</p>
           </div>
+        </div>
+        <div class="lab-gallery" aria-label="Screens from the local visual lab">
+          <figure class="lab-shot">
+            <img src="assets/screenshots/guided-retrieval.jpg" alt="Guided lesson showing ranked retrieval evidence from the bundled Cloudflare corpus" loading="lazy" />
+            <figcaption data-i18n="studio.shot.guided">Guided lesson: follow ranked evidence back to its source.</figcaption>
+          </figure>
+          <figure class="lab-shot">
+            <img src="assets/screenshots/explore-bm25.jpg" alt="Explore workspace showing a BM25 retrieval over the bundled Cloudflare corpus" loading="lazy" />
+            <figcaption data-i18n="studio.shot.explore">Explore: change the retrieval setup and inspect what comes back.</figcaption>
+          </figure>
         </div>
         <p class="studio-link-row"><a href="https://github.com/jameswei/tiny-rag-lab#local-visual-lab" target="_blank" rel="noopener" class="text-link" data-i18n="studio.cta">Run the local studio with Docker Compose →</a></p>
       </div>
@@ -315,7 +326,7 @@
           </div>
           <div class="stack-item">
             <span class="stack-label" data-i18n="stack.l.corpus">Corpus</span>
-            <span class="stack-value">IBM watsonxDocsQA</span>
+            <span class="stack-value" data-i18n="stack.v.corpus">Cloudflare docs + watsonxDocsQA</span>
           </div>
           <div class="stack-item">
             <span class="stack-label" data-i18n="stack.l.deps">Dependencies</span>
@@ -332,7 +343,7 @@
     <section id="cli" class="section section-alt">
       <div class="container">
         <h2 class="section-title" data-i18n="cli.title">A clean CLI interface</h2>
-        <p class="section-subtitle" data-i18n="cli.subtitle">Index a corpus, retrieve evidence, ask a question — each step inspectable.</p>
+        <p class="section-subtitle" data-i18n="cli.subtitle">The direct, repeatable companion to the visual workspace: index a corpus, retrieve evidence, and ask a question with the same inspectable mechanics.</p>
         <div class="cli-block">
           <div class="cli-bar">
             <span class="cli-dot cli-dot-red"></span>

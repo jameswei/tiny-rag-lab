@@ -53,8 +53,16 @@ class LabRun:
     evidence: list[EvidenceSnapshot]
     query_vector: list[float] | None = None
     config: dict[str, Any] = field(default_factory=dict)
+    # Present only for a catalog-backed run.  Keeping this server-produced
+    # makes it impossible for the browser to accidentally compare a question
+    # against gold data from a different corpus.
+    catalog_check: dict[str, Any] | None = None
+    # Saved lessons record the pinned corpus/source identity alongside the
+    # immutable index snapshot.  Ordinary interactive runs need not duplicate
+    # that data because it already lives in their index manifest.
+    source_snapshot: dict[str, Any] | None = None
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    mode: Literal["live", "replay"] = "live"
+    mode: Literal["live", "replay", "saved_lesson"] = "live"
     run_id: str = field(default_factory=lambda: str(uuid4()))
     schema_version: str = LAB_TRACE_SCHEMA_VERSION
     error: str | None = None
@@ -69,7 +77,9 @@ def build_lab_run(
     evidence: list[EvidenceSnapshot],
     query_vector: list[float] | None = None,
     config: dict[str, Any] | None = None,
-    mode: Literal["live", "replay"] = "live",
+    catalog_check: dict[str, Any] | None = None,
+    source_snapshot: dict[str, Any] | None = None,
+    mode: Literal["live", "replay", "saved_lesson"] = "live",
     error: str | None = None,
 ) -> LabRun:
     return LabRun(
@@ -84,6 +94,8 @@ def build_lab_run(
         evidence=evidence,
         query_vector=query_vector,
         config=config or {},
+        catalog_check=catalog_check,
+        source_snapshot=source_snapshot,
         mode=mode,
         error=error,
     )

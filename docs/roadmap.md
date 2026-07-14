@@ -259,7 +259,7 @@ Expected capabilities:
 
 Status: Complete; see `docs/phases/phase-3.1-field-guide-visual-foundation.md`.
 
-## Proposed Phase 3.2: Real-Corpus Guided Learning
+## Phase 3.2: Real-Corpus Guided Learning
 
 Goal: replace the synthetic starter replay with a real, bundled technical
 documentation corpus and a provider-free guided classic-RAG learning path.
@@ -275,8 +275,8 @@ Expected capabilities:
   exploration with gold-source reveal
 - explicit provider gating for Live Ask and idempotent local seed assets
 
-Status: Candidate; owner content approval is recorded. Architecture review and
-activation are still required.
+Status: Complete; see
+`docs/phases/phase-3.2-real-corpus-guided-learning.md`.
 
 ## Later: Reporting, Artifacts, And Agentic RAG
 

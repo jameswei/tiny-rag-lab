@@ -13,12 +13,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     LAB_IMAGE_VARIANT=${LAB_IMAGE_VARIANT}
 WORKDIR /app
 COPY pyproject.toml README.md ./
+# The local lab has no GPU execution path.  Install the official CPU-only
+# wheel first so sentence-transformers cannot resolve a CUDA/NVIDIA runtime
+# transitively on Linux. Keeping it before application source preserves this
+# expensive, CPU-only layer while the lab code is refined.
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 'torch==2.7.1+cpu'
 COPY tiny_rag_lab ./tiny_rag_lab
 COPY scripts ./scripts
 COPY assets/seed/v1 /opt/tiny-rag-lab/seeds/v1
 COPY docker-entrypoint.sh /usr/local/bin/tiny-rag-lab-entrypoint
-RUN chmod +x /usr/local/bin/tiny-rag-lab-entrypoint
-RUN pip install --no-cache-dir '.[qdrant]'
+RUN chmod +x /usr/local/bin/tiny-rag-lab-entrypoint \
+    && pip install --no-cache-dir '.[qdrant]'
 COPY --from=web-build /web/dist /app/web-dist
 # Full prepares the existing default embedder at build time; slim defers it.
 RUN if [ "$LAB_IMAGE_VARIANT" = "full" ]; then SENTENCE_TRANSFORMERS_HOME=/opt/tiny-rag-models python -c "from tiny_rag_lab.embeddings import SentenceTransformerEmbedder; SentenceTransformerEmbedder()"; fi

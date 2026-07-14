@@ -1,0 +1,166 @@
+# tiny-rag-lab
+
+[English](README.md) · [项目主页](https://jameswei.github.io/tiny-rag-lab/)
+
+> 一个面向学习、可检查的 RAG 实验室：先通过代码学习经典 RAG，再在丰富的本地可视化工作区中进行实验。
+
+`tiny-rag-lab` 面向希望真正弄清楚 RAG 工作机制的学习者：从用户问题、文档语料、检索到的证据、打包后的上下文，到带引用的答案，每一步都可以看见和检查。项目用易读的 Python 直接实现经典 RAG 生命周期，再将同一套机制带入丰富的本地浏览器工作区，用于引导学习、自由检索实验、索引构建和失败检查。
+
+它是学习工具，而不是生产级 RAG 平台。项目优先选择可见的机制，而非框架魔法；先评估再优化；先分析失败再引入高级特性。
+
+## 通过真实证据学习，而非玩具示例
+
+本地可视化工作区是一级学习环境，而不是 CLI 外面的一层仪表盘。它让学习者可以在真实技术文档上，沿着一条完整的本地路径理解经典 RAG。
+
+学习者不再从合成的单文档回放开始，而是从固定的 40 篇 Cloudflare 语料中，跟随四个不依赖服务商的已保存课程。每个课程都会保留连接各个 RAG 阶段的真实产物：源文档、文本块、查询向量、排序后的候选证据、选入与省略的上下文、提示词、答案和引用。在这一引导基线上，学习者还可以自行检索、构建索引、导入小型语料、比较可检查的 NumPy 索引与可选 Qdrant，并且只在已测试可用的服务商存在时使用 Live Ask。
+
+因此，项目同时以两种互补方式发挥价值：通过易读源码和直接的 CLI 学习 RAG 机制；通过交互式、实验性的 Web 应用观察这些机制如何在真实证据上运行。
+
+这里的**经典 RAG**指一条可见、可检查的路径：从语料中检索证据，选择并打包为上下文，然后生成带引用、基于证据的答案。经过测试的 OpenAI 兼容服务商会为 Live Ask 补全生成步骤；这不会使项目变成 Agentic RAG 或多步 RAG。
+
+## 一个可检查的核心，两种学习入口
+
+Web 应用和 CLI 是学习同一套项目自有 RAG 核心的互补方式，而不是拥有不同机制的两个独立产品。两者都使用相同的文档、文本块、嵌入、检索结果、选入的上下文、提示词、引用和 trace。
+
+- **本地可视化工作区：** 推荐的起点。它通过真实语料回放引导学习者，让中间产物易于检查，并支持亲手进行检索、索引、失败场景和服务商实验。
+- **CLI：** 直接、紧凑且可脚本化的入口。它适合重复某个配置、比较结果、检查原始输出，并逐条命令跟随 RAG 机制。
+
+## 这个实验室的独特之处
+
+许多 RAG 示例止步于一次框架调用、一个聊天界面，或一条顺利完成的答案路径。`tiny-rag-lab` 将学习者真正需要理解和推理的概念连接起来：
+
+- **实现与学习体验保持连接。** CLI 和 Web 工作区都呈现来自同一套项目自有 RAG 核心的产物，而不是讲解与可执行代码脱节的抽象流程图。
+- **真实产物就是课程。** 引导回放展示一次结果背后的真实源文档、文本块、向量、排序候选、选入与省略的上下文、提示词、答案、引用和耗时。
+- **从引导走向实验。** 学习者可以从稳定、不依赖服务商的真实语料回放开始，再调整检索方式、构建索引、上传小型语料，或连接服务商进行 Live Ask。
+- **失败也是学习内容。** 评估、trace 检查和精心设计的失败场景，让学习者能够追问结果为何出现，而不只是确认是否返回了答案。
+
+## 从本地可视化实验室开始
+
+最快的学习方式是启动内置的本地 Studio：
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+然后在浏览器打开 http://127.0.0.1:8000。服务只绑定本机回环地址；不需要公共部署，也不需要注册账号。
+
+推荐的首次使用路径如下：
+
+1. **Home → Start guided lesson：** 从固定的 40 篇 Cloudflare State & Coordination 文档中，选择四个已保存课程之一进行回放。
+2. **Learn：** 逐步查看语料、文本块、查询嵌入向量、检索候选、选入上下文的证据、基于证据的答案和引用。
+3. **Explore：** 提出题库问题或自由问题，比较稠密检索、BM25 和混合检索，并检查返回的 trace。只有希望进行 Live Ask 生成时，才需要配置并测试 OpenAI 兼容的 LLM 服务商。
+4. **Build & Inspect：** 使用内置语料或小型 Markdown/纯文本上传构建索引，然后检查文档、文本块、向量和来源信息。
+5. **Failure Lab：** 对比精心设计的失败场景及其改进方案。
+
+界面提供英文和简体中文。内置语料内容、问题、已记录答案和引用会保留其原始语言。
+
+### 实验室包含什么
+
+- 四个不依赖 LLM 服务商、带完整已保存产物的 Guided Learn 回放课程。
+- 固定的 Cloudflare 学习语料，以及可直接使用的结构化分块和固定字符分块 NumPy 索引。
+- 内置 watsonxDocsQA 源数据；完成显式的后台索引构建后，可以使用全部 75 个题库问题。
+- 不配置 LLM 服务商也可以进行纯检索探索；通过连接测试后，可使用任何 OpenAI 兼容 Chat Completions 服务进行 Live Ask。
+- 支持小型自定义语料上传：最多 100 个 Markdown 或纯文本文件，总大小不超过 100 MiB。
+- 默认使用 NumPy/文件索引；可选的本地 Qdrant 后端只改变存储和向量搜索的执行方式，不改变本项目要讲解的文本块、嵌入、检索、上下文、引用和 trace 概念。
+- 精心设计的失败课程、原始产物检查、来源溯源、候选证据与上下文选择的对比，以及支持减少动画偏好的回放体验。
+
+默认的 `full` 镜像包含本地嵌入模型，只使用 CPU，不需要 GPU 或 CUDA 运行时。若想体验更小的镜像：
+
+```bash
+LAB_IMAGE_VARIANT=slim docker compose up --build
+```
+
+在 slim 镜像中，Guided Learn 回放和 BM25 检索仍然可用。设置页会明确提示下载嵌入模型；下载完成后才会解锁稠密/混合检索和索引构建。
+
+如需使用可选的 Qdrant 对比后端：
+
+```bash
+docker compose --profile qdrant up --build
+```
+
+## 经典 RAG 流程
+
+```text
+本地语料 -> 文档 -> 规范化文本 -> 文本块 -> 嵌入向量
+-> 本地向量索引 -> 查询嵌入 -> 检索
+-> 选出的上下文 -> 基于证据的提示词 -> 带引用的答案
+```
+
+项目使每个阶段都可检查：
+
+- **索引：** 文档加载、文本规范化、固定字符/结构化/实验性语义分块、元数据、嵌入和本地索引。
+- **检索：** 稠密余弦检索、BM25 关键词检索、基于倒数排名融合（RRF）的混合检索，以及可选的二次重排序。
+- **生成：** 显式上下文预算、提示词组装、OpenAI 兼容的生成边界、引用，以及证据不足时的拒答。
+- **评估与可观测性：** 检索指标、LLM-as-judge 答案指标、可回放 trace 和精心设计的失败诊断。
+
+## CLI：直接而可脚本化的入口
+
+CLI 是可视化工作区直接、可重复的伙伴。需要通过紧凑命令体验同一套机制时，可以使用：
+
+```bash
+rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-overlap 120
+rag index --corpus PATH --index-dir .tiny-rag/index --chunking-strategy structural
+rag index --corpus PATH --index-dir .tiny-rag/index --chunking-strategy semantic --semantic-similarity-threshold 0.5
+
+rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever dense
+rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever bm25
+rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
+
+rag ask "question text" --index-dir .tiny-rag/index --top-k 5
+rag ask "question text" --index-dir .tiny-rag/index --context-budget 8192 --output-format json
+
+rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
+rag eval --qa-file corpus/watsonx-docsqa/qa.jsonl --index-dir .tiny-rag/index --judge fake --generator fake
+
+rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-rag/index
+```
+
+每个命令都有针对性的帮助：
+
+```bash
+uv run rag --help
+uv run rag index --help
+uv run rag retrieve --help
+uv run rag ask --help
+uv run rag eval --help
+uv run rag diagnose --help
+```
+
+## 开发
+
+```bash
+uv sync --group dev
+uv run pytest --tb=short -q
+```
+
+如需为独立 CLI 准备 watsonxDocsQA 语料：
+
+```bash
+uv run python scripts/prepare_watsonx_docsqa.py --inspect
+uv run python scripts/prepare_watsonx_docsqa.py --output-dir corpus/watsonx-docsqa
+```
+
+本地生成的语料和索引会被 Git 忽略：
+
+```text
+corpus/
+.tiny-rag/
+```
+
+## 技术选择
+
+- Python · `argparse` CLI · FastAPI · React + TypeScript · Docker Compose
+- 本地嵌入模型：`sentence-transformers/all-MiniLM-L6-v2`
+- 默认索引：可检查的 NumPy 文件；可选本地 Qdrant 适配器
+- 生成：OpenAI 兼容 Chat Completions API
+- 离线测试：fake embedder + fake generator
+- 不使用 LangChain、LlamaIndex 或 Haystack 来封装学习关键路径上的 RAG 机制
+
+## 文档
+
+- [项目提案](docs/proposal.md)：项目目的、理念和非目标
+- [路线图](docs/roadmap.md)：阶段方向
+- [架构](docs/architecture.md)：RAG 概念平面和边界
+- [文件结构](docs/file-structure.md)：仓库地图
+- [阶段记录](docs/phases/README.md)：已完成阶段的决策和历史

@@ -12,6 +12,7 @@ ASSETS = (
     ("watsonxdocsqa-v1", "corpora/watsonxdocsqa-v1", "corpora/watsonxdocsqa-v1"),
     ("cloudflare-state-structural-v1", "indexes/cloudflare-state-structural-v1", "indexes/cloudflare-state-structural-v1"),
     ("cloudflare-state-fixed-v1", "indexes/cloudflare-state-fixed-v1", "indexes/cloudflare-state-fixed-v1"),
+    ("cloudflare-state-coordination-v1", "lessons/cloudflare-state-coordination-v1", "lessons/cloudflare-state-coordination-v1"),
 )
 
 

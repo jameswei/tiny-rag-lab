@@ -4809,6 +4809,33 @@
           "sha256": "01f1cf74475e8099cea06bcd5eee8d486151b730e189aa5a46cf8be7c39669df"
         }
       ]
+    },
+    {
+      "id": "cloudflare-state-coordination-v1",
+      "path": "lessons/cloudflare-state-coordination-v1",
+      "target": "lessons/cloudflare-state-coordination-v1",
+      "files": [
+        {
+          "path": "cloudflare-do-coordinator-v1.json",
+          "sha256": "68ca2c8cc79c476f4669feefb782bfdab377c6025506bcaecde83def3f4be922"
+        },
+        {
+          "path": "cloudflare-kv-r2-choice-v1.json",
+          "sha256": "6e0843fa17cbf5f41153f416409fb174485ddd3be6d058d9a1a632a2fd164fec"
+        },
+        {
+          "path": "cloudflare-queues-retries-v1.json",
+          "sha256": "b99003a1923c8324fc1d35b0ec61b324d588c505a02036001956a669619b3a63"
+        },
+        {
+          "path": "cloudflare-workflows-resume-v1.json",
+          "sha256": "61608dbbc8bcf14c698e7b70d2fe503ac4ab132791f5ad55f28a18407984f975"
+        },
+        {
+          "path": "manifest.json",
+          "sha256": "8be7bbf70be0aed5d7224a21c5da89217a95dbdf122b71659b78bce39abe2854"
+        }
+      ]
     }
   ]
 }

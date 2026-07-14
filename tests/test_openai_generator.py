@@ -21,6 +21,18 @@ def test_default_model():
     assert OpenAIGenerator.DEFAULT_MODEL == "gpt-4o-mini"
 
 
+def test_generator_can_disable_client_retries_for_bounded_connection_tests(monkeypatch):
+    import sys
+    from unittest.mock import MagicMock
+
+    with monkeypatch.context() as context:
+        mock_openai = MagicMock()
+        context.setitem(sys.modules, "openai", MagicMock(OpenAI=mock_openai))
+        OpenAIGenerator(timeout=10.0, max_retries=0)
+        assert mock_openai.call_args.kwargs["timeout"] == 10.0
+        assert mock_openai.call_args.kwargs["max_retries"] == 0
+
+
 # ---------------------------------------------------------------------------
 # generate() calls the OpenAI API correctly
 # ---------------------------------------------------------------------------

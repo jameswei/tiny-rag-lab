@@ -20,7 +20,7 @@ from uuid import uuid4
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -36,6 +36,7 @@ from tiny_rag_lab.index_loader import load_index
 from tiny_rag_lab.index_writer import write_index
 from tiny_rag_lab.lab_trace import EvidenceSnapshot, build_lab_run, load_lab_run, write_lab_run
 from tiny_rag_lab.prompting import assemble_prompt, extract_source_citations
+from tiny_rag_lab.qdrant_backend import qdrant_is_available
 from tiny_rag_lab.seed_assets import SeedAssetError, seed_bundled_assets
 from tiny_rag_lab.trace import AskTrace, ChunkTrace, RetrieveTrace
 
@@ -64,7 +65,8 @@ class IndexRequest(BaseModel):
 
 class RunRequest(BaseModel):
     index_id: str
-    query: str = Field(min_length=1)
+    query: str | None = Field(default=None, min_length=1)
+    catalog_question_id: str | None = None
     retriever: Literal["dense", "bm25", "hybrid"] = "dense"
     top_k: int = Field(default=5, ge=1, le=50)
     context_budget: int = Field(default=0, ge=0)
@@ -156,11 +158,30 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
         allow_methods=["*"], allow_headers=["*"], allow_credentials=False,
     )
 
+    def resolve_provider(override: ProviderOverride | None = None) -> dict[str, str | None]:
+        override = override or ProviderOverride()
+        api_key = override.api_key or os.environ.get("OPENAI_API_KEY")
+        base_url = override.base_url or os.environ.get("OPENAI_BASE_URL")
+        # OpenAI's client accepts an API root and appends /chat/completions.
+        # Learners commonly paste the complete provider URL, so accept both
+        # forms while keeping the client-facing base URL unambiguous.
+        if base_url:
+            base_url = base_url.rstrip("/")
+            if base_url.endswith("/chat/completions"):
+                base_url = base_url.removesuffix("/chat/completions")
+        model = override.model or os.environ.get("OPENAI_MODEL") or getattr(OpenAIGenerator, "DEFAULT_MODEL", "gpt-4o-mini")
+        return {"api_key": api_key, "base_url": base_url, "model": model}
+
+    def provider_is_usable(config: dict[str, str | None]) -> bool:
+        return bool(config["model"] and (config["api_key"] or config["base_url"]))
+
     def provider_status() -> dict:
+        config = resolve_provider()
         return {
-            "configured": bool(os.environ.get("OPENAI_API_KEY")),
+            "configured": provider_is_usable(config),
             "base_url_configured": bool(os.environ.get("OPENAI_BASE_URL")),
             "model_configured": bool(os.environ.get("OPENAI_MODEL")),
+            "default_model": getattr(OpenAIGenerator, "DEFAULT_MODEL", "gpt-4o-mini"),
         }
 
     def model_status() -> dict:
@@ -208,8 +229,50 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             raise HTTPException(409, str(exc)) from exc
         return index_id, index, backend
 
+    def load_catalog_question(corpus_id: str, question_id: str) -> dict:
+        questions_path = corpora_dir / corpus_id / "questions.jsonl"
+        if not questions_path.exists():
+            raise HTTPException(409, "This corpus does not provide a question catalog")
+        for line in questions_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            item = json.loads(line)
+            if item.get("question_id") == question_id:
+                return item
+        raise HTTPException(404, "Catalog question not found")
+
+    def resolve_run_question(request: RunRequest, index) -> tuple[str, dict | None]:
+        """Resolve catalog IDs on the server, never from browser-provided gold."""
+        if not request.catalog_question_id:
+            if request.query is None:
+                raise HTTPException(422, "Provide a query or catalog_question_id")
+            return request.query, None
+
+        corpus_id = index.manifest.get("source_corpus_id")
+        if not corpus_id:
+            raise HTTPException(409, "This legacy index cannot be used with catalog questions")
+        question = load_catalog_question(corpus_id, request.catalog_question_id)
+        # The canonical catalog text wins even when an older browser sends its
+        # own copy.  This keeps the question/gold pairing durable across restarts.
+        return question["question"], question
+
+    def catalog_check(question: dict | None, results) -> dict | None:
+        if question is None:
+            return None
+        expected = list(question.get("gold_doc_ids", []))
+        retrieved = [result.chunk.doc_id for result in results]
+        return {
+            "question_id": question["question_id"],
+            "expected_document_ids": expected,
+            "retrieved_document_ids": retrieved,
+            "hit": bool(set(expected) & set(retrieved)),
+        }
+
     def run_retrieval(request: RunRequest):
         index_id, index, vector_backend = resolve_index(request.index_id)
+        query, catalog_question = resolve_run_question(request, index)
+        if request.retriever != "bm25" and not model_status()["ready"]:
+            raise HTTPException(409, "Download the default embedding model before dense or hybrid retrieval")
         t0 = time.perf_counter()
         query_vector: list[float] | None = None
         latency: dict[str, float] = {}
@@ -217,7 +280,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
 
         score_components: dict[str, dict[str, float]] = {}
         if request.retriever == "bm25":
-            results = BM25Retriever(index.chunks).retrieve(request.query, request.top_k)
+            results = BM25Retriever(index.chunks).retrieve(query, request.top_k)
             semantics = "bm25_score"
             score_components = {
                 result.chunk.chunk_id: {"bm25_score": result.score, "bm25_rank": float(result.rank)}
@@ -225,8 +288,8 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             }
         else:
             model_name = index.manifest.get("embedding_model")
-            embedder = SentenceTransformerEmbedder(model_name)
-            query_vec = embedder.embed([request.query])[0]
+            embedder = SentenceTransformerEmbedder(model_name, local_files_only=True)
+            query_vec = embedder.embed([query])[0]
             query_vector = [float(value) for value in query_vec]
             latency["embed"] = time.perf_counter() - t0
             t0 = time.perf_counter()
@@ -240,7 +303,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             dense_results = [hit.result for hit in dense_hits]
             semantics = dense_hits[0].score_semantics if dense_hits else vector_backend.score_semantics
             if request.retriever == "hybrid":
-                bm25_results = BM25Retriever(index.chunks).retrieve(request.query, request.top_k)
+                bm25_results = BM25Retriever(index.chunks).retrieve(query, request.top_k)
                 results = reciprocal_rank_fusion([dense_results, bm25_results], request.top_k)
                 semantics = "reciprocal_rank_fusion"
                 dense_by_id = {result.chunk.chunk_id: result for result in dense_results}
@@ -264,10 +327,10 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
         if request.retriever == "bm25":
             latency["retrieve"] = time.perf_counter() - t0
         trace = RetrieveTrace(
-            query=request.query, retriever=request.retriever, top_k=request.top_k,
+            query=query, retriever=request.retriever, top_k=request.top_k,
             chunks=[_chunk_trace(result) for result in results], latency_by_stage=latency,
         )
-        return index_id, index, results, trace, query_vector, semantics, score_components
+        return index_id, index, results, trace, query_vector, semantics, score_components, catalog_question
 
     @app.get("/api/health")
     def health():
@@ -278,6 +341,50 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
     @app.get("/api/provider-status")
     def get_provider_status():
         return provider_status()
+
+    @app.get("/api/backends")
+    def get_backend_status():
+        """Expose safe local backend readiness for the Build & Inspect UI."""
+        return {"items": [
+            {"id": "numpy", "available": True},
+            {
+                "id": "qdrant",
+                "available": qdrant_is_available(
+                    os.environ.get("QDRANT_URL", "http://127.0.0.1:6333")
+                ),
+            },
+        ]}
+
+    @app.post("/api/provider/test")
+    def test_provider(override: ProviderOverride | None = None):
+        config = resolve_provider(override)
+        if not provider_is_usable(config):
+            return JSONResponse(status_code=409, content={
+                "ok": False,
+                "error": "Configure a model and either a provider base URL or API key before testing.",
+            })
+        api_key = config["api_key"] or "local-provider-no-key"
+        try:
+            OpenAIGenerator(
+                model=config["model"], api_key=api_key, base_url=config["base_url"],
+                # The SDK retries failed calls by default.  Disable those
+                # retries so this is a single request with a true 10-second
+                # server-side deadline rather than several 10-second attempts.
+                timeout=10.0, max_retries=0,
+            ).generate("Reply only with OK.", max_tokens=4)
+        except Exception as exc:
+            logger.exception("Provider connection test failed")
+            status = getattr(exc, "status_code", None)
+            category = type(exc).__name__
+            detail = f"Provider connection failed ({category})"
+            if isinstance(status, int):
+                detail += f"; provider returned HTTP {status}"
+            detail += ". Check the base URL, model, and credentials."
+            return JSONResponse(status_code=502, content={
+                "ok": False,
+                "error": detail,
+            })
+        return {"ok": True, "message": "Provider connection verified"}
 
     @app.get("/api/models/default/status")
     def get_model_status():
@@ -329,6 +436,31 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
         )
         return save_run(run)
 
+    @app.get("/api/lessons")
+    def list_lessons():
+        items = []
+        for package_dir in sorted((root / "lessons").glob("*")):
+            manifest_path = package_dir / "manifest.json"
+            if not manifest_path.exists():
+                continue
+            package = _read_json(manifest_path)
+            for lesson in package.get("lessons", []):
+                items.append({
+                    "id": lesson["id"], "package_id": package["id"],
+                    "order": lesson["order"], "title": lesson["title"],
+                    "question": lesson["question"], "focus": lesson["focus"],
+                })
+        return {"items": sorted(items, key=lambda item: (item["package_id"], item["order"]))}
+
+    @app.get("/api/lessons/{lesson_id}")
+    def get_lesson(lesson_id: str):
+        lesson_id = _safe_id(lesson_id, "lesson")
+        for package_dir in sorted((root / "lessons").glob("*")):
+            path = package_dir / f"{lesson_id}.json"
+            if path.exists():
+                return _read_json(path)
+        raise HTTPException(404, "Lesson not found")
+
     @app.get("/api/failure-lessons")
     def failure_lessons():
         from tiny_rag_lab.failure_lessons import FAILURE_LESSONS
@@ -342,6 +474,24 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             if path.is_dir() and manifest.exists():
                 items.append(_read_json(manifest))
         return {"items": items, "limits": {"files": MAX_UPLOAD_FILES, "bytes": MAX_UPLOAD_BYTES}}
+
+    @app.get("/api/corpora/{corpus_id}/questions")
+    def list_catalog_questions(corpus_id: str):
+        corpus_id = _safe_id(corpus_id, "corpus")
+        questions_path = corpora_dir / corpus_id / "questions.jsonl"
+        if not questions_path.exists():
+            raise HTTPException(404, "Question catalog not found")
+        items = []
+        for position, line in enumerate(questions_path.read_text(encoding="utf-8").splitlines()):
+            if not line.strip():
+                continue
+            question = json.loads(line)
+            # Do not expose answer or gold IDs before a validated run.
+            items.append({
+                "id": question["question_id"], "question": question["question"],
+                "featured": position < 8,
+            })
+        return {"items": items}
 
     @app.get("/api/indexes")
     def list_indexes():
@@ -359,6 +509,8 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
         return {
             "id": index_id,
             "manifest": index.manifest,
+            "document_count": index.manifest.get("document_count", 0),
+            "chunk_count": index.manifest.get("chunk_count", len(index.chunks)),
             "chunks": [
                 {
                     "chunk_id": chunk.chunk_id, "doc_id": chunk.doc_id,
@@ -440,6 +592,13 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             raise HTTPException(404, "Corpus not found")
         if not model_status()["ready"]:
             raise HTTPException(409, "Download the default embedding model before indexing this corpus")
+        if request.index_backend == "qdrant" and not qdrant_is_available(
+            os.environ.get("QDRANT_URL", "http://127.0.0.1:6333")
+        ):
+            raise HTTPException(
+                409,
+                "Qdrant is not ready. Start the optional Qdrant service, then try building again.",
+            )
         job_id, job_path = admit_job("index", corpus_id=corpus_id)
 
         def index_job():
@@ -467,6 +626,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
                         if request.chunking_strategy == "semantic" else {},
                         index_backend=request.index_backend,
                         backend_identity=collection if request.index_backend == "qdrant" else "numpy",
+                        source_corpus_id=corpus_id,
                     )
                     staged_index = load_index(staging_dir)
                     vector_backend = backend_from_manifest(
@@ -480,7 +640,12 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
                 except Exception:
                     logger.exception("Index job %s failed", job_id)
                     shutil.rmtree(locals().get("staging_dir", indexes_dir / ".missing"), ignore_errors=True)
-                    _write_json(job_path, {"id": job_id, "status": "failed", "kind": "index", "error": "Indexing failed. Check the local server logs and try again."})
+                    error = (
+                        "Qdrant could not build this index. Confirm the local Qdrant service is still running, then try again."
+                        if request.index_backend == "qdrant"
+                        else "Indexing failed. Check the local server logs and try again."
+                    )
+                    _write_json(job_path, {"id": job_id, "status": "failed", "kind": "index", "error": error})
 
         background_tasks.add_task(index_job)
         return {"id": job_id, "status": "queued"}
@@ -494,24 +659,25 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
 
     @app.post("/api/runs/retrieve", status_code=201)
     def retrieve(request: RunRequest):
-        index_id, index, results, trace, query_vector, semantics, components = run_retrieval(request)
+        index_id, index, results, trace, query_vector, semantics, components, question = run_retrieval(request)
         return save_run(build_lab_run(
             trace, index_id=index_id, manifest=index.manifest,
             document_count=index.manifest.get("document_count", 0),
             evidence=[_evidence(result, semantics, score_components=components.get(result.chunk.chunk_id)) for result in results],
             query_vector=query_vector,
             config={"retriever": request.retriever, "top_k": request.top_k, "context_budget": request.context_budget},
+            catalog_check=catalog_check(question, results),
         ))
 
     @app.post("/api/runs/ask", status_code=201)
     def ask(request: RunRequest):
-        override = request.provider or ProviderOverride()
-        api_key = override.api_key or os.environ.get("OPENAI_API_KEY")
-        base_url = override.base_url or os.environ.get("OPENAI_BASE_URL")
-        model = override.model or os.environ.get("OPENAI_MODEL")
+        provider = resolve_provider(request.provider)
+        api_key = provider["api_key"]
+        base_url = provider["base_url"]
+        model = provider["model"]
         # A local OpenAI-compatible provider may intentionally have no key,
         # but a completely empty browser override is not a configured provider.
-        if not api_key and not base_url:
+        if not provider_is_usable(provider):
             raise HTTPException(409, "Configure an OpenAI-compatible provider before live Ask")
         # The OpenAI SDK requires a non-empty key even for local compatible
         # servers (such as Ollama) that do not authenticate requests. This
@@ -519,16 +685,17 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
         # never stored in a run, job, or response.
         if base_url and not api_key:
             api_key = "local-provider-no-key"
-        index_id, index, results, retrieve_trace, query_vector, semantics, components = run_retrieval(request)
+        index_id, index, results, retrieve_trace, query_vector, semantics, components, question = run_retrieval(request)
+        query = retrieve_trace.query
         candidate_results = list(results)
         if request.context_budget:
-            packed = pack_context(results, request.context_budget, FakeTokenCounter(), question=request.query)
+            packed = pack_context(results, request.context_budget, FakeTokenCounter(), question=query)
             selected = set(packed.selected)
             results = [result for result in results if result.chunk.chunk_id in selected]
         else:
             packed = None
             selected = {result.chunk.chunk_id for result in results}
-        prompt = assemble_prompt(request.query, results)
+        prompt = assemble_prompt(query, results)
         generator = OpenAIGenerator(
             model=model,
             api_key=api_key,
@@ -540,7 +707,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
         except Exception:
             logger.exception("Live generation failed for index %s", index_id)
             failed_trace = AskTrace(
-                query=request.query, retriever=request.retriever, top_k=request.top_k,
+                query=query, retriever=request.retriever, top_k=request.top_k,
                 chunks=[_chunk_trace(result) for result in results], prompt=prompt,
                 latency_by_stage={**retrieve_trace.latency_by_stage, "generate": time.perf_counter() - t0},
                 context_pack=packed,
@@ -558,11 +725,16 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
                 ],
                 query_vector=query_vector,
                 config={"retriever": request.retriever, "top_k": request.top_k, "context_budget": request.context_budget},
+                catalog_check=catalog_check(question, candidate_results),
                 error="Live generation failed. Check your provider settings and try again.",
             ))
-        citations = extract_source_citations(answer)
+        # A model may repeat a marker or invent one not present in its prompt.
+        # Keep only unique citations that resolve to the context actually sent
+        # to it; the raw answer remains inspectable in the saved trace.
+        available_citations = {result.chunk.chunk_id for result in results}
+        citations = [citation for citation in extract_source_citations(answer) if citation in available_citations]
         trace = AskTrace(
-            query=request.query, retriever=request.retriever, top_k=request.top_k,
+            query=query, retriever=request.retriever, top_k=request.top_k,
             chunks=[_chunk_trace(result) for result in results], prompt=prompt,
             answer=answer, citations=citations,
             latency_by_stage={**retrieve_trace.latency_by_stage, "generate": time.perf_counter() - t0},
@@ -581,6 +753,7 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             ],
             query_vector=query_vector,
             config={"retriever": request.retriever, "top_k": request.top_k, "context_budget": request.context_budget},
+            catalog_check=catalog_check(question, candidate_results),
         ))
 
     @app.get("/api/runs/{run_id}")

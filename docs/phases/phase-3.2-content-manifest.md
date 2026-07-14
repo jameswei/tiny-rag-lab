@@ -1,7 +1,7 @@
 # Phase 3.2 Content Manifest: Cloudflare State & Coordination
 
-**Status:** Owner approved 2026-07-13. This is a concrete proposed learning
-corpus, not yet a bundled project asset.
+**Status:** Owner approved 2026-07-13. The reviewed corpus, indexes, and
+saved-lesson package are bundled as immutable Phase 3.2 seed assets.
 
 ## Source and attribution
 
@@ -45,9 +45,9 @@ replays it.
 
 | ID | Order | Question | Learning focus | Expected primary evidence |
 |---|---:|---|---|---|
-| `cloudflare-do-coordinator-v1` | 1 | How can a Worker send requests for the same entity to one stateful coordinator? | Document-to-chunk provenance, Durable Object identity/stubs, and rank ordering. | Workers Durable Object binding; what Durable Objects are; create stubs/send requests. |
+| `cloudflare-do-coordinator-v1` | 1 | How can a Worker use a Durable Object namespace, stable ID, and stub to send requests for the same entity to one stateful coordinator? | Document-to-chunk provenance, Durable Object identity/stubs, and rank ordering. | Workers Durable Object binding; what Durable Objects are; create stubs/send requests. |
 | `cloudflare-queues-retries-v1` | 2 | If a queue consumer fails while processing a message, how should retries and batching be considered? | Retrieval candidates versus context selection for delivery behavior. | How Queues work; delivery guarantees; batching and retries. |
-| `cloudflare-kv-r2-choice-v1` | 3 | When should an application keep globally read configuration in KV and put mutable files in R2? | Multi-document evidence and a constrained context pack. | How KV works; distributed configuration with KV; how R2 works; R2 consistency/durability. |
+| `cloudflare-kv-r2-choice-v1` | 3 | What is the tradeoff between Workers KV eventual consistency for global configuration and R2 object storage for mutable files? | Multi-document evidence and a constrained context pack. | How KV works; distributed configuration with KV; how R2 works; R2 consistency/durability. |
 | `cloudflare-workflows-resume-v1` | 4 | How can a long-running multi-step process pause, retry, and resume safely? | Prompt construction, saved grounded answer, and citations. | Workflows guide; rules; sleeping/retrying; step context. |
 
 ## Review checklist
