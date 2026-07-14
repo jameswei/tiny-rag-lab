@@ -1,0 +1,7 @@
+# Data metadata (SPSS Modeler)
+
+# Data metadata #
+
+This section describes how to set up the data model attributes based on `pyspark.sql.StructField`\.
+
+<!-- </article "role="article" "> -->

@@ -42,6 +42,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 # ---------------------------------------------------------------------------
 # Real dataset identifier and schema
@@ -86,6 +87,56 @@ def _pick_text(row: dict) -> str:
         if val and str(val).strip():
             return str(val).strip()
     return ""
+
+
+_PLACEHOLDER_TITLE = re.compile(r"^\{\{\s*document\.title\.text\s*\}\}$")
+_H1 = re.compile(r"^\s{0,3}#(?!#)\s+(.+?)\s*#*\s*$")
+
+
+def _is_placeholder_title(value: str) -> bool:
+    normalized = " ".join(value.split())
+    return not normalized or bool(_PLACEHOLDER_TITLE.fullmatch(normalized))
+
+
+def _first_h1(text: str) -> str:
+    """Return the first usable ATX H1 outside fenced code blocks."""
+    fenced = False
+    for line in text.splitlines():
+        if line.lstrip().startswith(("```", "~~~")):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        match = _H1.match(line)
+        if match:
+            title = match.group(1).strip()
+            if not _is_placeholder_title(title):
+                return title
+    return ""
+
+
+def _url_title(value: str) -> str:
+    try:
+        path = urlparse(value).path
+    except ValueError:
+        return ""
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        return ""
+    segment = unquote(segments[-1])
+    segment = re.sub(r"\.(?:html?|mdx?)$", "", segment, flags=re.IGNORECASE)
+    return " ".join(re.sub(r"[-_]+", " ", segment).split())
+
+
+def resolve_title(dataset_title: str, text: str, url: str, original_id: str) -> tuple[str, str]:
+    """Resolve a display title while retaining a deterministic provenance method."""
+    if not _is_placeholder_title(dataset_title):
+        return dataset_title.strip(), "dataset_title"
+    if title := _first_h1(text):
+        return title, "markdown_h1"
+    if title := _url_title(url):
+        return title, "source_url_path"
+    return original_id, "original_doc_id"
 
 
 def _is_corpus_row(row: dict) -> bool:
@@ -168,10 +219,16 @@ def extract_documents(
             continue
         slug = _slugify(original_id)
         prepared_id = f"docs/{slug}.md"
+        original_title = str(row.get(_CORPUS_TITLE_FIELD, original_id)).strip()
+        text = _pick_text(row)
+        url = str(row.get(_CORPUS_URL_FIELD, ""))
+        title, title_resolution = resolve_title(original_title, text, url, original_id)
         docs[original_id] = {
-            "title": str(row.get(_CORPUS_TITLE_FIELD, original_id)).strip(),
-            "text": _pick_text(row),
-            "url": str(row.get(_CORPUS_URL_FIELD, "")),
+            "title": title,
+            "original_title": original_title,
+            "title_resolution": title_resolution,
+            "text": text,
+            "url": url,
             "slug": slug,
             "prepared_id": prepared_id,
         }
@@ -264,6 +321,8 @@ def write_corpus(output_dir: Path, docs: dict[str, dict]) -> list[dict]:
                 "original_doc_id": original_id,      # original dataset ID for traceability
                 "path": str(filepath),
                 "title": info["title"],
+                "original_title": info["original_title"],
+                "title_resolution": info["title_resolution"],
                 "url": info["url"],
             }
         )

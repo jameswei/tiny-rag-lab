@@ -160,6 +160,18 @@ def test_manifest_corpus_root(small_index):
     assert manifest["corpus_root"] == "/corpus"
 
 
+def test_manifest_records_optional_source_corpus_id(tmp_path):
+    index_dir = tmp_path / "index"
+    write_index(
+        index_dir, docs=[_make_doc()], chunks=[_make_chunk()],
+        embeddings=np.zeros((1, 8), dtype=np.float32), corpus_root=Path("/corpus"),
+        embedding_backend="FakeEmbedder", embedding_model="fake", embedding_dim=8,
+        chunk_size=800, chunk_overlap=120, source_corpus_id="catalog-v1",
+    )
+    manifest = json.loads((index_dir / "manifest.json").read_text())
+    assert manifest["source_corpus_id"] == "catalog-v1"
+
+
 def test_manifest_corpus_files_count(small_index):
     index_dir, docs, *_ = small_index
     manifest = json.loads((index_dir / "manifest.json").read_text())

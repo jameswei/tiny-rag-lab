@@ -244,6 +244,40 @@ Capabilities:
 The phase deliberately leaves arbitrary batch evaluation in the CLI; a future
 interactive evaluation/reporting phase may build on Phase 3.0 run artifacts.
 
+## Phase 3.1: Field-Guide Visual Foundation
+
+Goal: refine the existing local browser lab into a light, evidence-led visual
+workspace before adding a separate Guided Learn mode.
+
+Expected capabilities:
+
+- grouped Home, Build & Inspect, Explore, Failure Lab, and Settings navigation
+- accessible field-guide visual language and responsive presentation
+- evidence cards and progressive raw-artifact inspection
+- purposeful, reduced-motion-safe pipeline and context-selection motion
+- no RAG-engine, API, trace-schema, or index-artifact changes
+
+Status: Complete; see `docs/phases/phase-3.1-field-guide-visual-foundation.md`.
+
+## Phase 3.2: Real-Corpus Guided Learning
+
+Goal: replace the synthetic starter replay with a real, bundled technical
+documentation corpus and a provider-free guided classic-RAG learning path.
+
+Expected capabilities:
+
+- a separate Learn area with four sequenced saved replays over a pinned
+  Cloudflare State & Coordination corpus
+- ready structural and fixed-character NumPy indexes for the bundled corpus
+- complete visible artifacts for corpus, chunks, embeddings, retrieval,
+  context packing, answer, and citations
+- watsonxDocsQA bundled source data, background indexing, and question-library
+  exploration with gold-source reveal
+- explicit provider gating for Live Ask and idempotent local seed assets
+
+Status: Complete; see
+`docs/phases/phase-3.2-real-corpus-guided-learning.md`.
+
 ## Later: Reporting, Artifacts, And Agentic RAG
 
 After the near-term quality roadmap is clearer, consider broader observability

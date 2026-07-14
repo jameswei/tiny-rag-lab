@@ -1,0 +1,34 @@
+{
+  "id": "cloudflare-state-coordination-v1",
+  "schema_version": 1,
+  "lessons": [
+    {
+      "id": "cloudflare-do-coordinator-v1",
+      "order": 1,
+      "title": "Route one entity to one coordinator",
+      "question": "How can a Worker use a Durable Object namespace, stable ID, and stub to send requests for the same entity to one stateful coordinator?",
+      "focus": "Document-to-chunk provenance, Durable Object identity/stubs, and rank ordering."
+    },
+    {
+      "id": "cloudflare-queues-retries-v1",
+      "order": 2,
+      "title": "Inspect retry and batching decisions",
+      "question": "If a queue consumer fails while processing a message, how should retries and batching be considered?",
+      "focus": "Retrieval candidates versus context selection for delivery behavior."
+    },
+    {
+      "id": "cloudflare-kv-r2-choice-v1",
+      "order": 3,
+      "title": "Choose KV or R2 from access semantics",
+      "question": "What is the tradeoff between Workers KV eventual consistency for global configuration and R2 object storage for mutable files?",
+      "focus": "Multi-document evidence and a constrained context pack."
+    },
+    {
+      "id": "cloudflare-workflows-resume-v1",
+      "order": 4,
+      "title": "Pause and resume durable work",
+      "question": "How can a long-running multi-step process pause, retry, and resume safely?",
+      "focus": "Prompt construction, saved grounded answer, and citations."
+    }
+  ]
+}

@@ -11,6 +11,7 @@ from tiny_rag_lab.prompting import (
     CONTEXT_BLOCK_TEMPLATE,
     PROMPT_TEMPLATE,
     assemble_prompt,
+    extract_source_citations,
     format_source_table,
 )
 
@@ -159,6 +160,11 @@ def test_empty_results_still_produces_prompt():
 def test_empty_results_has_no_source_marker():
     prompt = assemble_prompt("Q?", [])
     assert "[Source:" not in prompt
+
+
+def test_extract_source_citations_splits_compact_markers_and_deduplicates():
+    answer = "Evidence [Source: alpha; Source: beta] again [Source: alpha]."
+    assert extract_source_citations(answer) == ["alpha", "beta"]
 
 
 # ---------------------------------------------------------------------------

@@ -38,6 +38,7 @@ def write_index(
     index_backend: str = "numpy",
     distance_metric: str = "cosine",
     backend_identity: str | None = None,
+    source_corpus_id: str | None = None,
 ) -> None:
     """Write manifest.json, chunks.jsonl, and embeddings.npz to index_dir.
 
@@ -72,6 +73,7 @@ def write_index(
         index_backend=index_backend,
         distance_metric=distance_metric,
         backend_identity=backend_identity,
+        source_corpus_id=source_corpus_id,
     )
     _write_chunks(index_dir, chunks)
     _write_embeddings(index_dir, chunks, embeddings)
@@ -93,6 +95,7 @@ def _write_manifest(
     index_backend: str = "numpy",
     distance_metric: str = "cosine",
     backend_identity: str | None = None,
+    source_corpus_id: str | None = None,
 ) -> None:
     corpus_files = [
         {"doc_id": doc.doc_id, "path": doc.path, "raw_hash": doc.raw_hash}
@@ -111,6 +114,7 @@ def _write_manifest(
         "index_backend": index_backend,
         "distance_metric": distance_metric,
         "backend_identity": backend_identity or index_backend,
+        "source_corpus_id": source_corpus_id,
         "embedding_backend": embedding_backend,
         "embedding_model": embedding_model,
         "embedding_dim": embedding_dim,

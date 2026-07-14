@@ -19,7 +19,7 @@ class Generator(ABC):
     """
 
     @abstractmethod
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, *, max_tokens: int | None = None) -> str:
         """Generate an answer for prompt. Returns a plain text string."""
         ...
 
@@ -36,7 +36,7 @@ class FakeGenerator(Generator):
         The answer is derived from the retrieved documents. [Source: def9876543210987]
     """
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, prompt: str, *, max_tokens: int | None = None) -> str:
         markers = extract_source_citations(prompt)
         if not markers:
             return (
@@ -67,6 +67,8 @@ class OpenAIGenerator(Generator):
         model: str | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> None:
         from openai import OpenAI  # deferred import — fails gracefully if not installed
 
@@ -76,11 +78,18 @@ class OpenAIGenerator(Generator):
             kwargs["api_key"] = api_key
         if base_url:
             kwargs["base_url"] = base_url
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        if max_retries is not None:
+            kwargs["max_retries"] = max_retries
         self._client = OpenAI(**kwargs)
 
-    def generate(self, prompt: str) -> str:
-        response = self._client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-        )
+    def generate(self, prompt: str, *, max_tokens: int | None = None) -> str:
+        kwargs = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+        response = self._client.chat.completions.create(**kwargs)
         return response.choices[0].message.content

@@ -4,8 +4,8 @@ This file is the activation switch for implementation work.
 
 ## Current Phase
 
-No phase is currently active. Do not start implementation until a new phase
-spec and taskboard are reviewed, signed off, and named here.
+No phase is active. A new proposal must be reviewed, signed off, and activated
+here before implementation begins.
 
 ## Completed Phase Records
 
@@ -16,7 +16,9 @@ root documentation.
 
 | Phase | Delivered focus | Record |
 |---|---|---|
+| 3.2 | Real-corpus guided learning | [record](phase-3.2-real-corpus-guided-learning.md) |
 | 3.0 | Local visual RAG lab | [record](phase-3.0-local-visual-rag-lab.md) |
+| 3.1 | Field-guide visual foundation | [record](phase-3.1-field-guide-visual-foundation.md) |
 | 2.2 | Structural and semantic chunking | [record](phase-2.2-structural-semantic-chunking.md) |
 | 2.1 | Context budgets and structured answers | [record](phase-2.1-context-budget-structured-answers.md) |
 | 2.0 | Answer-quality judging | [record](phase-2.0-answer-quality-judging.md) |
@@ -27,7 +29,7 @@ root documentation.
 | 1.5 | Retrieval mechanics | [record](phase-1.5-retrieval-mechanics.md) |
 | 1 | Classic RAG baseline | [record](phase-1-naive-classic-rag.md) |
 
-## Candidate And Deferred Direction
+## Deferred Direction
 
 Agentic RAG remains deferred. It is not an implementation contract until a
 separate phase proposal is reviewed, signed off, and activated above.

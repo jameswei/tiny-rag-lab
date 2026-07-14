@@ -51,6 +51,7 @@ Path: {path}
 # consumer. Keeping extraction next to the emitted marker prevents CLI, failure
 # diagnosis, and the browser API from silently disagreeing about citations.
 SOURCE_CITATION_RE = re.compile(r"\[Source: ([^\]]+)\]")
+_CITATION_SEPARATOR_RE = re.compile(r"\s*[;,]\s*(?:Source:\s*)?", re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
@@ -74,8 +75,19 @@ def assemble_prompt(question: str, results: list[RetrievalResult]) -> str:
 
 
 def extract_source_citations(answer: str) -> list[str]:
-    """Return the source IDs cited with the prompt's visible marker format."""
-    return SOURCE_CITATION_RE.findall(answer)
+    """Return unique source IDs from the prompt's visible marker format.
+
+    Some compatible providers compress several markers into one bracket, for
+    example ``[Source: a; Source: b]``. Split that presentation variant and
+    retain first-seen order so the browser can show stable source references.
+    """
+    citations: list[str] = []
+    for marker in SOURCE_CITATION_RE.findall(answer):
+        for citation in _CITATION_SEPARATOR_RE.split(marker):
+            normalized = citation.removeprefix("Source:").strip()
+            if normalized and normalized not in citations:
+                citations.append(normalized)
+    return citations
 
 
 def format_source_table(results: list[RetrievalResult]) -> str:
