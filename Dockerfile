@@ -5,6 +5,13 @@ RUN npm ci
 COPY web/ ./
 RUN npm run build
 
+FROM node:22-slim AS guides-build
+WORKDIR /guides
+COPY learning_materials/package.json learning_materials/package-lock.json ./
+RUN npm ci
+COPY learning_materials/ ./
+RUN npm run build
+
 FROM python:3.12-slim AS lab
 ARG LAB_IMAGE_VARIANT=full
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -25,6 +32,7 @@ COPY docker-entrypoint.sh /usr/local/bin/tiny-rag-lab-entrypoint
 RUN chmod +x /usr/local/bin/tiny-rag-lab-entrypoint \
     && pip install --no-cache-dir '.[qdrant]'
 COPY --from=web-build /web/dist /app/web-dist
+COPY --from=guides-build /guides/.vitepress/dist /app/web-dist/docs
 # Full prepares the existing default embedder at build time; slim defers it.
 RUN if [ "$LAB_IMAGE_VARIANT" = "full" ]; then SENTENCE_TRANSFORMERS_HOME=/opt/tiny-rag-models python -c "from tiny_rag_lab.embeddings import SentenceTransformerEmbedder; SentenceTransformerEmbedder()"; fi
 EXPOSE 8000

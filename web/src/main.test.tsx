@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { learningMaterialUrl } from "./copy";
 import { App } from "./main";
 
 const starterRun = {
@@ -36,6 +37,11 @@ function mockApi({ corpora = [], indexes = [], lessons = [], guided = [guidedLes
 
 describe("field-guide visual foundation", () => {
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear(); });
+
+  it("routes both learning-guide languages to packaged static HTML", () => {
+    expect(learningMaterialUrl("en", "retrieval-mechanics.md")).toBe("/docs/en/retrieval-mechanics.html");
+    expect(learningMaterialUrl("zh", "rag-failure-lab.md")).toBe("/docs/zh/rag-failure-lab.html");
+  });
 
   it("groups Build and Inspect while preserving both internal views", async () => {
     mockApi(); const user = userEvent.setup(); render(<App />);
@@ -82,7 +88,9 @@ describe("field-guide visual foundation", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(screen.getByText("Inspect raw artifact"));
     expect(screen.getByText(/context_pack/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Read the learning material" })).toHaveAttribute("href", expect.stringContaining("retrieval-and-generation.md"));
+    const guideLink = screen.getByRole("link", { name: "Read the learning guide" });
+    expect(guideLink).toHaveAttribute("href", "/docs/en/retrieval-and-generation.html");
+    expect(guideLink).toHaveAttribute("target", "_blank");
   });
 
   it("keeps the Failure Lab context selection and citations visible", async () => {
@@ -93,7 +101,7 @@ describe("field-guide visual foundation", () => {
     expect(screen.getAllByText("Sources cited in the answer")).toHaveLength(2);
     expect(screen.getByText("with_h1.md")).toBeInTheDocument();
     expect(screen.getAllByText("subdir/nested.md").some((element) => element.closest("li"))).toBe(true);
-    expect(screen.getByRole("link", { name: "Read the learning material" })).toHaveAttribute("href", expect.stringContaining("rag-failure-lab.md"));
+    expect(screen.getByRole("link", { name: "Read the learning guide" })).toHaveAttribute("href", "/docs/en/rag-failure-lab.html");
   });
 
   it("can select an existing index and run retrieval", async () => {

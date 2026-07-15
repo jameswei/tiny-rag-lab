@@ -278,6 +278,22 @@ Expected capabilities:
 Status: Complete; see
 `docs/phases/phase-3.2-real-corpus-guided-learning.md`.
 
+## Phase 3.3: Local Learning Guides Docsite
+
+Goal: ship the existing bilingual learning materials as a readable, searchable
+static docsite alongside the local Studio, so conceptual explanations no longer
+open on GitHub.
+
+Expected capabilities:
+
+- English and Simplified-Chinese VitePress guides under `/docs/`
+- local search, roadmap-ordered navigation, language switching, and local assets
+- same-origin links from the visual lab and a single Studio container/port
+- paired factual corrections without new learning subjects or RAG behavior
+
+Status: Complete; see `docs/phases/phase-3.3-local-learning-docsite.md` and
+`docs/phases/phase-3.3-taskboard.md`.
+
 ## Later: Reporting, Artifacts, And Agentic RAG
 
 After the near-term quality roadmap is clearer, consider broader observability

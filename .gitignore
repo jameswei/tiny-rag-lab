@@ -27,6 +27,9 @@ env/
 /.tiny-rag-lab/
 /web/node_modules/
 /web/dist/
+/learning_materials/node_modules/
+/learning_materials/.vitepress/cache/
+/learning_materials/.vitepress/dist/
 /.polish/
 
 # macOS

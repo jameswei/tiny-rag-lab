@@ -16,6 +16,7 @@ root documentation.
 
 | Phase | Delivered focus | Record |
 |---|---|---|
+| 3.3 | Local bilingual Learning Guides docsite | [record](phase-3.3-local-learning-docsite.md) |
 | 3.2 | Real-corpus guided learning | [record](phase-3.2-real-corpus-guided-learning.md) |
 | 3.0 | Local visual RAG lab | [record](phase-3.0-local-visual-rag-lab.md) |
 | 3.1 | Field-guide visual foundation | [record](phase-3.1-field-guide-visual-foundation.md) |

@@ -26,7 +26,7 @@ export const copy = {
     modelReady: "Default embedding model is ready: all-MiniLM-L6-v2 (384 dimensions)", modelMissing: "Download the default embedding model before building an index", modelDownloadRequired: "Dense and Hybrid retrieval need the default embedding model. Open Settings, download it, then retry.", modelDownloading: "Downloading default embedding model…", modelDownloadInProgress: "Download in progress. This page will update when the model is ready.", downloadModel: "Download default embedding model",
     retriever: "Retriever", topK: "Top-k", contextBudget: "Context budget (0 = unlimited)",
     selected: "Selected for context", omitted: "Not selected for context", vector: "Query vector", timings: "Stage timings",
-    baseline: "Baseline", intervention: "Intervention", learn: "Read the learning material", raw: "Inspect raw artifact", source: "Source", score: "Score", chunkReference: "Chunk ID", citationReference: "Source reference",
+    baseline: "Baseline", intervention: "Intervention", learn: "Read the learning guide", raw: "Inspect raw artifact", source: "Source", score: "Score", chunkReference: "Chunk ID", citationReference: "Source reference",
     scoreDetails: "Score details", citations: "Sources cited in the answer", indexFacts: "Index facts", chunks: "Chunks", documents: "Documents", embeddingModel: "Embedding model",
     buildIntro: "Start with a bundled corpus or bring a small corpus of your own. Then choose a local vector backend and build an inspectable index.",
     inspectIntro: "Review the saved index facts, chunks, and a numeric vector preview without leaving the lab.",
@@ -66,7 +66,7 @@ export const copy = {
     providerUrl: "模型服务 API 地址", providerModel: "模型", providerKey: "API 密钥（仅当前会话）",
     modelReady: "默认嵌入模型已就绪：all-MiniLM-L6-v2（384 维）", modelMissing: "构建索引前需要下载默认嵌入模型", modelDownloadRequired: "语义检索和混合检索需要默认嵌入模型。请前往设置下载模型后重试。", modelDownloading: "正在下载默认嵌入模型…", modelDownloadInProgress: "下载正在进行中。模型就绪后此页面会自动更新。", downloadModel: "下载默认嵌入模型",
     retriever: "检索器", topK: "Top-k", contextBudget: "上下文预算（0 = 不限）", selected: "已选入上下文", omitted: "未选入上下文", vector: "查询向量", timings: "阶段耗时",
-    baseline: "基线", intervention: "干预", learn: "阅读学习材料", raw: "查看原始产物", source: "来源", score: "分数", chunkReference: "分块 ID", citationReference: "来源引用",
+    baseline: "基线", intervention: "干预", learn: "阅读学习指南", raw: "查看原始产物", source: "来源", score: "分数", chunkReference: "分块 ID", citationReference: "来源引用",
     scoreDetails: "分数详情", citations: "答案引用的来源", indexFacts: "索引事实", chunks: "分块", documents: "文档", embeddingModel: "嵌入模型",
     buildIntro: "使用随附的语料库，或带入自己的小型语料库。接着选择本地向量后端，并构建可检查的索引。",
     inspectIntro: "无需离开实验室，即可检查已保存的索引事实、分块和数值化向量预览。",
@@ -87,5 +87,5 @@ export const copy = {
 export type Copy = (typeof copy)[Lang];
 
 export function learningMaterialUrl(lang: Lang, page: string) {
-  return `https://github.com/jameswei/tiny-rag-lab/blob/main/learning_materials/${lang}/${page}`;
+  return `/docs/${lang}/${page.replace(/\.md$/, ".html")}`;
 }

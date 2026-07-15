@@ -67,10 +67,19 @@ tests/
 
 ```text
 web/                              React + TypeScript visual learning client
+learning_materials/               EN/ZH Markdown learning sources
+  .vitepress/                     local Learning Guides configuration and theme
+  en/                             English guide pages
+  zh/                             Simplified-Chinese guide pages
+  package.json                    VitePress build and development commands
 Dockerfile                        multi-stage local studio image
 compose.yaml                      loopback studio + optional Qdrant profile
 .env.example                      local provider and image-variant template
 ```
+
+The VitePress output is generated into `learning_materials/.vitepress/dist/`
+and copied into `/app/web-dist/docs` in the existing Studio image. It is build
+output, not a second runtime service.
 
 Generated data should stay out of version control:
 
