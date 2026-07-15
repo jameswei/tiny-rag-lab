@@ -2,18 +2,22 @@
 
 [简体中文](README.zh-CN.md) · [Project site](https://jameswei.github.io/tiny-rag-lab/)
 
-> A learning-first, inspectable RAG lab: study classic RAG in code, then
-> experiment with it in a rich local visual workspace.
+> A learning-first, inspectable classic RAG lab with readable Python, a rich
+> browser Studio, direct CLI experiments, real-corpus traces, and bilingual
+> Learning Guides.
 
-`tiny-rag-lab` is for learners who want to see what actually happens between a
-question, a document corpus, retrieved evidence, packed context, and a cited
-answer. It keeps the classic RAG lifecycle explicit in readable Python, then
-turns the same mechanics into a rich local browser workspace for guided
-learning, free retrieval experiments, index building, and failure inspection.
+`tiny-rag-lab` makes the path between a question, a document corpus, retrieved
+evidence, packed context, and a cited answer visible and inspectable. Readable
+Python keeps the RAG mechanics explicit; a rich browser Studio turns their
+artifacts into guided replays and hands-on experiments; a direct CLI supports
+repeatable inspection. Searchable English and Simplified Chinese Learning
+Guides open beside the lab when a concept deserves quieter, deeper reading.
 
 It is a learning tool, not a production RAG platform. The project favors
 visible mechanics over framework magic, evaluation before optimization, and
 failure analysis before advanced features.
+
+![Guided Learn replay showing real retrieved evidence](website/assets/screenshots/guided-retrieval.jpg)
 
 ## Learn through real evidence, not a toy demo
 
@@ -90,8 +94,8 @@ docker compose up --build
 
 Open http://127.0.0.1:8000 in your browser. The Learning Guides are available
 at http://127.0.0.1:8000/docs/ and are also linked from relevant lab stages.
-Everything is local and bound to loopback; no public deployment or account is
-required.
+The Studio and guides run locally; no public deployment or account is required.
+Live Ask contacts only the provider you configure.
 
 A useful first visit follows this path:
 
