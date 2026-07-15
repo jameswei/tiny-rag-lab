@@ -25,7 +25,9 @@ directory. Start at the top and work down.
 
 ## High-Level Architecture
 
-The pipeline has two main planes, plus infrastructure and measurement:
+The project architecture defines four planes. This learning sequence expands
+them into six study areas so evaluation, observability, failure analysis, and
+answer quality can be inspected separately:
 
 ```
                    ┌──────────────────────┐
@@ -95,8 +97,9 @@ The pipeline has two main planes, plus infrastructure and measurement:
 	                   └──────────────────────-┘
 ```
 
-The two planes meet at the index on disk — the indexing plane writes it, the
-retrieval plane reads it. The evaluation layer reuses the retrieval plane
+The indexing and retrieval planes meet at the index on disk — the indexing
+plane writes it, and the retrieval plane reads it. The evaluation layer reuses
+the retrieval plane
 exactly as the user experiences it. The observability layer records what
 happened in one `retrieve` or `ask` run so you can debug it later.
 The failure lab turns known retrieval mistakes into repeatable baseline vs.

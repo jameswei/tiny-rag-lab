@@ -16,6 +16,10 @@
 
 因此，项目同时以两种互补方式发挥价值：通过易读源码和直接的 CLI 学习 RAG 机制；通过交互式、实验性的 Web 应用观察这些机制如何在真实证据上运行。
 
+当某个阶段需要更深入的概念解释时，本地 Studio 还会同时提供中英双语的**学习指南**：
+可搜索的长文阅读会在实验旁打开，无需跳转到 GitHub。学习指南用于辅助两种入口，而
+不是引入另一套 RAG 体验。
+
 这里的**经典 RAG**指一条可见、可检查的路径：从语料中检索证据，选择并打包为上下文，然后生成带引用、基于证据的答案。经过测试的 OpenAI 兼容服务商会为 Live Ask 补全生成步骤；这不会使项目变成 Agentic RAG 或多步 RAG。
 
 ## 一个可检查的核心，两种学习入口
@@ -43,7 +47,9 @@ cp .env.example .env
 docker compose up --build
 ```
 
-然后在浏览器打开 http://127.0.0.1:8000。服务只绑定本机回环地址；不需要公共部署，也不需要注册账号。
+然后在浏览器打开 http://127.0.0.1:8000。学习指南位于
+http://127.0.0.1:8000/docs/，也可以从实验室中的相关阶段直接打开。所有服务只绑定
+本机回环地址；不需要公共部署，也不需要注册账号。
 
 推荐的首次使用路径如下：
 
@@ -52,6 +58,9 @@ docker compose up --build
 3. **Explore：** 提出题库问题或自由问题，比较稠密检索、BM25 和混合检索，并检查返回的 trace。只有希望进行 Live Ask 生成时，才需要配置并测试 OpenAI 兼容的 LLM 服务商。
 4. **Build & Inspect：** 使用内置语料或小型 Markdown/纯文本上传构建索引，然后检查文档、文本块、向量和来源信息。
 5. **Failure Lab：** 对比精心设计的失败场景及其改进方案。
+
+当你希望在更安静的阅读环境中理解相应概念时，可以从 Learn、Explore 或 Failure Lab
+打开**阅读学习指南**。它会在新标签页打开，并保留当前实验状态。
 
 界面提供英文和简体中文。内置语料内容、问题、已记录答案和引用会保留其原始语言。
 
@@ -134,6 +143,19 @@ uv sync --group dev
 uv run pytest --tb=short -q
 ```
 
+如需从源码运行两个浏览器界面，请在两个终端中分别执行：
+
+```bash
+npm --prefix learning_materials install
+npm --prefix learning_materials run dev
+
+npm --prefix web install
+npm --prefix web run dev
+```
+
+React 开发服务器会将 `/docs` 代理到 `127.0.0.1:4173` 上的 VitePress 服务，与打包后
+的同源路径保持一致。
+
 如需为独立 CLI 准备 watsonxDocsQA 语料：
 
 ```bash
@@ -150,7 +172,7 @@ corpus/
 
 ## 技术选择
 
-- Python · `argparse` CLI · FastAPI · React + TypeScript · Docker Compose
+- Python · `argparse` CLI · FastAPI · React + TypeScript · VitePress · Docker Compose
 - 本地嵌入模型：`sentence-transformers/all-MiniLM-L6-v2`
 - 默认索引：可检查的 NumPy 文件；可选本地 Qdrant 适配器
 - 生成：OpenAI 兼容 Chat Completions API
@@ -159,6 +181,8 @@ corpus/
 
 ## 文档
 
+- [学习指南](learning_materials/zh/learning-roadmap.md)：CLI 与可视化实验室的概念
+  伴读材料（由 Studio 在本地 `/docs/` 提供）
 - [项目提案](docs/proposal.md)：项目目的、理念和非目标
 - [路线图](docs/roadmap.md)：阶段方向
 - [架构](docs/architecture.md)：RAG 概念平面和边界

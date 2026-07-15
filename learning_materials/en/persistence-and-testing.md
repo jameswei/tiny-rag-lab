@@ -35,13 +35,19 @@ index. For a learning lab, inspectability matters more than minimal file count.
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "corpus_root": "/home/user/tiny-rag-lab/corpus/watsonx-docsqa",
   "created_at": "2026-06-09T10:30:00+00:00",
   "document_count": 42,
   "chunk_count": 312,
   "chunk_size": 800,
   "chunk_overlap": 120,
+  "chunking_strategy": "fixed_character",
+  "chunking_params": {},
+  "index_backend": "numpy",
+  "distance_metric": "cosine",
+  "backend_identity": "numpy",
+  "source_corpus_id": null,
   "embedding_backend": "SentenceTransformerEmbedder",
   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
   "embedding_dim": 384,
@@ -57,9 +63,9 @@ parameters, embedding model, and a hash of every source file. This means you
 can look at an index you built three weeks ago and know exactly how it was
 made without digging through shell history.
 
-The `schema_version` field ("1.0") exists so future phases can evolve the
-format. If Phase 1.5 adds BM25 scores to the index, it can bump the version and
-the loader can handle both old and new formats.
+The `schema_version` field ("2.0") exists so the format can evolve. BM25 builds
+its index from the stored chunk text and does not need persisted scores; any
+future incompatible persisted shape would require explicit version handling.
 
 ### `chunks.jsonl` — one JSON object per line
 
@@ -145,8 +151,8 @@ test should always run, even on a fresh clone with zero setup.
 ## The Fake Backend Pattern
 
 Phase 1 uses two fake backends: `FakeEmbedder` and `FakeGenerator`. Together
-they let all 241 tests run without network, without API keys, and without
-downloading an 80MB transformer model.
+they let the broad deterministic test suite run without network, API keys, or
+an embedding-model download.
 
 ### Why this pattern works
 
@@ -182,10 +188,10 @@ Both fakes share the same design:
 | LLM prompt compliance | The fake doesn't follow groundedness instructions |
 | Embedding model behavior | Only `SentenceTransformerEmbedder` tests cover this |
 
-These gaps are intentional. Phase 1.6 (Evaluation Harness) will add real-corpus
-tests with real embeddings to measure actual quality. The fake backends are for
-**correctness** — does the code work? Real backends are for **quality** — does
-it work well?
+These gaps are intentional. The evaluation harness and watsonxDocsQA workflow
+provide real-corpus quality measurement when a real embedding backend is
+available. Fake backends are for **correctness** — does the code work? Real
+backends are for **quality** — does it work well?
 
 ### How the CLI tests swap backends
 
@@ -255,6 +261,6 @@ it silently produces wrong answers. The three-file format with cross-validation
 is a miniature case study in defensive I/O.
 
 The fake backend pattern — narrow interface, deterministic implementation,
-deliberate seams for testing — is the reason 241 tests can run in 3.6 seconds
-on a fresh clone. It's a pattern that scales to any pipeline where real
-backends are slow, expensive, or non-deterministic.
+deliberate seams for testing — keeps the broad test suite fast and runnable on
+a fresh clone. It's a pattern that scales to any pipeline where real backends
+are slow, expensive, or non-deterministic.

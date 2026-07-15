@@ -32,13 +32,19 @@
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "corpus_root": "/home/user/tiny-rag-lab/corpus/watsonx-docsqa",
   "created_at": "2026-06-09T10:30:00+00:00",
   "document_count": 42,
   "chunk_count": 312,
   "chunk_size": 800,
   "chunk_overlap": 120,
+  "chunking_strategy": "fixed_character",
+  "chunking_params": {},
+  "index_backend": "numpy",
+  "distance_metric": "cosine",
+  "backend_identity": "numpy",
+  "source_corpus_id": null,
   "embedding_backend": "SentenceTransformerEmbedder",
   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
   "embedding_dim": 384,
@@ -53,8 +59,8 @@ manifest 记录了产生索引的一切 —— 语料库路径、块参数、嵌
 哈希。这意味着你可以查看三周前构建的索引，而不必翻找 shell 历史就能确切知道
 它是如何制作的。
 
-`schema_version` 字段（"1.0"）存在是为了让后续阶段可以演化格式。如果 Phase 1.5
-向索引添加了 BM25 分数，它可以提升版本号，加载器可以同时处理旧格式和新格式。
+`schema_version` 字段（"2.0"）用于支持格式演化。BM25 直接从已存储的文本块构建
+索引，无需持久化分数；未来若出现不兼容的持久化结构，则需要显式处理版本。
 
 ### `chunks.jsonl` —— 每行一个 JSON 对象
 
@@ -130,9 +136,8 @@ Markdown 和纯文本文件。没有 `watsonxDocsQA` 下载，没有真实嵌入
 
 ## 假后端模式
 
-Phase 1 使用两个假后端：`FakeEmbedder` 和 `FakeGenerator`。它们共同使所有
-241 个测试在没有网络、没有 API 密钥、无需下载 80MB transformer 模型的情况下
-运行。
+Phase 1 使用两个假后端：`FakeEmbedder` 和 `FakeGenerator`。它们让覆盖面广泛的
+确定性测试套件可以在没有网络、API 密钥或嵌入模型下载的情况下运行。
 
 ### 这个模式为什么有效
 
@@ -168,9 +173,9 @@ Phase 1 使用两个假后端：`FakeEmbedder` 和 `FakeGenerator`。它们共�
 | LLM prompt 合规性 | 假实现不遵循基于上下文的指令 |
 | 嵌入模型行为 | 只有 `SentenceTransformerEmbedder` 测试覆盖这些 |
 
-这些差距是有意的。Phase 1.6（评估框架）将用真实嵌入添加真实语料库测试来衡量
-实际质量。假后端用于**正确性** —— 代码是否工作？真后端用于**质量** —— 它是否
-工作得好？
+这些差距是有意的。评估框架和 watsonxDocsQA 工作流可以在真实嵌入后端可用时衡量
+真实语料质量。假后端用于**正确性** —— 代码是否工作？真后端用于**质量** —— 它
+是否工作得好？
 
 ### CLI 测试如何交换后端
 
@@ -235,6 +240,6 @@ embeddings.npz 是为机器准备的。合并它们会使两者都更难使用�
 加载时检查的不变量都是一个在悄悄产生错误答案之前被捕获的 bug。带交叉验证的
 三文件格式是防御性 I/O 的一个微型案例研究。
 
-假后端模式 —— 狭窄的接口、确定性的实现、为测试设计的接缝 —— 是 241 个测试能
-在首次克隆时以 3.6 秒运行的原因。这是一种可以扩展到你流水线中任何真实后端缓慢、
-昂贵或不确定的阶段的模式。
+假后端模式 —— 狭窄的接口、确定性的实现、为测试设计的接缝 —— 让覆盖面广泛的
+测试套件在首次克隆时仍能快速运行。这是一种可以扩展到流水线中任何真实后端缓慢、
+昂贵或不确定阶段的模式。

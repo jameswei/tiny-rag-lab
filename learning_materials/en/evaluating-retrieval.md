@@ -278,8 +278,9 @@ The same local run also shows the precision/recall trade-off:
 
 As `k` increases, hit rate and recall improve because the retriever has more
 chances to include a gold document. Precision falls because more non-gold
-chunks enter the prompt. Phase 1.5 (BM25, hybrid retrieval) will try to improve
-these numbers, and now you have a way to tell whether it worked.
+chunks enter the prompt. BM25 and hybrid retrieval are now available, so you
+can rerun the same evaluation to measure whether either approach improves the
+result.
 
 ---
 

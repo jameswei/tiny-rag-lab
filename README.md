@@ -34,6 +34,11 @@ This makes the project useful in two complementary ways: readable source code
 and a direct CLI for studying the mechanics, plus an interactive experimental
 web application for seeing those mechanics operate on real evidence.
 
+When a stage needs a deeper conceptual explanation, the local Studio also
+ships bilingual **Learning Guides**: searchable, long-form reading that opens
+beside the experiment without sending the learner to GitHub. The guides support
+the two entry points rather than introducing a separate RAG experience.
+
 Here, **classic RAG** means one visible, inspectable path: retrieve evidence
 from a corpus, select and pack it into context, then generate a grounded answer
 with citations. A tested OpenAI-compatible provider completes that generation
@@ -83,8 +88,10 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Open http://127.0.0.1:8000 in your browser. Everything is local and bound to
-loopback; no public deployment or account is required.
+Open http://127.0.0.1:8000 in your browser. The Learning Guides are available
+at http://127.0.0.1:8000/docs/ and are also linked from relevant lab stages.
+Everything is local and bound to loopback; no public deployment or account is
+required.
 
 A useful first visit follows this path:
 
@@ -99,6 +106,10 @@ A useful first visit follows this path:
    Markdown/plain-text upload, then inspect documents, chunks, vectors, and
    provenance.
 5. **Failure Lab:** compare curated failure scenarios with their interventions.
+
+Open **Read the learning guide** from Learn, Explore, or Failure Lab whenever
+you want the corresponding concept in a quieter reading format. It opens in a
+new tab, preserving the current experiment.
 
 The interface is available in English and Simplified Chinese. Bundled corpus
 content, questions, recorded answers, and citations keep their original
@@ -199,6 +210,19 @@ uv sync --group dev
 uv run pytest --tb=short -q
 ```
 
+Run the two browser surfaces from source in separate terminals:
+
+```bash
+npm --prefix learning_materials install
+npm --prefix learning_materials run dev
+
+npm --prefix web install
+npm --prefix web run dev
+```
+
+The React development server proxies `/docs` to the VitePress server on
+`127.0.0.1:4173`, matching the packaged same-origin route.
+
 Prepare the watsonxDocsQA corpus for the standalone CLI when needed:
 
 ```bash
@@ -215,7 +239,7 @@ corpus/
 
 ## Technical choices
 
-- Python · `argparse` CLI · FastAPI · React + TypeScript · Docker Compose
+- Python · `argparse` CLI · FastAPI · React + TypeScript · VitePress · Docker Compose
 - Local embeddings: `sentence-transformers/all-MiniLM-L6-v2`
 - Default index: inspectable NumPy files; optional local Qdrant adapter
 - Generation: OpenAI-compatible Chat Completions API
@@ -225,6 +249,8 @@ corpus/
 
 ## Docs
 
+- [Learning Guides](learning_materials/en/learning-roadmap.md): conceptual
+  companion to the CLI and visual lab (served locally at `/docs/` by Studio)
 - [Proposal](docs/proposal.md): project purpose, philosophy, and non-goals
 - [Roadmap](docs/roadmap.md): directional phase sequence
 - [Architecture](docs/architecture.md): conceptual RAG planes and boundaries

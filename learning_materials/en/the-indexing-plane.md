@@ -162,8 +162,9 @@ chunk will also start the next one — the retrieval system gets two chances to
 find it.
 
 The trade-off: more overlap means more chunks (which means a larger index and
-slower retrieval), but fewer "split in the middle" misses. Phase 1 uses 120 as
-a reasonable default; Phase 1.5 will make this configurable for experiments.
+slower retrieval), but fewer "split in the middle" misses. The 120-character
+default remains a baseline, and the CLI exposes both chunk size and overlap for
+experiments.
 
 ### The slice invariant in action
 
@@ -242,8 +243,8 @@ Key properties:
   even "hello" and "hello!" produce unrelated seeds.
 - **Vectors are unit length.** L2-normalization makes cosine similarity work as
   a simple dot product — no division by norms needed at query time.
-- **No downloads, no network, no GPU.** Pure Python + NumPy. All 241 Phase 1
-  tests use this embedder.
+- **No downloads, no network, no GPU.** The fake itself uses only Python and
+  NumPy, so deterministic fake-backed tests can run without model setup.
 
 ### SentenceTransformerEmbedder — the real thing
 
@@ -257,9 +258,9 @@ class SentenceTransformerEmbedder(Embedder):
 
 A few design notes:
 
-**Why `all-MiniLM-L6-v2`?** It's one of the smallest viable embedding models
-(384 dimensions, ~80MB), runs on CPU, and produces reasonable semantic vectors.
-For a learning lab, small and local beats large and API-dependent.
+**Why `all-MiniLM-L6-v2`?** It is a compact 384-dimensional embedding model,
+runs on CPU, and produces reasonable semantic vectors. For a learning lab,
+small and local beats large and API-dependent.
 
 **`normalize_embeddings=True`** is set in the `encode` call:
 
@@ -291,7 +292,7 @@ open `documents.py`, read `load_document` top to bottom, and understand exactly
 what happens to one file.
 
 The design choice to keep the embedder behind an ABC means the same retrieval
-code works with a 10-line hash function (tests) and an 80MB transformer model
-(production). This pattern — a narrow interface plus a deterministic fake —
-recurs throughout Phase 1 and makes the entire pipeline testable without
-network access.
+code works with a small hash function in deterministic tests and a local
+transformer model for semantic retrieval. This pattern — a narrow interface
+plus a deterministic fake — recurs throughout Phase 1 and makes the pipeline
+testable without network access.
