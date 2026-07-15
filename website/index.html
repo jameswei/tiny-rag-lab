@@ -4,7 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tiny-rag-lab — An Inspectable Classic RAG Learning Lab</title>
-  <meta name="description" content="A learning-first, inspectable RAG lab: study classic RAG in code, then experiment with it in a rich local visual workspace." />
+  <meta name="description" content="A learning-first, inspectable RAG lab: see classic RAG actually run over real documents, real retrieval, and real citations." />
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="alternate icon" href="favicon.ico" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://jameswei.github.io/tiny-rag-lab/" />
+  <meta property="og:title" content="tiny-rag-lab — An Inspectable Classic RAG Learning Lab" />
+  <meta property="og:description" content="A learning-first, inspectable RAG lab: see classic RAG actually run over real documents, real retrieval, and real citations." />
+  <meta property="og:image" content="https://jameswei.github.io/tiny-rag-lab/assets/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="tiny-rag-lab — An Inspectable Classic RAG Learning Lab" />
+  <meta name="twitter:description" content="A learning-first, inspectable RAG lab: see classic RAG actually run over real documents, real retrieval, and real citations." />
+  <meta name="twitter:image" content="https://jameswei.github.io/tiny-rag-lab/assets/og-image.png" />
+
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -16,6 +31,7 @@
       <ul class="nav-links">
         <li><a href="#about"        data-i18n="nav.about">About</a></li>
         <li><a href="#pipeline"     data-i18n="nav.pipeline">Pipeline</a></li>
+        <li><a href="#evidence"     data-i18n="nav.evidence">Evidence</a></li>
         <li><a href="#studio"       data-i18n="nav.studio">Visual Lab</a></li>
         <li><a href="#capabilities" data-i18n="nav.capabilities">Capabilities</a></li>
         <li><a href="#stack"        data-i18n="nav.stack">Stack</a></li>
@@ -23,7 +39,7 @@
       </ul>
       <div class="nav-actions">
         <button id="lang-toggle" class="btn btn-lang" aria-label="Switch language">中文</button>
-        <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-outline nav-github" data-i18n="nav.github">View on GitHub</a>
+        <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-outline nav-github" data-i18n="nav.github">GitHub →</a>
       </div>
     </nav>
   </header>
@@ -34,22 +50,47 @@
     <section class="hero">
       <div class="container hero-grid">
         <div class="hero-copy">
+          <p class="hero-label" data-i18n="hero.kicker">A LEARNING-FIRST RAG LAB</p>
           <h1 class="hero-title">tiny-rag-lab</h1>
-          <p class="hero-tagline" data-i18n="hero.tagline">Learn classic RAG by inspecting real evidence.</p>
+          <p class="hero-tagline" data-i18n="hero.tagline">See classic RAG actually run — real documents, real retrieval, real citations.</p>
+          <p class="hero-why" data-i18n="hero.why">RAG is the backbone of most AI assistants and agents today. Most tutorials hide it behind a framework call — this one builds it by hand, so you understand it completely before you reach for agentic RAG.</p>
           <div class="hero-actions">
-            <a href="#studio" class="btn btn-primary" data-i18n="hero.cta.studio">Explore the visual lab ↓</a>
-            <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-secondary" data-i18n="hero.cta.github">View on GitHub</a>
+            <a href="#studio" class="btn btn-primary" data-i18n="hero.cta.studio">Run the local lab ↓</a>
+            <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-secondary" data-i18n="hero.cta.github">View source on GitHub</a>
           </div>
         </div>
-        <aside class="hero-trace" aria-label="Example guided RAG trace">
-          <div class="trace-topline"><span class="trace-pulse"></span><span data-i18n="trace.label">Follow one grounded answer</span></div>
-          <div class="trace-step trace-question"><span class="trace-step-label" data-i18n="trace.question">Corpus</span><strong data-i18n="trace.question.value">Real technical documents</strong></div>
-          <div class="trace-flow" aria-hidden="true"></div>
-          <div class="trace-step trace-evidence"><span class="trace-step-label" data-i18n="trace.retrieval">Retrieve</span><strong data-i18n="trace.retrieval.value">Ranked chunks</strong></div>
-          <div class="trace-flow" aria-hidden="true"></div>
-          <div class="trace-step trace-context"><span class="trace-step-label" data-i18n="trace.context">Context</span><strong data-i18n="trace.context.value">Selected evidence</strong></div>
-          <div class="trace-flow" aria-hidden="true"></div>
-          <div class="trace-step trace-answer"><span class="trace-step-label" data-i18n="trace.answer">Answer</span><strong data-i18n="trace.answer.value">Grounded with citations</strong></div>
+        <aside class="hero-trace" aria-label="How a corpus of documents becomes chunks, selected evidence, and a cited answer">
+          <div class="trace-topline"><span class="trace-pulse"></span><span data-i18n="trace.label">From documents to a cited answer</span></div>
+          <div class="narrative-row">
+            <div class="narrative-stage stage-wide">
+              <div class="doc-stack">
+                <div class="doc-card doc-back"></div>
+                <div class="doc-card doc-mid"></div>
+                <div class="doc-card doc-front"><span class="bar"></span><span class="bar"></span><span class="bar"></span></div>
+              </div>
+              <span class="narrative-stage-label" data-i18n="trace.stage.documents">Documents</span>
+            </div>
+            <span class="narrative-arrow" aria-hidden="true">→</span>
+            <div class="narrative-stage stage-wide">
+              <div class="chunk-stack">
+                <div class="chunk-tile ct-1"></div>
+                <div class="chunk-tile ct-2"></div>
+                <div class="chunk-tile ct-3"></div>
+                <div class="chunk-tile ct-4"></div>
+              </div>
+              <span class="narrative-stage-label" data-i18n="trace.stage.chunks">Chunks</span>
+            </div>
+            <span class="narrative-arrow" aria-hidden="true">→</span>
+            <div class="narrative-stage">
+              <div class="narrative-evidence"><span class="bar"></span><span class="bar"></span></div>
+              <span class="narrative-stage-label" data-i18n="trace.stage.evidence">Evidence</span>
+            </div>
+            <span class="narrative-arrow" aria-hidden="true">→</span>
+            <div class="narrative-stage">
+              <div class="narrative-answer-icon" data-i18n="trace.stage.answer.icon">ANSWER</div>
+              <span class="narrative-stage-label" data-i18n="trace.stage.answer">Answer</span>
+            </div>
+          </div>
         </aside>
       </div>
     </section>
@@ -74,7 +115,6 @@
             <a href="#cli" class="text-link" data-i18n="about.cli.cta">See the CLI path →</a>
           </article>
         </div>
-        <p class="about-distinct" data-i18n="about.p4">What makes the lab distinct is that the artifacts are the lesson: real-corpus replay shows the evidence and decisions behind an answer, then lets learners experiment with the same mechanics and study curated failures rather than only a happy-path chat response.</p>
         <div class="about-stats">
           <div class="stat-card">
             <span class="stat-number">4</span>
@@ -93,6 +133,25 @@
             <span class="stat-label" data-i18n="stat.chunking">Chunking Strategies</span>
           </div>
         </div>
+        <p class="section-label diff-label" data-i18n="diff.label">WHAT MAKES IT DIFFERENT</p>
+        <div class="diff-grid">
+          <div class="diff-item">
+            <p class="diff-statement" data-i18n="diff.1.title">Real evidence, not a toy demo</p>
+            <p class="diff-proof" data-i18n="diff.1.proof">Four guided lessons replay real retrieval over 40 real Cloudflare docs — not a synthetic one-file example.</p>
+          </div>
+          <div class="diff-item">
+            <p class="diff-statement" data-i18n="diff.2.title">One core, two ways in</p>
+            <p class="diff-proof" data-i18n="diff.2.proof">The visual lab and CLI use the same project-owned RAG components and expose the same mechanics and artifacts — there is no demo-only pipeline.</p>
+          </div>
+          <div class="diff-item">
+            <p class="diff-statement" data-i18n="diff.3.title">Failure is part of the curriculum</p>
+            <p class="diff-proof" data-i18n="diff.3.proof">A dedicated Failure Lab replays bad chunking, buried evidence, and stale documents — and shows whether a fix actually helps.</p>
+          </div>
+          <div class="diff-item">
+            <p class="diff-statement" data-i18n="diff.4.title">No framework black box</p>
+            <p class="diff-proof" data-i18n="diff.4.proof">Chunking, retrieval, prompting, and citations are hand-written and readable — no LangChain, LlamaIndex, or Haystack wrapper hiding the mechanics.</p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -108,23 +167,23 @@
           <svg viewBox="0 0 1020 230" xmlns="http://www.w3.org/2000/svg" class="pipeline-svg">
             <defs>
               <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="#2563eb" />
+                <polygon points="0 0, 8 3, 0 6" fill="#0f766e" />
               </marker>
             </defs>
 
             <!-- ── Lane labels ── -->
             <text x="250" y="22" text-anchor="middle" class="svg-lane-label" data-i18n="svg.indexing">Indexing</text>
-            <line x1="20" y1="28" x2="490" y2="28" stroke="#e2e8f0" stroke-width="1" />
+            <line x1="20" y1="28" x2="490" y2="28" stroke="#e6e5e1" stroke-width="1" />
 
             <text x="760" y="22" text-anchor="middle" class="svg-lane-label" data-i18n="svg.querytime">Query time</text>
-            <line x1="520" y1="28" x2="1000" y2="28" stroke="#e2e8f0" stroke-width="1" />
+            <line x1="520" y1="28" x2="1000" y2="28" stroke="#e6e5e1" stroke-width="1" />
 
             <!-- Corpus -->
             <rect x="20"  y="70" width="140" height="60" rx="8" class="svg-node" />
             <text x="90"  y="94"  text-anchor="middle" class="svg-node-title" data-i18n="svg.corpus">Corpus</text>
             <text x="90"  y="111" text-anchor="middle" class="svg-node-sub" data-i18n="svg.corpus.sub">docs / Markdown</text>
 
-            <line x1="161" y1="100" x2="178" y2="100" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+            <line x1="161" y1="100" x2="178" y2="100" stroke="#0f766e" stroke-width="2" marker-end="url(#arrowhead)" />
 
             <!-- Chunks -->
             <rect x="180" y="70" width="140" height="60" rx="8" class="svg-node" />
@@ -132,44 +191,44 @@
             <text x="250" y="109" text-anchor="middle" class="svg-node-sub" data-i18n="svg.chunks.sub1">fixed / structural</text>
             <text x="250" y="122" text-anchor="middle" class="svg-node-sub" data-i18n="svg.chunks.sub2">/ semantic</text>
 
-            <line x1="321" y1="100" x2="338" y2="100" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+            <line x1="321" y1="100" x2="338" y2="100" stroke="#0f766e" stroke-width="2" marker-end="url(#arrowhead)" />
 
             <!-- Embeddings -->
             <rect x="340" y="70" width="140" height="60" rx="8" class="svg-node svg-node-accent" />
             <text x="410" y="94"  text-anchor="middle" class="svg-node-title svg-node-title-accent" data-i18n="svg.embeddings">Embeddings</text>
             <text x="410" y="111" text-anchor="middle" class="svg-node-sub svg-node-sub-accent" data-i18n="svg.embeddings.sub">MiniLM vectors</text>
 
-            <line x1="410" y1="131" x2="410" y2="148" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+            <line x1="410" y1="131" x2="410" y2="148" stroke="#0f766e" stroke-width="2" marker-end="url(#arrowhead)" />
 
             <!-- Local Index -->
             <rect x="340" y="150" width="140" height="48" rx="8" class="svg-node-store" />
             <text x="410" y="171" text-anchor="middle" class="svg-node-title" data-i18n="svg.index">Local Index</text>
             <text x="410" y="186" text-anchor="middle" class="svg-node-sub" data-i18n="svg.index.sub">NumPy · BM25</text>
 
-            <line x1="506" y1="40" x2="506" y2="218" stroke="#e2e8f0" stroke-width="1.5" stroke-dasharray="6,4" />
+            <line x1="506" y1="40" x2="506" y2="218" stroke="#e6e5e1" stroke-width="1.5" stroke-dasharray="6,4" />
 
             <!-- Query -->
             <rect x="524" y="70" width="140" height="60" rx="8" class="svg-node" />
             <text x="594" y="94"  text-anchor="middle" class="svg-node-title" data-i18n="svg.query">Query</text>
             <text x="594" y="111" text-anchor="middle" class="svg-node-sub" data-i18n="svg.query.sub">user question</text>
 
-            <line x1="665" y1="100" x2="682" y2="100" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+            <line x1="665" y1="100" x2="682" y2="100" stroke="#0f766e" stroke-width="2" marker-end="url(#arrowhead)" />
 
             <!-- Retrieve -->
             <rect x="684" y="70" width="140" height="60" rx="8" class="svg-node svg-node-accent" />
             <text x="754" y="94"  text-anchor="middle" class="svg-node-title svg-node-title-accent" data-i18n="svg.retrieve">Retrieve</text>
             <text x="754" y="111" text-anchor="middle" class="svg-node-sub svg-node-sub-accent" data-i18n="svg.retrieve.sub">dense · BM25 · hybrid</text>
 
-            <path d="M 481 174 Q 582 210 683 103" stroke="#2563eb" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowhead)" />
+            <path d="M 481 174 Q 582 210 683 103" stroke="#0f766e" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#arrowhead)" />
 
-            <line x1="825" y1="100" x2="842" y2="100" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+            <line x1="825" y1="100" x2="842" y2="100" stroke="#0f766e" stroke-width="2" marker-end="url(#arrowhead)" />
 
             <!-- Generate -->
             <rect x="844" y="70" width="140" height="60" rx="8" class="svg-node" />
             <text x="914" y="94"  text-anchor="middle" class="svg-node-title" data-i18n="svg.generate">Generate</text>
             <text x="914" y="111" text-anchor="middle" class="svg-node-sub" data-i18n="svg.generate.sub">grounded prompt → LLM</text>
 
-            <line x1="914" y1="131" x2="914" y2="148" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowhead)" />
+            <line x1="914" y1="131" x2="914" y2="148" stroke="#0f766e" stroke-width="2" marker-end="url(#arrowhead)" />
 
             <!-- Answer -->
             <rect x="844" y="150" width="140" height="48" rx="8" class="svg-node-answer" />
@@ -187,8 +246,39 @@
       </div>
     </section>
 
+    <!-- ─────────────────────────── REAL EVIDENCE SHOWCASE ─────────────────────────── -->
+    <section id="evidence" class="section section-alt">
+      <div class="container">
+        <p class="section-label" data-i18n="evidence.label">REAL EVIDENCE</p>
+        <h2 class="section-title" data-i18n="evidence.title">The artifacts are the lesson</h2>
+        <p class="section-subtitle" data-i18n="evidence.subtitle">Every citation below is a real retrieval over the bundled Cloudflare corpus — not a mockup.</p>
+        <div class="evidence-grid">
+          <article class="evidence-card">
+            <p class="evidence-question">
+              <span class="evidence-label" data-i18n="evidence.label.question">Question</span>
+              <strong data-i18n="evidence.1.question">How can a Worker use a Durable Object namespace, stable ID, and stub to send requests for the same entity to one stateful coordinator?</strong>
+            </p>
+            <blockquote class="evidence-excerpt" data-i18n-html="evidence.1.excerpt">Bind a Durable Object namespace to the Worker, derive a stable Durable Object ID for the entity, obtain that object's <mark class="highlight">stub</mark>, and send every request for the same entity to that one coordinator.</blockquote>
+            <span class="citation-chip">durable-objects/best-practices/rules-of-durable-objects.md</span>
+            <span class="citation-chip">durable-objects/best-practices/create-durable-object-stubs-and-send-requests.md</span>
+            <p class="evidence-answer" data-i18n="evidence.1.footer">Retrieved, packed into context, and cited — not paraphrased from memory.</p>
+          </article>
+          <article class="evidence-card">
+            <p class="evidence-question">
+              <span class="evidence-label" data-i18n="evidence.label.question">Question</span>
+              <strong data-i18n="evidence.2.question">What is the tradeoff between Workers KV eventual consistency for global configuration and R2 object storage for mutable files?</strong>
+            </p>
+            <blockquote class="evidence-excerpt" data-i18n-html="evidence.2.excerpt">Use KV for configuration that is read globally and <mark class="highlight">tolerates eventual consistency</mark>. Use R2 for mutable file or object content that needs strong read-after-write behavior.</blockquote>
+            <span class="citation-chip">kv/concepts/how-kv-works.md</span>
+            <span class="citation-chip">r2/reference/consistency.md</span>
+            <p class="evidence-answer" data-i18n="evidence.2.footer">Two source documents, one grounded comparison.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <!-- ─────────────────────────── VISUAL LAB ─────────────────────────── -->
-    <section id="studio" class="section section-alt">
+    <section id="studio" class="section">
       <div class="container">
         <h2 class="section-title" data-i18n="studio.title">A rich local workspace for learning RAG</h2>
         <p class="section-subtitle" data-i18n="studio.subtitle">Learn through real documents: start with four guided replays, inspect every artifact, then run retrieval experiments of your own.</p>
@@ -218,75 +308,64 @@
             <img src="assets/screenshots/explore-bm25.jpg" alt="Explore workspace showing a BM25 retrieval over the bundled Cloudflare corpus" loading="lazy" />
             <figcaption data-i18n="studio.shot.explore">Explore: change the retrieval setup and inspect what comes back.</figcaption>
           </figure>
+          <figure class="lab-shot">
+            <img src="assets/screenshots/failure-lab-compare.jpg" alt="Failure Lab comparing a baseline retrieval run against a fixed intervention" loading="lazy" />
+            <figcaption data-i18n="studio.shot.failure">Failure Lab: compare a baseline run against a fix, side by side.</figcaption>
+          </figure>
+          <figure class="lab-shot">
+            <img src="assets/screenshots/build-inspect.jpg" alt="Build and Inspect view showing chunk, vector, and source provenance details" loading="lazy" />
+            <figcaption data-i18n="studio.shot.inspect">Build &amp; Inspect: examine chunks, vectors, and source provenance directly.</figcaption>
+          </figure>
         </div>
-        <p class="studio-link-row"><a href="https://github.com/jameswei/tiny-rag-lab#local-visual-lab" target="_blank" rel="noopener" class="text-link" data-i18n="studio.cta">Run the local studio with Docker Compose →</a></p>
+        <p class="studio-link-row"><a href="https://github.com/jameswei/tiny-rag-lab#start-with-the-local-visual-lab" target="_blank" rel="noopener" class="text-link" data-i18n="studio.cta">Run the local studio with Docker Compose →</a></p>
+        <p class="studio-local-note" data-i18n="studio.local-note">Core lab workflows run locally with no account required. Live Ask contacts only the provider you configure.</p>
       </div>
     </section>
 
     <!-- ─────────────────────────── CAPABILITIES ─────────────────────────── -->
-    <section id="capabilities" class="section">
+    <section id="capabilities" class="section section-alt">
       <div class="container">
-        <h2 class="section-title" data-i18n="cap.title">What it covers</h2>
-        <p class="section-subtitle" data-i18n="cap.subtitle">Built phase-by-phase, each capability measurable and debuggable.</p>
-        <div class="cards-grid">
+        <p class="section-label" data-i18n="cap.label">WHAT IT COVERS</p>
+        <h2 class="section-title" data-i18n="cap.title">Four planes, one inspectable pipeline</h2>
+        <p class="section-subtitle" data-i18n="cap.subtitle">Everything a classic RAG pipeline needs, built phase-by-phase and mapped to the same architecture the code implements.</p>
 
-          <div class="card">
-            <div class="card-icon">⬡</div>
-            <h3 class="card-title" data-i18n="cap.rag.title">Classic RAG baseline</h3>
-            <p class="card-desc" data-i18n="cap.rag.desc">
-              Full pipeline: document loading, text normalization, chunking, embedding,
-              local cosine-similarity retrieval, grounded prompt assembly, answer generation,
-              and citations.
-            </p>
-          </div>
+        <div class="cap-planes">
 
-          <div class="card">
-            <div class="card-icon">⬡</div>
-            <h3 class="card-title" data-i18n="cap.retrieval.title">Retrieval mechanics</h3>
-            <p class="card-desc" data-i18n="cap.retrieval.desc">
-              Dense vector search, BM25 keyword retrieval, and hybrid fusion via
-              Reciprocal Rank Fusion — all configurable and comparable with a single CLI flag.
-            </p>
-          </div>
+          <article class="cap-plane">
+            <h3 class="cap-plane-title" data-i18n="cap.indexing.title">Indexing</h3>
+            <ul class="cap-plane-points" data-i18n-html="cap.indexing.points">
+              <li>Document loading, normalization, and metadata</li>
+              <li>Fixed-character, structural, and experimental semantic chunking</li>
+              <li>Local embeddings (MiniLM) and an inspectable NumPy index</li>
+            </ul>
+          </article>
 
-          <div class="card">
-            <div class="card-icon">⬡</div>
-            <h3 class="card-title" data-i18n="cap.eval.title">Evaluation harness</h3>
-            <p class="card-desc" data-i18n-html="cap.eval.desc">
-              <code>rag eval</code> measures retrieval quality (hit rate, MRR, context
-              precision/recall) and answer quality (faithfulness, relevance, correctness)
-              against a prepared QA set.
-            </p>
-          </div>
+          <article class="cap-plane">
+            <h3 class="cap-plane-title" data-i18n="cap.retrieval.title">Retrieval</h3>
+            <ul class="cap-plane-points" data-i18n-html="cap.retrieval.points">
+              <li>Dense cosine search, BM25 keyword search, and hybrid RRF fusion</li>
+              <li>Optional second-pass reranking (fake or cross-encoder)</li>
+              <li>Configurable and comparable with a single CLI flag or UI toggle</li>
+            </ul>
+          </article>
 
-          <div class="card">
-            <div class="card-icon">⬡</div>
-            <h3 class="card-title" data-i18n="cap.obs.title">Observability &amp; failure lab</h3>
-            <p class="card-desc" data-i18n-html="cap.obs.desc">
-              Per-query trace output exposes retriever, scores, latency, and prompt context.
-              <code>rag diagnose</code> runs curated failure cases with baseline vs. intervention
-              comparison.
-            </p>
-          </div>
+          <article class="cap-plane">
+            <h3 class="cap-plane-title" data-i18n="cap.generation.title">Generation</h3>
+            <ul class="cap-plane-points" data-i18n-html="cap.generation.points">
+              <li>Token-budgeted context packing with traceable omitted chunks</li>
+              <li>Grounded prompt assembly and OpenAI-compatible generation</li>
+              <li>Citations and abstention when evidence is insufficient</li>
+            </ul>
+          </article>
 
-          <div class="card">
-            <div class="card-icon">⬡</div>
-            <h3 class="card-title" data-i18n="cap.rerank.title">Reranking &amp; answer judging</h3>
-            <p class="card-desc" data-i18n="cap.rerank.desc">
-              Optional second-pass reranking (fake or cross-encoder). LLM-as-judge interface
-              for answer-quality verdicts — both fakeable for offline testing.
-            </p>
-          </div>
-
-          <div class="card">
-            <div class="card-icon">⬡</div>
-            <h3 class="card-title" data-i18n="cap.budget.title">Context budget &amp; chunking</h3>
-            <p class="card-desc" data-i18n="cap.budget.desc">
-              Token-budget context packing with traceable omitted chunks. Three chunking
-              strategies: fixed-character, Markdown-structural, and experimental
-              semantic topic-shift.
-            </p>
-          </div>
+          <article class="cap-plane">
+            <h3 class="cap-plane-title" data-i18n="cap.eval.title">Evaluation &amp; Observability</h3>
+            <ul class="cap-plane-points" data-i18n-html="cap.eval.points">
+              <li>Retrieval metrics: hit rate, MRR, context precision/recall</li>
+              <li>Answer metrics via LLM-as-judge: faithfulness, relevance, correctness</li>
+              <li>Per-query traces and a curated Failure Lab</li>
+            </ul>
+          </article>
 
         </div>
       </div>
@@ -367,7 +446,7 @@
 <span class="cli-prompt">$</span> rag diagnose --cases-file tests/fixtures/failure/cases.jsonl</code></pre>
         </div>
         <p class="cli-link-row">
-          <a href="https://github.com/jameswei/tiny-rag-lab#cli" target="_blank" rel="noopener" class="text-link" data-i18n="cli.link">
+          <a href="https://github.com/jameswei/tiny-rag-lab#cli-the-direct-interface" target="_blank" rel="noopener" class="text-link" data-i18n="cli.link">
             Full CLI reference and docs on GitHub →
           </a>
         </p>
@@ -378,7 +457,7 @@
     <section class="section cta-section">
       <div class="container cta-container">
         <h2 class="cta-title" data-i18n="cta.title">Interested in the source?</h2>
-        <p class="cta-desc" data-i18n="cta.desc">All code, phase specs, and implementation notes are on GitHub.</p>
+        <p class="cta-desc" data-i18n="cta.desc">Clone it, run it, or just read how it's built — all on GitHub.</p>
         <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-primary btn-lg" data-i18n="cta.btn">
           View on GitHub
         </a>
@@ -392,10 +471,9 @@
     <div class="container footer-inner">
       <span class="footer-copy">
         <span data-i18n="footer.built">Built by</span>
-        <a href="https://www.linkedin.com/in/jamesweipek/" target="_blank" rel="noopener" class="footer-link">James Wei</a>
+        <a href="https://lifeplayer.space" target="_blank" rel="noopener" class="footer-link">James Wei</a>
       </span>
       <nav class="footer-nav" aria-label="Footer navigation">
-        <a href="https://www.linkedin.com/in/jamesweipek/" target="_blank" rel="noopener" class="footer-link">LinkedIn</a>
         <a href="https://github.com/jameswei" target="_blank" rel="noopener" class="footer-link">GitHub</a>
       </nav>
     </div>

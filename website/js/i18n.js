@@ -3,6 +3,7 @@ const translations = {
     // Nav
     'nav.about':        'About',
     'nav.pipeline':     'Pipeline',
+    'nav.evidence':     'Evidence',
     'nav.studio':       'Visual Lab',
     'nav.capabilities': 'Capabilities',
     'nav.stack':        'Stack',
@@ -10,20 +11,20 @@ const translations = {
     'nav.github':       'GitHub →',
 
     // Hero
-    'hero.tagline':   'Learn classic RAG by inspecting real evidence.',
-    'hero.cta.github': 'View on GitHub',
-    'hero.cta.studio': 'Explore the visual lab ↓',
+    'hero.kicker':    'A LEARNING-FIRST RAG LAB',
+    'hero.tagline':   'See classic RAG actually run — real documents, real retrieval, real citations.',
+    'hero.why':       'RAG is the backbone of most AI assistants and agents today. Most tutorials hide it behind a framework call — this one builds it by hand, so you understand it completely before you reach for agentic RAG.',
+    'hero.cta.github': 'View source on GitHub',
+    'hero.cta.studio': 'Run the local lab ↓',
 
-    // Trace hero
-    'trace.label': 'Follow one grounded answer',
-    'trace.question': 'Corpus',
-    'trace.question.value': 'Real technical documents',
-    'trace.retrieval': 'Retrieve',
-    'trace.retrieval.value': 'Ranked chunks',
-    'trace.context': 'Context',
-    'trace.context.value': 'Selected evidence',
-    'trace.answer': 'Answer',
-    'trace.answer.value': 'Grounded with citations',
+    // Trace hero (documents -> chunks -> evidence -> answer narrative)
+    'trace.label': 'From documents to a cited answer',
+    'trace.stage.documents': 'Documents',
+    'trace.stage.chunks': 'Chunks',
+    'trace.stage.evidence': 'Evidence',
+    'trace.stage.answer': 'Answer',
+    'trace.stage.answer.icon': 'ANSWER',
+    'evidence.label.question': 'Question',
 
     // About
     'about.label': 'ONE CORE · TWO WAYS TO LEARN',
@@ -37,17 +38,23 @@ const translations = {
     'about.cli.title': 'Direct CLI',
     'about.cli.body': 'Repeat configurations, compare results, inspect raw output, and follow the same mechanics command by command.',
     'about.cli.cta': 'See the CLI path →',
-    'about.p1':    'RAG (retrieval-augmented generation) is a foundational pattern behind many AI tools and assistants — but most tutorials hide the interesting parts behind framework calls. <strong>tiny-rag-lab</strong> is my attempt to build every stage by hand: document loading, chunking, embedding, local vector search, retrieval, prompt assembly, answer generation, evaluation, and failure diagnosis.',
-    'about.p2':    'The goal is not a production platform. The goal is deep, inspectable understanding — readable code over framework magic, evaluation before optimization, failure analysis before advanced features.',
-    'about.p3':    'One inspectable RAG core has two learning entry points: a rich local workspace for guided real-corpus replay and hands-on experiments, plus a direct CLI for repeatable, scriptable inspection. Both expose the same documents, chunks, retrieval evidence, context, prompts, citations, and traces.',
-    'about.p4':    'What makes the lab distinct is that the artifacts are the lesson: real-corpus replay shows the evidence and decisions behind an answer, then lets learners experiment with the same mechanics and study curated failures rather than only a happy-path chat response.',
-    'about.cta':   'Explore the source on GitHub →',
 
     // Stats
     'stat.planes':    'RAG Architecture Planes',
     'stat.entrypoints':'Local Learning Entrypoints',
     'stat.retrievers':'Retrieval Strategies',
     'stat.chunking':  'Chunking Strategies',
+
+    // What makes it different (About)
+    'diff.label':   'WHAT MAKES IT DIFFERENT',
+    'diff.1.title': 'Real evidence, not a toy demo',
+    'diff.1.proof': 'Four guided lessons replay real retrieval over 40 real Cloudflare docs — not a synthetic one-file example.',
+    'diff.2.title': 'One core, two ways in',
+    'diff.2.proof': 'The visual lab and CLI use the same project-owned RAG components and expose the same mechanics and artifacts — there is no demo-only pipeline.',
+    'diff.3.title': 'Failure is part of the curriculum',
+    'diff.3.proof': 'A dedicated Failure Lab replays bad chunking, buried evidence, and stale documents — and shows whether a fix actually helps.',
+    'diff.4.title': 'No framework black box',
+    'diff.4.proof': 'Chunking, retrieval, prompting, and citations are hand-written and readable — no LangChain, LlamaIndex, or Haystack wrapper hiding the mechanics.',
 
     // Pipeline
     'pipeline.title':    'The RAG pipeline',
@@ -80,6 +87,17 @@ const translations = {
     'plane.generation': 'Generation plane',
     'plane.eval':       'Evaluation & observability plane',
 
+    // Real Evidence Showcase
+    'evidence.label':    'REAL EVIDENCE',
+    'evidence.title':    'The artifacts are the lesson',
+    'evidence.subtitle': 'Every citation below is a real retrieval over the bundled Cloudflare corpus — not a mockup.',
+    'evidence.1.question': 'How can a Worker use a Durable Object namespace, stable ID, and stub to send requests for the same entity to one stateful coordinator?',
+    'evidence.1.excerpt':  'Bind a Durable Object namespace to the Worker, derive a stable Durable Object ID for the entity, obtain that object\'s <mark class="highlight">stub</mark>, and send every request for the same entity to that one coordinator.',
+    'evidence.1.footer':   'Retrieved, packed into context, and cited — not paraphrased from memory.',
+    'evidence.2.question': 'What is the tradeoff between Workers KV eventual consistency for global configuration and R2 object storage for mutable files?',
+    'evidence.2.excerpt':  'Use KV for configuration that is read globally and <mark class="highlight">tolerates eventual consistency</mark>. Use R2 for mutable file or object content that needs strong read-after-write behavior.',
+    'evidence.2.footer':   'Two source documents, one grounded comparison.',
+
     // Visual lab
     'studio.title':        'A rich local workspace for learning RAG',
     'studio.subtitle':     'Learn through real documents: start with four guided replays, inspect every artifact, then run retrieval experiments of your own.',
@@ -91,23 +109,23 @@ const translations = {
     'studio.compare.desc': 'Start with bundled Cloudflare lessons, then build watsonxDocsQA or a small upload, compare NumPy with optional Qdrant, and study curated failures.',
     'studio.shot.guided': 'Guided lesson: follow ranked evidence back to its source.',
     'studio.shot.explore':'Explore: change the retrieval setup and inspect what comes back.',
+    'studio.shot.failure':'Failure Lab: compare a baseline run against a fix, side by side.',
+    'studio.shot.inspect':'Build & Inspect: examine chunks, vectors, and source provenance directly.',
     'studio.cta':         'Run the local studio with Docker Compose →',
+    'studio.local-note':  'Core lab workflows run locally with no account required. Live Ask contacts only the provider you configure.',
 
     // Capabilities
-    'cap.title':    'What it covers',
-    'cap.subtitle': 'Built phase-by-phase, each capability measurable and debuggable.',
-    'cap.rag.title':       'Classic RAG baseline',
-    'cap.rag.desc':        'Full pipeline: document loading, text normalization, chunking, embedding, local cosine-similarity retrieval, grounded prompt assembly, answer generation, and citations.',
-    'cap.retrieval.title': 'Retrieval mechanics',
-    'cap.retrieval.desc':  'Dense vector search, BM25 keyword retrieval, and hybrid fusion via Reciprocal Rank Fusion — all configurable and comparable with a single CLI flag.',
-    'cap.eval.title': 'Evaluation harness',
-    'cap.eval.desc':  '<code>rag eval</code> measures retrieval quality (hit rate, MRR, context precision/recall) and answer quality (faithfulness, relevance, correctness) against a prepared QA set.',
-    'cap.obs.title': 'Observability & failure lab',
-    'cap.obs.desc':  'Per-query trace output exposes retriever, scores, latency, and prompt context. <code>rag diagnose</code> runs curated failure cases with baseline vs. intervention comparison.',
-    'cap.rerank.title': 'Reranking & answer judging',
-    'cap.rerank.desc':  'Optional second-pass reranking (fake or cross-encoder). LLM-as-judge interface for answer-quality verdicts — both fakeable for offline testing.',
-    'cap.budget.title': 'Context budget & chunking',
-    'cap.budget.desc':  'Token-budget context packing with traceable omitted chunks. Three chunking strategies: fixed-character, Markdown-structural, and experimental semantic topic-shift.',
+    'cap.label':    'WHAT IT COVERS',
+    'cap.title':    'Four planes, one inspectable pipeline',
+    'cap.subtitle': 'Everything a classic RAG pipeline needs, built phase-by-phase and mapped to the same architecture the code implements.',
+    'cap.indexing.title':   'Indexing',
+    'cap.indexing.points':  '<li>Document loading, normalization, and metadata</li><li>Fixed-character, structural, and experimental semantic chunking</li><li>Local embeddings (MiniLM) and an inspectable NumPy index</li>',
+    'cap.retrieval.title':  'Retrieval',
+    'cap.retrieval.points': '<li>Dense cosine search, BM25 keyword search, and hybrid RRF fusion</li><li>Optional second-pass reranking (fake or cross-encoder)</li><li>Configurable and comparable with a single CLI flag or UI toggle</li>',
+    'cap.generation.title':  'Generation',
+    'cap.generation.points': '<li>Token-budgeted context packing with traceable omitted chunks</li><li>Grounded prompt assembly and OpenAI-compatible generation</li><li>Citations and abstention when evidence is insufficient</li>',
+    'cap.eval.title':  'Evaluation & Observability',
+    'cap.eval.points': '<li>Retrieval metrics: hit rate, MRR, context precision/recall</li><li>Answer metrics via LLM-as-judge: faithfulness, relevance, correctness</li><li>Per-query traces and a curated Failure Lab</li>',
 
     // Stack
     'stack.title':    'Tech stack',
@@ -134,18 +152,18 @@ const translations = {
 
     // CTA
     'cta.title': 'Interested in the source?',
-    'cta.desc':  'All code, phase specs, and implementation notes are on GitHub.',
+    'cta.desc':  'Clone it, run it, or just read how it\'s built — all on GitHub.',
     'cta.btn':   'View on GitHub',
 
     // Footer
     'footer.built': 'Built by',
-    'footer.repo':  'Repository',
   },
 
   zh: {
     // Nav
     'nav.about':        '关于',
     'nav.pipeline':     '流程',
+    'nav.evidence':     '证据',
     'nav.studio':       '可视化实验室',
     'nav.capabilities': '功能',
     'nav.stack':        '技术栈',
@@ -153,20 +171,20 @@ const translations = {
     'nav.github':       'GitHub →',
 
     // Hero
-    'hero.tagline':   '通过检查真实证据学习经典 RAG。',
-    'hero.cta.github': '在 GitHub 查看',
-    'hero.cta.studio': '探索可视化实验室 ↓',
+    'hero.kicker':    '一个以学习为先的 RAG 实验室',
+    'hero.tagline':   '亲眼看经典 RAG 运行——真实文档、真实检索、真实引用。',
+    'hero.why':       'RAG 是当今大多数 AI 助手和智能体背后的核心机制，但大多数教程只是调用一个框架就算完成。这个项目手工实现每一步，让你在转向智能体式 RAG 之前，先彻底理解经典 RAG。',
+    'hero.cta.github': '在 GitHub 查看源码',
+    'hero.cta.studio': '运行本地实验室 ↓',
 
     // Trace hero
-    'trace.label': '跟随一个基于证据的答案',
-    'trace.question': '语料',
-    'trace.question.value': '真实技术文档',
-    'trace.retrieval': '检索',
-    'trace.retrieval.value': '排序后的文本块',
-    'trace.context': '上下文',
-    'trace.context.value': '选入的证据',
-    'trace.answer': '答案',
-    'trace.answer.value': '带引用的基于证据答案',
+    'trace.label': '从文档到有据可依的答案',
+    'trace.stage.documents': '文档',
+    'trace.stage.chunks': '文本块',
+    'trace.stage.evidence': '证据',
+    'trace.stage.answer': '答案',
+    'trace.stage.answer.icon': '答案',
+    'evidence.label.question': '问题',
 
     // About
     'about.label': '一个核心 · 两种学习方式',
@@ -180,17 +198,23 @@ const translations = {
     'about.cli.title': '直接使用 CLI',
     'about.cli.body': '重复配置、比较结果、检查原始输出，并逐条命令跟随同一套机制。',
     'about.cli.cta': '查看 CLI 路径 →',
-    'about.p1':    'RAG（检索增强生成）是当前众多 AI 工具和助手背后的核心模式——但大多数教程将关键细节隐藏在框架调用之后。<strong>tiny-rag-lab</strong> 是我手工实现每个阶段的尝试：文档加载、分块、嵌入、本地向量检索、召回、提示词组装、答案生成、评估与失败诊断。',
-    'about.p2':    '目标不是构建生产级平台，而是深入、可观察的理解——可读代码优于框架魔法，先评估再优化，先分析失败再引入高级特性。',
-    'about.p3':    '一套可检查的 RAG 核心提供两种学习入口：丰富的本地工作区用于真实语料的引导回放和动手实验；直接的 CLI 用于可重复、可脚本化的检查。两者都暴露相同的文档、文本块、检索证据、上下文、提示词、引用和 trace。',
-    'about.p4':    '实验室的独特之处在于，产物本身就是课程：真实语料回放展示答案背后的证据和决策；随后学习者可以用同一套机制进行实验，并研究精心设计的失败场景，而不只是看到一条顺利完成的聊天回答。',
-    'about.cta':   '在 GitHub 查看源码 →',
 
     // Stats
     'stat.planes':    'RAG 架构层',
     'stat.entrypoints':'本地学习入口',
     'stat.retrievers':'检索策略',
     'stat.chunking':  '分块策略',
+
+    // What makes it different (About)
+    'diff.label':   '它的独特之处',
+    'diff.1.title': '真实证据，而非玩具演示',
+    'diff.1.proof': '四个引导课程在 40 篇真实 Cloudflare 文档上回放真实检索——不是一个合成的单文件示例。',
+    'diff.2.title': '一套核心，两种入口',
+    'diff.2.proof': '可视化工作区和 CLI 使用同一套项目自有 RAG 组件，并暴露相同的机制与产物——不存在仅供演示的独立流水线。',
+    'diff.3.title': '失败也是课程的一部分',
+    'diff.3.proof': '专门的失败实验室回放糟糕的分块、被埋没的证据和过期文档——并展示修复是否真的有效。',
+    'diff.4.title': '没有框架黑箱',
+    'diff.4.proof': '分块、检索、提示词组装和引用均为手写且可读——没有 LangChain、LlamaIndex 或 Haystack 封装掩盖机制。',
 
     // Pipeline
     'pipeline.title':    'RAG 流程',
@@ -223,6 +247,17 @@ const translations = {
     'plane.generation': '生成层',
     'plane.eval':       '评估与可观测层',
 
+    // Real Evidence Showcase
+    'evidence.label':    '真实证据',
+    'evidence.title':    '产物本身就是课程',
+    'evidence.subtitle': '下面的每一条引用都是对内置 Cloudflare 语料的真实检索——不是模拟数据。',
+    'evidence.1.question': 'Worker 如何通过 Durable Object 命名空间、稳定 ID 和 stub，将同一实体的请求都发送给同一个有状态协调者？',
+    'evidence.1.excerpt':  '将 Durable Object 命名空间绑定到 Worker，为该实体推导出稳定的 Durable Object ID，获取该对象的 <mark class="highlight">stub</mark>，并将同一实体的每个请求都发送给这一个协调者。',
+    'evidence.1.footer':   '经过检索、打包进上下文并标注引用——不是凭记忆转述。',
+    'evidence.2.question': '对于面向全局读取、可以容忍最终一致性的配置数据使用 Workers KV，与需要强读写一致性的可变文件使用 R2 对象存储相比，两者的权衡是什么？',
+    'evidence.2.excerpt':  '将 KV 用于全局读取、可以容忍<mark class="highlight">最终一致性</mark>的配置数据。将 R2 用于需要强读写一致性的可变文件或对象内容。',
+    'evidence.2.footer':   '两份源文档，一次有据可依的对比。',
+
     // Visual lab
     'studio.title':        '用于学习 RAG 的丰富本地工作区',
     'studio.subtitle':     '通过真实文档学习：从四个引导回放开始，检查每一份产物，然后进行自己的检索实验。',
@@ -234,23 +269,23 @@ const translations = {
     'studio.compare.desc': '先学习内置的 Cloudflare 课程，再构建 watsonxDocsQA 或上传小型语料，比较 NumPy 与可选 Qdrant，并研究精心设计的失败案例。',
     'studio.shot.guided': '引导课程：沿着排序后的证据回到它的来源。',
     'studio.shot.explore':'探索：改变检索配置，检查返回了什么。',
+    'studio.shot.failure':'失败实验室：并排比较基线运行与修复后的结果。',
+    'studio.shot.inspect':'构建与检查：直接查看分块、向量和来源出处。',
     'studio.cta':         '使用 Docker Compose 运行本地实验室 →',
+    'studio.local-note':  '核心实验流程在本地运行，无需账号。只有 Live Ask 会联系你自行配置的服务商。',
 
     // Capabilities
-    'cap.title':    '功能覆盖',
-    'cap.subtitle': '按阶段迭代构建，每项能力均可测量和调试。',
-    'cap.rag.title':       '经典 RAG 基线',
-    'cap.rag.desc':        '完整流程：文档加载、文本规范化、分块、嵌入、本地余弦相似度检索、基于检索的提示词组装、答案生成与引用。',
-    'cap.retrieval.title': '检索机制',
-    'cap.retrieval.desc':  '稠密向量检索、BM25 关键词检索，以及基于倒数排名融合（RRF）的混合检索——通过单个 CLI 参数即可配置和对比。',
-    'cap.eval.title': '评估框架',
-    'cap.eval.desc':  '<code>rag eval</code> 基于预置 QA 集衡量检索质量（命中率、MRR、上下文精确率/召回率）和答案质量（忠实度、相关性、正确性）。',
-    'cap.obs.title': '可观测性与失败实验室',
-    'cap.obs.desc':  '逐查询 trace 输出暴露检索器、分数、延迟和提示词上下文。<code>rag diagnose</code> 运行精心设计的失败案例，进行基线 vs. 干预对比。',
-    'cap.rerank.title': '重排序与答案评判',
-    'cap.rerank.desc':  '可选的二次重排序（fake 或 cross-encoder）。基于 LLM 的答案质量评判接口，生成忠实度、相关性等指标——均可用 fake 后端离线测试。',
-    'cap.budget.title': '上下文预算与分块策略',
-    'cap.budget.desc':  'Token 预算的上下文打包，省略的 chunk 可追踪。三种分块策略：固定字符、Markdown 结构感知，以及实验性的语义话题切换。',
+    'cap.label':    '功能覆盖',
+    'cap.title':    '四个层面，一条可检查的流水线',
+    'cap.subtitle': '经典 RAG 流水线所需的一切，按阶段构建，并与代码实现的架构一一对应。',
+    'cap.indexing.title':   '索引',
+    'cap.indexing.points':  '<li>文档加载、文本规范化与元数据</li><li>固定字符、结构化与实验性语义分块</li><li>本地嵌入模型（MiniLM）与可检查的 NumPy 索引</li>',
+    'cap.retrieval.title':  '检索',
+    'cap.retrieval.points': '<li>稠密余弦检索、BM25 关键词检索与混合 RRF 融合</li><li>可选的二次重排序（fake 或 cross-encoder）</li><li>通过单个 CLI 参数或界面开关即可配置与对比</li>',
+    'cap.generation.title':  '生成',
+    'cap.generation.points': '<li>带 Token 预算的上下文打包，省略的 chunk 可追踪</li><li>基于检索的提示词组装与 OpenAI 兼容生成</li><li>引用来源，证据不足时拒答</li>',
+    'cap.eval.title':  '评估与可观测性',
+    'cap.eval.points': '<li>检索指标：命中率、MRR、上下文精确率/召回率</li><li>基于 LLM 评判的答案指标：忠实度、相关性、正确性</li><li>逐查询 trace 与精心设计的失败实验室</li>',
 
     // Stack
     'stack.title':    '技术栈',
@@ -277,16 +312,16 @@ const translations = {
 
     // CTA
     'cta.title': '对源码感兴趣？',
-    'cta.desc':  '所有代码、阶段规格说明和实现笔记均在 GitHub 上。',
+    'cta.desc':  '克隆它、运行它，或者直接看看它是如何构建的——一切都在 GitHub 上。',
     'cta.btn':   '在 GitHub 查看',
 
     // Footer
     'footer.built': '作者',
-    'footer.repo':  '代码仓库',
   }
 };
 
-let currentLang = localStorage.getItem('tiny-rag-lang') || 'en';
+const savedLang = localStorage.getItem('tiny-rag-lang');
+let currentLang = savedLang === 'zh' ? 'zh' : 'en';
 
 function applyTranslations(lang) {
   // Plain text elements
@@ -297,7 +332,7 @@ function applyTranslations(lang) {
     }
   });
 
-  // HTML content elements (contain tags like <strong>, <code>)
+  // HTML content elements (contain tags like <strong>, <code>, <mark>)
   document.querySelectorAll('[data-i18n-html]').forEach(el => {
     const key = el.dataset.i18nHtml;
     if (translations[lang][key] !== undefined) {
@@ -313,7 +348,13 @@ function applyTranslations(lang) {
 
   // Toggle button label
   const btn = document.getElementById('lang-toggle');
-  if (btn) btn.textContent = lang === 'zh' ? 'English' : '中文';
+  if (btn) {
+    btn.textContent = lang === 'zh' ? 'English' : '中文';
+    btn.setAttribute(
+      'aria-label',
+      lang === 'zh' ? '切换到英文' : 'Switch to Chinese',
+    );
+  }
 }
 
 function setLanguage(lang) {
