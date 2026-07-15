@@ -190,7 +190,5 @@ corpus/
 - [学习指南](learning_materials/zh/learning-roadmap.md)：CLI 与可视化实验室的概念
   伴读材料（由 Studio 在本地 `/docs/` 提供）
 - [项目提案](docs/proposal.md)：项目目的、理念和非目标
-- [路线图](docs/roadmap.md)：阶段方向
 - [架构](docs/architecture.md)：RAG 概念平面和边界
 - [文件结构](docs/file-structure.md)：仓库地图
-- [阶段记录](docs/phases/README.md)：已完成阶段的决策和历史

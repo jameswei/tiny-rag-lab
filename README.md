@@ -256,7 +256,5 @@ corpus/
 - [Learning Guides](learning_materials/en/learning-roadmap.md): conceptual
   companion to the CLI and visual lab (served locally at `/docs/` by Studio)
 - [Proposal](docs/proposal.md): project purpose, philosophy, and non-goals
-- [Roadmap](docs/roadmap.md): directional phase sequence
 - [Architecture](docs/architecture.md): conceptual RAG planes and boundaries
 - [File structure](docs/file-structure.md): repository map
-- [Phase records](docs/phases/README.md): completed-phase decisions and history
