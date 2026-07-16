@@ -6,8 +6,9 @@ import { ExploreView } from "./components/ExploreView";
 import { FailureLabView } from "./components/FailureLabView";
 import { HomeView } from "./components/HomeView";
 import { LearnView } from "./components/LearnView";
+import { RetrievalView } from "./components/RetrievalView";
 import { SettingsView } from "./components/SettingsView";
-import type { Area, BackendAvailability, BuildView, CatalogQuestion, Corpus, FailureLesson, GuidedLesson, GuidedLessonSummary, IndexItem, LabRun, Lang, Stage } from "./types";
+import type { Area, BackendAvailability, BuildView, CatalogQuestion, Corpus, FailureLesson, GuidedLesson, GuidedLessonSummary, IndexItem, LabRun, Lang, RetrievalMaterial, RetrievalModule, Stage } from "./types";
 import "./styles.css";
 
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
@@ -39,6 +40,8 @@ export function App() {
   const [catalogQuestions, setCatalogQuestions] = useState<CatalogQuestion[]>([]);
   const [catalogQuestionId, setCatalogQuestionId] = useState("");
   const [retriever, setRetriever] = useState<"dense" | "bm25" | "hybrid">("dense");
+  const [reranker, setReranker] = useState<"none" | "cross-encoder">("none");
+  const [rerankTopN, setRerankTopN] = useState(20);
   const [topK, setTopK] = useState(5);
   const [contextBudget, setContextBudget] = useState(0);
   const [backend, setBackend] = useState<"numpy" | "qdrant">("numpy");
@@ -52,10 +55,18 @@ export function App() {
   const [running, setRunning] = useState<"retrieve" | "ask" | null>(null);
   const [testingProvider, setTestingProvider] = useState(false);
   const [modelReady, setModelReady] = useState<boolean | null>(null);
+  const [rerankerReady, setRerankerReady] = useState<boolean | null>(null);
   const [downloadingModel, setDownloadingModel] = useState(false);
+  const [downloadingReranker, setDownloadingReranker] = useState(false);
   const [lessons, setLessons] = useState<FailureLesson[]>([]);
   const [guidedLessons, setGuidedLessons] = useState<GuidedLessonSummary[]>([]);
   const [guidedLesson, setGuidedLesson] = useState<GuidedLesson | null>(null);
+  const [retrievalMaterials, setRetrievalMaterials] = useState<RetrievalMaterial[]>([]);
+  const [retrievalIndexId, setRetrievalIndexId] = useState("cloudflare-state-structural-v1");
+  const [retrievalModule, setRetrievalModule] = useState<RetrievalModule>("lexical");
+  const [retrievalMaterialId, setRetrievalMaterialId] = useState("");
+  const [retrievalRun, setRetrievalRun] = useState<LabRun | null>(null);
+  const [retrievalRunning, setRetrievalRunning] = useState(false);
   const [lessonProgress, setLessonProgress] = useState<Record<string, Stage>>({});
   const [lessonId, setLessonId] = useState("");
   const [activeStage, setActiveStage] = useState<Stage>(3);
@@ -75,17 +86,20 @@ export function App() {
   };
 
   useEffect(() => { void refresh().catch((error: Error) => setMessage(error.message)); }, []);
-  useEffect(() => { localStorage.setItem("tiny-rag-lab-lang", lang); document.documentElement.lang = lang === "zh" ? "zh-CN" : "en"; }, [lang]);
+  useEffect(() => { localStorage.setItem("tiny-rag-lab-lang", lang); document.documentElement.lang = lang === "zh" ? "zh-CN" : "en"; setMessage(""); }, [lang]);
   useEffect(() => { localStorage.setItem("tiny-rag-lab-provider-url", providerUrl); localStorage.setItem("tiny-rag-lab-provider-model", providerModel); }, [providerUrl, providerModel]);
   useEffect(() => { setMessage(""); }, [area]);
   useEffect(() => { if (indexId) void api(`/indexes/${indexId}`).then(setDetail).catch((error: Error) => setMessage(error.message)); }, [indexId]);
   useEffect(() => { const corpusId = indexes.find((item) => item.id === indexId)?.manifest.source_corpus_id; setCatalogQuestionId(""); if (typeof corpusId === "string") void api<{ items: CatalogQuestion[] }>(`/corpora/${corpusId}/questions`).then((data) => setCatalogQuestions(data.items)).catch(() => setCatalogQuestions([])); else setCatalogQuestions([]); }, [indexId, indexes]);
   useEffect(() => { void api<{ ready: boolean }>("/models/default/status").then((status) => setModelReady(status.ready)).catch((error: Error) => setMessage(error.message)); }, []);
+  useEffect(() => { void api<{ ready: boolean }>("/models/reranker/status").then((status) => setRerankerReady(status.ready)).catch(() => setRerankerReady(false)); }, []);
+  useEffect(() => { void api<{ items: Array<{ id: string; kind: string }> }>("/jobs/active").then(({ items }) => { const active = items[0]; if (active?.kind === "embedding-model") { setDownloadingModel(true); void pollModelJob(active.id, "embedding"); } else if (active?.kind === "reranker-model") { setDownloadingReranker(true); void pollModelJob(active.id, "reranker"); } }).catch(() => undefined); }, []);
   useEffect(() => { void api<{ items: BackendAvailability[] }>("/backends").then((status) => setQdrantAvailable(status.items.some((item) => item.id === "qdrant" && item.available))).catch(() => setQdrantAvailable(false)); }, []);
   useEffect(() => { void api<{ configured: boolean }>("/provider-status").then((status) => setEnvironmentProviderReady(status.configured)).catch(() => setEnvironmentProviderReady(false)); }, []);
   useEffect(() => { void api<{ items: FailureLesson[] }>("/failure-lessons").then((data) => { setLessons(data.items); setLessonId(data.items[0]?.id || ""); }).catch((error: Error) => setMessage(error.message)); }, []);
   const openLesson = async (id: string, navigate = true) => { try { setGuidedLesson(await api<GuidedLesson>(`/lessons/${id}`)); setActiveStage(0); if (navigate) setArea("learn"); } catch (error: any) { setMessage(error.message); } };
   useEffect(() => { void api<{ items: GuidedLessonSummary[] }>("/lessons").then((data) => { const items = data.items || []; setGuidedLessons(items); if (items[0]) void api<GuidedLesson>(`/lessons/${items[0].id}`).then(setGuidedLesson).catch((error: Error) => setMessage(error.message)); }).catch((error: Error) => setMessage(error.message)); }, []);
+  useEffect(() => { void api<{ index_id: string; items: RetrievalMaterial[] }>("/retrieval/materials").then((data) => { setRetrievalIndexId(data.index_id); setRetrievalMaterials(data.items); setRetrievalMaterialId(data.items.find((item) => item.category === "lexical")?.question_id || ""); }).catch((error: Error) => setMessage(error.message)); }, []);
   useEffect(() => () => { runAbort.current?.abort(); providerTestAbort.current?.abort(); }, []);
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -117,7 +131,7 @@ export function App() {
     runAbort.current = controller;
     setRunning(kind);
     try {
-      const nextRun = await api<LabRun>(`/runs/${kind}`, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify({ index_id: indexId, query: question || undefined, catalog_question_id: catalogQuestionId || undefined, retriever, top_k: topK, context_budget: contextBudget, provider: kind === "ask" ? { base_url: providerUrl || undefined, model: providerModel || undefined, api_key: providerKey || undefined } : undefined }) });
+      const nextRun = await api<LabRun>(`/runs/${kind}`, { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify({ index_id: indexId, query: question || undefined, catalog_question_id: catalogQuestionId || undefined, retriever, top_k: topK, reranker, rerank_top_n: rerankTopN, context_budget: contextBudget, explain: reranker !== "none", provider: kind === "ask" ? { base_url: providerUrl || undefined, model: providerModel || undefined, api_key: providerKey || undefined } : undefined }) });
       if (controller.signal.aborted || requestId !== runRequestId.current) return;
       setRun(nextRun); setActiveStage(kind === "ask" ? 5 : 3); setArea("explore");
     } catch (error: any) {
@@ -146,25 +160,60 @@ export function App() {
     } finally { if (requestId === providerTestRequestId.current) { providerTestAbort.current = null; setTestingProvider(false); } }
   };
   const replayStarter = () => { if (guidedLessons[0]) void openLesson(guidedLessons[0].id); else setArea("learn"); };
+  const chooseRetrievalModule = (next: RetrievalModule) => {
+    setRetrievalModule(next); setRetrievalRun(null);
+    if (["lexical", "dense", "hybrid", "reranking"].includes(next)) setRetrievalMaterialId(retrievalMaterials.find((item) => item.category === next)?.question_id || "");
+    else setRetrievalMaterialId("");
+  };
+  const runRetrievalLesson = async () => {
+    if (retrievalRunning || !retrievalMaterialId) return;
+    setRetrievalRunning(true);
+    try {
+      const isReranking = retrievalModule === "reranking";
+      const next = await api<LabRun>("/runs/retrieve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index_id: retrievalIndexId, retrieval_material_id: retrievalMaterialId, retriever: retrievalModule === "lexical" ? "bm25" : retrievalModule === "dense" ? "dense" : "hybrid", top_k: 5, reranker: isReranking ? "cross-encoder" : "none", rerank_top_n: isReranking ? 20 : 5, explain: true }) });
+      setRetrievalRun(next);
+    } catch (error: any) { setMessage(error.message === "Download the default embedding model before dense or hybrid retrieval" ? t.modelDownloadRequired : error.message); }
+    finally { setRetrievalRunning(false); }
+  };
+  const pollModelJob = async (jobId: string, kind: "embedding" | "reranker"): Promise<void> => {
+    try {
+      const state = await api<{ status: string; error?: string }>(`/jobs/${jobId}`);
+      if (state.status === "complete") {
+        if (kind === "embedding") { setModelReady(true); setDownloadingModel(false); setMessage(t.modelReady); }
+        else { setRerankerReady(true); setDownloadingReranker(false); setMessage(t.rerankerReady); }
+        return;
+      }
+      if (state.status === "failed" || state.status === "cancelled") {
+        if (kind === "embedding") setDownloadingModel(false); else setDownloadingReranker(false);
+        setMessage(state.error || (kind === "embedding" ? "Embedding model download stopped." : "Reranker model download stopped."));
+        return;
+      }
+      window.setTimeout(() => { void pollModelJob(jobId, kind); }, 700);
+    } catch (error: any) {
+      if (kind === "embedding") setDownloadingModel(false); else setDownloadingReranker(false);
+      setMessage(error.message);
+    }
+  };
   const downloadModel = async () => {
     if (downloadingModel) return;
     try {
       const job = await api<{ id: string; status: string }>("/models/default/download", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
       if (job.status === "complete") { setModelReady(true); setMessage(t.modelReady); return; }
       setDownloadingModel(true); setMessage(t.modelDownloading);
-      const poll = async (): Promise<void> => {
-        try {
-          const state = await api<{ status: string; error?: string }>(`/jobs/${job.id}`);
-          if (state.status === "complete") { setModelReady(true); setDownloadingModel(false); setMessage(t.modelReady); return; }
-          if (state.status === "failed") { setDownloadingModel(false); setMessage(state.error || "Model download failed."); return; }
-          window.setTimeout(() => { void poll(); }, 700);
-        } catch (error: any) { setDownloadingModel(false); setMessage(error.message); }
-      };
-      void poll();
+      void pollModelJob(job.id, "embedding");
+    } catch (error: any) { setMessage(error.message); }
+  };
+  const downloadReranker = async () => {
+    if (downloadingReranker) return;
+    try {
+      const job = await api<{ id: string; status: string }>("/models/reranker/download", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      if (job.status === "complete") { setRerankerReady(true); setMessage(t.rerankerReady); return; }
+      setDownloadingReranker(true); setMessage(t.rerankerDownloading);
+      void pollModelJob(job.id, "reranker");
     } catch (error: any) { setMessage(error.message); }
   };
   const navigation = useMemo<Array<[Area, string]>>(() => [
-    ["home", t.areas.home], ["learn", t.areas.learn], ["explore", t.areas.explore], ["build", t.areas.build], ["failure", t.areas.failure], ["settings", t.areas.settings],
+    ["home", t.areas.home], ["learn", t.areas.learn], ["retrieval", t.areas.retrieval], ["explore", t.areas.explore], ["build", t.areas.build], ["failure", t.areas.failure], ["settings", t.areas.settings],
   ], [t]);
 
   return <main className="app-shell" data-motion={reducedMotion ? "reduced" : "full"}>
@@ -173,10 +222,11 @@ export function App() {
     {message && <p className="notice status-panel status-info" role="status">{message}<button type="button" aria-label="Dismiss" onClick={() => setMessage("")}>×</button></p>}
     {area === "home" && <HomeView onReplay={replayStarter} onBuild={() => { setBuildView("build"); setArea("build"); }} t={t} />}
     {area === "learn" && <LearnView lessons={guidedLessons} lesson={guidedLesson} activeStage={activeStage} maxStage={guidedLesson ? lessonProgress[guidedLesson.lesson.id] ?? 0 : 0} onLesson={(id) => void openLesson(id)} onStage={setActiveStage} onAdvance={(stage) => { if (guidedLesson) setLessonProgress((current) => ({ ...current, [guidedLesson.lesson.id]: Math.max(current[guidedLesson.lesson.id] ?? 0, stage) as Stage })); }} lang={lang} t={t} />}
+    {area === "retrieval" && <RetrievalView module={retrievalModule} materials={retrievalMaterials} materialId={retrievalMaterialId} run={retrievalRun} running={retrievalRunning} modelReady={modelReady} rerankerReady={rerankerReady} lang={lang} onModule={chooseRetrievalModule} onMaterial={(id) => { setRetrievalMaterialId(id); setRetrievalRun(null); }} onRun={() => void runRetrievalLesson()} t={t} />}
     {area === "build" && <BuildInspectView view={buildView} setView={setBuildView} corpora={corpora} indexes={indexes} corpusId={corpusId} indexId={indexId} backend={backend} qdrantAvailable={qdrantAvailable} modelReady={modelReady} building={building} detail={detail} onCorpus={setCorpusId} onIndex={setIndexId} onBackend={setBackend} onUpload={upload} onBuild={build} t={t} />}
-    {area === "explore" && <ExploreView indexes={indexes} indexId={indexId} question={question} catalogQuestions={catalogQuestions} catalogQuestionId={catalogQuestionId} retriever={retriever} topK={topK} contextBudget={contextBudget} run={run} activeStage={activeStage} lang={lang} running={running} testingProvider={testingProvider} providerReady={providerVerified} onIndex={setIndexId} onQuestion={(value) => { setQuestion(value); setCatalogQuestionId(""); }} onCatalogQuestion={(id) => { setCatalogQuestionId(id); const found = catalogQuestions.find((item) => item.id === id); setQuestion(found?.question || ""); }} onRetriever={setRetriever} onTopK={setTopK} onContextBudget={setContextBudget} onStage={setActiveStage} onRun={execute} t={t} />}
+    {area === "explore" && <ExploreView indexes={indexes} indexId={indexId} question={question} catalogQuestions={catalogQuestions} catalogQuestionId={catalogQuestionId} rerankingMaterials={retrievalMaterials.filter((item) => item.category === "reranking")} retriever={retriever} topK={topK} reranker={reranker} rerankTopN={rerankTopN} rerankerReady={rerankerReady} contextBudget={contextBudget} run={run} activeStage={activeStage} lang={lang} running={running} testingProvider={testingProvider} providerReady={providerVerified} onIndex={setIndexId} onQuestion={(value) => { setQuestion(value); setCatalogQuestionId(""); }} onCatalogQuestion={(id) => { setCatalogQuestionId(id); const found = catalogQuestions.find((item) => item.id === id); setQuestion(found?.question || ""); }} onRetriever={setRetriever} onTopK={setTopK} onReranker={setReranker} onRerankTopN={setRerankTopN} onContextBudget={setContextBudget} onStage={setActiveStage} onRun={execute} t={t} />}
     {area === "failure" && <FailureLabView lessons={lessons} lessonId={lessonId} onLesson={setLessonId} lang={lang} t={t} />}
-    {area === "settings" && <SettingsView modelReady={modelReady} downloadingModel={downloadingModel} providerUrl={providerUrl} providerModel={providerModel} providerKey={providerKey} providerReady={providerReady} testing={testingProvider} generating={running === "ask"} onDownload={downloadModel} onTest={testProvider} onProviderUrl={(value) => { setProviderVerified(false); setProviderUrl(value); }} onProviderModel={(value) => { setProviderVerified(false); setProviderModel(value); }} onProviderKey={(value) => { setProviderVerified(false); setProviderKey(value); }} t={t} />}
+    {area === "settings" && <SettingsView modelReady={modelReady} downloadingModel={downloadingModel} rerankerReady={rerankerReady} downloadingReranker={downloadingReranker} providerUrl={providerUrl} providerModel={providerModel} providerKey={providerKey} providerReady={providerReady} testing={testingProvider} generating={running === "ask"} onDownload={downloadModel} onDownloadReranker={downloadReranker} onTest={testProvider} onProviderUrl={(value) => { setProviderVerified(false); setProviderUrl(value); }} onProviderModel={(value) => { setProviderVerified(false); setProviderModel(value); }} onProviderKey={(value) => { setProviderVerified(false); setProviderKey(value); }} t={t} />}
     <footer className="app-footer"><div><strong>tiny-rag-lab</strong><span>{lang === "en" ? "Created by James Wei · Learn classic RAG, locally." : "由 James Wei 创建 · 在本地学习经典 RAG。"}</span></div><div className="footer-links"><a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noreferrer">GitHub</a><a href="https://jameswei.github.io/tiny-rag-lab/" target="_blank" rel="noreferrer">{lang === "en" ? "Project site" : "项目主页"}</a></div></footer>
   </main>;
 }

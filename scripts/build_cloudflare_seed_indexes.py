@@ -41,6 +41,7 @@ def build(corpus_dir: Path, indexes_dir: Path) -> None:
         write_index(
             target, docs, chunks, embeddings, corpus_root=runtime_corpus_root,
             embedding_backend=type(embedder).__name__, embedding_model=embedder.model_name,
+            embedding_revision=embedder.revision,
             embedding_dim=embedder.dim, chunk_size=chunk_size, chunk_overlap=overlap,
             chunking_strategy=strategy, index_backend="numpy", source_corpus_id=CORPUS_ID,
         )
@@ -49,8 +50,8 @@ def build(corpus_dir: Path, indexes_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--corpus-dir", type=Path, default=Path("assets/seed/v1/corpora/cloudflare-state-v1"))
-    parser.add_argument("--indexes-dir", type=Path, default=Path("assets/seed/v1/indexes"))
+    parser.add_argument("--corpus-dir", type=Path, default=Path("assets/seed/v2/corpora/cloudflare-state-v1"))
+    parser.add_argument("--indexes-dir", type=Path, default=Path("assets/seed/v2/indexes"))
     args = parser.parse_args()
     build(args.corpus_dir, args.indexes_dir)
 

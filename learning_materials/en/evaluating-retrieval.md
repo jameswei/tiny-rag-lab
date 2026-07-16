@@ -308,6 +308,42 @@ The `_make_embedder` factory is the same one used by `cmd_retrieve` and
 
 ---
 
+## Compare two configurations in the browser
+
+The Studio's **Retrieval → Evaluation** module runs a fixed, reviewed set of 16
+Cloudflare questions against the bundled structural NumPy index. It keeps the
+corpus, chunks, embedding snapshot, and questions fixed so the retrieval
+configuration is the intentional variable.
+
+Three presets provide useful starting comparisons:
+
+- BM25 vs Dense
+- Dense vs Hybrid
+- Hybrid vs Hybrid + cross-encoder
+
+You may edit retriever, `top_k`, reranker, and candidate depth on either side.
+The lab rejects identical configurations because they teach nothing through an
+A/B comparison.
+
+Each side reports hit rate, MRR, context precision, and context recall
+separately. There is no composite winner. A positive change in recall may come
+with lower precision, and a better aggregate can still hide regressions on
+individual questions. Always open the per-question evidence and check:
+
+1. which gold document or documents were expected;
+2. where each side first retrieved a gold document;
+3. which distractors occupied the remaining top-k positions; and
+4. whether reranking promoted useful evidence or merely changed the order.
+
+The comparison runs as a recoverable background job. You may leave the page,
+return to its current progress, or request cancellation. Cancellation takes
+effect between questions; an in-flight embedding or cross-encoder call is not
+forcefully interrupted.
+
+The browser set is a teaching fixture, not a leaderboard. It is deliberately
+restricted to one pinned corpus and index so learners can reason about the
+evidence rather than wonder whether the underlying assets changed.
+
 ## What This Teaches
 
 Evaluation answers the question your Phase 1 pipeline left open: **is the

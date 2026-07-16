@@ -1,8 +1,8 @@
-# 检索机制 —— Dense、BM25 与混合检索
+# 检索机制 —— 词法、稠密、向量数据库与混合检索
 
-Phase 1 只提供一种检索器：dense 余弦相似度搜索。Phase 1.5 在此基础上增加了两种：
-基于关键词的 BM25，以及通过 Reciprocal Rank Fusion 将 dense 和 BM25 融合的混合
-检索。两个新模块完成这项工作：`bm25.py`（关键词检索）和 `hybrid.py`（融合逻辑）。
+实验室提供三种第一阶段检索策略：BM25 关键词检索、稠密余弦相似度检索，以及通过
+Reciprocal Rank Fusion 融合两份列表的混合检索。Studio 会暴露每种方法背后的计算，
+然后用完全相同的已存储向量比较本地 NumPy 索引与可选 Qdrant。
 
 ---
 
@@ -17,6 +17,21 @@ BM25 会提升该文档的排名。但它完全不理解同义词和改写。
 
 混合检索结合了二者：dense 捕捉语义，BM25 捕捉关键词，Reciprocal Rank Fusion 将
 两个排序列表合并为一个。
+
+## 跟随实时检索课程
+
+在 Studio 中打开**检索**，可以依次学习六个可直接选择的模块：
+
+1. **词法检索** —— 查询 token、文档频率、BM25 逐词贡献与最终得分。
+2. **稠密检索** —— 向量预览、范数、点积、余弦相似度与最终顺序。
+3. **从本地向量到向量数据库** —— 让完全相同的文本块与向量经过 NumPy 和可选
+   Qdrant。
+4. **混合检索** —— 稠密与 BM25 排名，以及各自的 RRF 贡献。
+5. **重排序** —— 第一阶段候选、交叉编码器得分与排名移动。
+6. **评估** —— 在 16 道已审核问题上比较两种配置。
+
+这些是在内置 Cloudflare 语料上运行的实时实验，不是已保存回放，也不需要 LLM
+服务商。
 
 ---
 
@@ -169,11 +184,40 @@ def retrieve_hybrid(
 2. **运行 dense 检索**：调用 `retrieval.py` 中的 `retrieve(query, index, embedder, top_k=top_k)`。
 3. **运行 BM25 检索**：调用 `bm25_retriever.retrieve(query, top_k=top_k)`。
 4. **融合结果**：调用 `reciprocal_rank_fusion([dense_results, bm25_results], top_k=top_k)`。
-5. **返回**恰好 `top_k` 个结果，score 为融合后的 RRF 分数，rank 从 1 重新编号。
+5. **返回**最多 `top_k` 个结果，score 为融合后的 RRF 分数，rank 从 1 重新编号。
+   对于较小或空语料，结果可能更少。
 
 返回的 `RetrievalResult.score` 是融合后的 RRF 分数——一个小正数，而非余弦相似度。
 
 ---
+
+## 从本地向量到向量数据库
+
+NumPy 索引是规范的教学路径，因为每个向量、文本块 ID 与余弦计算都容易检查。
+Qdrant 是第二种存储与搜索后端，而不是另一套嵌入概念。
+
+Studio 的向量数据库模块会直接复制结构化索引中的相同文本块和向量，不会重新分块或
+重新嵌入。因此，Qdrant 精确查询与本地 NumPy 查询的未过滤结果应该等价，只允许很小
+的浮点差异和平局顺序变化。
+
+启动 Qdrant 后，建议检查：
+
+- 标识有序文本块/向量集合的共同来源指纹；
+- 文本块 ID、文档路径、标题与来源分组等 point payload；
+- NumPy 与 Qdrant 的并排结果列表；
+- 针对 Durable Objects、Queues、KV、R2 或 Workflows 的独立元数据过滤演示。
+
+过滤结果不是一致性对比，因为它有意只搜索一个子集。未过滤对比才是在检查两个后端
+是否等价地搜索了同一组向量。
+
+Qdrant 始终是可选项：
+
+```bash
+docker compose --profile qdrant up -d
+```
+
+即使没有 Qdrant，词法、稠密、混合、重排序、评估、Explore 和本地 NumPy 索引仍然
+可以使用。
 
 ## CLI 使用方式
 
@@ -195,7 +239,7 @@ rag retrieve "what is watson assistant?" --retriever hybrid
 ### `rag eval` 选择检索器
 
 ```bash
-rag eval --qa-file qa.jsonl --retriever dense   # Phase 1 基线
+rag eval --qa-file qa.jsonl --retriever dense   # 语义基线
 rag eval --qa-file qa.jsonl --retriever bm25    # 纯关键词
 rag eval --qa-file qa.jsonl --retriever hybrid  # 组合检索
 ```
@@ -227,8 +271,8 @@ Context Recall    :  0.667
 | `tiny_rag_lab/hybrid.py` | `reciprocal_rank_fusion()`、`retrieve_hybrid()` |
 | `tiny_rag_lab/retrieval.py` | `retrieve()`、`retrieve_by_vector()` —— hybrid 使用的 dense 路径 |
 
-`models.py`、`index_loader.py` 和 `index_writer.py` 无需任何修改——`RetrievalResult`
-和 `Chunk` 数据类原生支持所有三种检索器。
+三种检索器都返回共享的 `RetrievalResult` 与 `Chunk` 契约。当前索引读写器还会携带
+Studio 实时解释和向量后端对比所需的模型与后端来源信息。
 
 ---
 
@@ -241,8 +285,9 @@ Context Recall    :  0.667
    其中一个。
 2. **检查评估数据。** 在同一个 QA 集上分别用三种检索器运行 `rag eval`。看看每种
    检索器答对了哪些问题——它会告诉你哪些类型的查询更依赖关键词，哪些更依赖语义。
-3. **追踪一次混合检索运行。** 在 `rag retrieve` 中加上 `--retriever hybrid`，查看
-   trace 输出。dense 和 BM25 各自的得分在 RRF 融合之前是分开可见的。
+3. **解释一次混合检索运行。** 在 `rag retrieve` 中加上 `--retriever hybrid`，检查
+   最终融合后的文本块与 RRF 得分；再打开 Studio 的**检索 → 混合检索**，查看融合前
+   各自的 dense/BM25 排名与每一项贡献。
 
 ---
 
@@ -250,3 +295,4 @@ Context Recall    :  0.667
 
 - [检索与生成](retrieval-and-generation.md) —— dense 余弦检索路径的详细说明。
 - [评估检索质量](evaluating-retrieval.md) —— 如何衡量哪种检索器效果最好。
+- [重排序](reranking.md) —— 交叉编码器如何把第一阶段候选变成最终证据。

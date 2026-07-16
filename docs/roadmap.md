@@ -20,6 +20,8 @@ Status: Phase 1, Phase 1.5, Phase 1.6, Phase 1.7, Phase 1.8, Phase 1.9,
 Phase 2.0, Phase 2.1, and Phase 2.2 are complete under `docs/phases/`.
 Phase 3.0 — Local Visual RAG Lab — is complete; its implementation contract is
 `docs/phases/phase-3.0-local-visual-rag-lab.md`.
+Phase 3.4 — Interactive Retrieval Mechanics — is complete; its implementation
+contract is `docs/phases/phase-3.4-interactive-retrieval.md`.
 
 ## Phase 1: Naive Classic RAG
 
@@ -293,6 +295,25 @@ Expected capabilities:
 
 Status: Complete; see `docs/phases/phase-3.3-local-learning-docsite.md` and
 `docs/phases/phase-3.3-taskboard.md`.
+
+## Phase 3.4: Interactive Retrieval Mechanics
+
+Goal: make lexical, dense, vector-database, hybrid, reranking, and evaluation
+mechanics directly inspectable through live browser experiments.
+
+Expected capabilities:
+
+- a dedicated bilingual Retrieval course over 16 reviewed Cloudflare questions
+- calculation-level BM25, cosine, reciprocal-rank-fusion, and reranking views
+- a substantial optional Qdrant module comparing exact copied vectors with the
+  canonical local NumPy index
+- fixed browser A/B evaluation with aggregate and per-question evidence
+- reranking controls shared by Explore retrieve and live generation
+- pinned CPU-only embedding and reranker model lifecycle for full/slim images
+
+Status: Complete; see
+`docs/phases/phase-3.4-interactive-retrieval.md` and
+`docs/phases/phase-3.4-taskboard.md`.
 
 ## Later: Reporting, Artifacts, And Agentic RAG
 

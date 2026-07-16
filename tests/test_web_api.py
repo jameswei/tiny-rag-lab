@@ -4,9 +4,13 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 import numpy as np
+import pytest
 
 from tiny_rag_lab.index_writer import write_index
+from tiny_rag_lab.jobs import LocalJobStore
 from tiny_rag_lab.models import Chunk, Document, make_chunk_id
+from tiny_rag_lab.qdrant_backend import QdrantBackendError, QdrantIndexBackend
+from tiny_rag_lab.reranker import FakeReranker
 from tiny_rag_lab.web_api import create_app
 
 
@@ -49,6 +53,54 @@ def _write_catalog_index(root, *, source_corpus_id="watsonxdocsqa-v1", index_id=
     )
 
 
+def _write_retrieval_materials(
+    root, *, category="lexical", question="What does catalog evidence explain?",
+):
+    target = root / "corpora" / "cloudflare-state-v1"
+    target.mkdir(parents=True, exist_ok=True)
+    item = {
+        "question_id": "cf-lex-test",
+        "category": category,
+        "question": question,
+        "gold_doc_ids": ["doc.md"],
+        "teaching_note": {"en": "Inspect the term.", "zh": "检查词项。"},
+        "expected_observation": {"en": "Exact terms contribute.", "zh": "精确词项会贡献分数。"},
+    }
+    (target / "retrieval-questions.jsonl").write_text(json.dumps(item) + "\n")
+    return item
+
+
+def _write_teaching_index(root, *, index_backend="numpy", backend_identity=None):
+    documents = []
+    chunks = []
+    vectors = []
+    for path, text, vector in [
+        ("r2/how-r2-works.md", "catalog evidence for object storage", [0.0, 1.0]),
+        ("queues/retries.md", "alpha queue retry evidence", [1.0, 0.0]),
+    ]:
+        raw_hash = hashlib.sha256(text.encode()).hexdigest()
+        document = Document(
+            doc_id=path, path=path, title=Path(path).stem.replace("-", " ").title(),
+            format="markdown", raw_text=text, normalized_text=text, raw_hash=raw_hash,
+        )
+        chunk = Chunk(
+            chunk_id=make_chunk_id(path, 0, text), doc_id=path, text=text,
+            char_start=0, char_end=len(text),
+            metadata={"title": document.title, "path": path, "format": "markdown", "raw_hash": raw_hash},
+        )
+        documents.append(document)
+        chunks.append(chunk)
+        vectors.append(vector)
+    write_index(
+        root / "indexes" / "cloudflare-state-structural-v1",
+        documents, chunks, np.asarray(vectors, dtype=np.float32),
+        corpus_root=root / "corpora" / "cloudflare-state-v1" / "files",
+        embedding_backend="test", embedding_model="test-embedder", embedding_dim=2,
+        chunk_size=800, chunk_overlap=120, source_corpus_id="cloudflare-state-v1",
+        index_backend=index_backend, backend_identity=backend_identity,
+    )
+
+
 def test_health_and_provider_status_are_non_secret(tmp_path):
     client = TestClient(create_app(tmp_path))
     assert client.get("/api/health").json()["status"] == "ok"
@@ -65,6 +117,96 @@ def test_backend_status_reports_numpy_and_optional_qdrant_readiness(tmp_path, mo
         {"id": "numpy", "available": True},
         {"id": "qdrant", "available": True},
     ]
+
+
+def test_qdrant_course_reports_optional_service_without_hiding_launch_step(tmp_path, monkeypatch):
+    _write_teaching_index(tmp_path)
+    monkeypatch.setattr("tiny_rag_lab.web_api.qdrant_is_available", lambda _url: False)
+    client = TestClient(create_app(tmp_path))
+
+    status = client.get("/api/retrieval/qdrant/status")
+    prepare = client.post("/api/retrieval/qdrant/prepare")
+
+    assert status.status_code == 200
+    assert status.json()["available"] is False
+    assert status.json()["prepared"] is False
+    assert status.json()["launch_command"] == "docker compose --profile qdrant up -d"
+    assert prepare.status_code == 409
+    assert "profile qdrant" in prepare.json()["detail"]
+
+
+def test_qdrant_course_prepares_exact_copy_and_compares_payload_filter(tmp_path, monkeypatch):
+    from qdrant_client import QdrantClient
+
+    _write_teaching_index(tmp_path)
+    material = _write_retrieval_materials(tmp_path)
+    backend = QdrantIndexBackend.__new__(QdrantIndexBackend)
+    backend._client = QdrantClient(location=":memory:")
+    monkeypatch.setattr("tiny_rag_lab.web_api.qdrant_is_available", lambda _url: True)
+    monkeypatch.setattr("tiny_rag_lab.web_api.QdrantIndexBackend", lambda _url: backend)
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    client = TestClient(create_app(tmp_path))
+
+    before = client.get("/api/retrieval/qdrant/status").json()
+    first = client.post("/api/retrieval/qdrant/prepare")
+    second = client.post("/api/retrieval/qdrant/prepare")
+    comparison = client.post("/api/retrieval/qdrant/compare", json={
+        "retrieval_material_id": material["question_id"], "top_k": 2,
+        "source_group": "r2",
+    })
+
+    assert before["prepared"] is False
+    assert first.status_code == 201
+    assert first.json()["verified"] is True
+    assert first.json()["reused"] is False
+    assert second.json()["reused"] is True
+    assert comparison.status_code == 200
+    body = comparison.json()
+    assert body["parity"]["equivalent"] is True
+    assert [item["chunk_id"] for item in body["numpy"]] == [
+        item["chunk_id"] for item in body["qdrant"]
+    ]
+    assert body["qdrant"][0]["payload"]["source_fingerprint"] == first.json()["source_fingerprint"]
+    assert {item["payload"]["source_group"] for item in body["filtered_qdrant"]} == {"r2"}
+
+    backend.search_exact = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        QdrantBackendError(
+            "Exact Qdrant search is unavailable. Prepare the teaching collection again."
+        )
+    )
+    failed = client.post("/api/retrieval/qdrant/compare", json={
+        "retrieval_material_id": material["question_id"], "top_k": 2,
+    })
+    assert failed.status_code == 503
+    assert failed.json()["detail"] == "Exact Qdrant search is unavailable. Prepare the teaching collection again."
+
+
+def test_legacy_qdrant_index_reports_payload_filters_unavailable(tmp_path, monkeypatch):
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import Distance, PointStruct, VectorParams
+
+    _write_teaching_index(tmp_path, index_backend="qdrant", backend_identity="legacy")
+    backend = QdrantIndexBackend.__new__(QdrantIndexBackend)
+    backend._client = QdrantClient(location=":memory:")
+    backend._client.create_collection(
+        "legacy", vectors_config=VectorParams(size=2, distance=Distance.COSINE),
+    )
+    backend._client.upsert(
+        "legacy",
+        points=[
+            PointStruct(id=0, vector=[0.0, 1.0], payload={"chunk_id": make_chunk_id("r2/how-r2-works.md", 0, "catalog evidence for object storage")}),
+            PointStruct(id=1, vector=[1.0, 0.0], payload={"chunk_id": make_chunk_id("queues/retries.md", 0, "alpha queue retry evidence")}),
+        ],
+        wait=True,
+    )
+    monkeypatch.setattr("tiny_rag_lab.web_api.backend_from_manifest", lambda *_args, **_kwargs: backend)
+
+    detail = TestClient(create_app(tmp_path)).get(
+        "/api/indexes/cloudflare-state-structural-v1"
+    )
+
+    assert detail.status_code == 200
+    assert detail.json()["capabilities"] == {"payload_filters": False}
 
 
 def test_starter_run_is_an_offline_replay_artifact(tmp_path):
@@ -162,6 +304,233 @@ def test_catalog_question_rejects_wrong_or_legacy_index_but_free_query_remains_v
     assert free.json()["catalog_check"] is None
 
 
+def test_retrieval_materials_drive_server_resolved_explained_run(tmp_path, monkeypatch):
+    client = _seeded_client(tmp_path, monkeypatch)
+    material = _write_retrieval_materials(tmp_path)
+    _write_catalog_index(
+        tmp_path, source_corpus_id="cloudflare-state-v1",
+        index_id="retrieval-course-index",
+    )
+
+    listing = client.get("/api/retrieval/materials")
+    assert listing.status_code == 200
+    assert listing.json()["items"] == [material]
+
+    run = client.post("/api/runs/retrieve", json={
+        "index_id": "retrieval-course-index",
+        "retrieval_material_id": material["question_id"],
+        "query": "browser text is ignored",
+        "retriever": "bm25",
+        "top_k": 1,
+        "explain": True,
+    })
+
+    assert run.status_code == 201
+    payload = run.json()
+    assert payload["trace"]["query"] == material["question"]
+    assert payload["schema_version"] == "1.1"
+    assert payload["explanations"]["kind"] == "bm25"
+    candidate = payload["explanations"]["bm25"]["candidates"][0]
+    assert sum(term["contribution"] for term in candidate["terms"]) == pytest.approx(candidate["score"])
+
+
+def test_retrieval_material_rejects_non_cloudflare_index(tmp_path, monkeypatch):
+    client = _seeded_client(tmp_path, monkeypatch)
+    material = _write_retrieval_materials(tmp_path)
+    _write_catalog_index(tmp_path, index_id="wrong-course-index")
+
+    response = client.post("/api/runs/retrieve", json={
+        "index_id": "wrong-course-index",
+        "retrieval_material_id": material["question_id"],
+        "retriever": "bm25",
+    })
+
+    assert response.status_code == 409
+    assert "bundled Cloudflare index" in response.json()["detail"]
+
+
+def test_hybrid_explanation_exposes_source_lists_and_exact_rrf_contributions(tmp_path, monkeypatch):
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    material = _write_retrieval_materials(
+        tmp_path, category="hybrid", question="How does alpha evidence relate to catalog evidence?",
+    )
+    _write_teaching_index(tmp_path)
+    response = TestClient(create_app(tmp_path)).post("/api/runs/retrieve", json={
+        "index_id": "cloudflare-state-structural-v1",
+        "retrieval_material_id": material["question_id"],
+        "retriever": "hybrid", "top_k": 2, "explain": True,
+    })
+
+    assert response.status_code == 201
+    explanation = response.json()["explanations"]
+    assert explanation["kind"] == "hybrid"
+    assert len(explanation["hybrid"]["dense"]) == 2
+    assert len(explanation["hybrid"]["bm25"]) == 2
+    for candidate in explanation["hybrid"]["candidates"]:
+        assert candidate["score"] == pytest.approx(
+            sum(source["contribution"] for source in candidate["sources"])
+        )
+
+
+def test_reranker_model_status_reports_the_pinned_local_snapshot(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "tiny_rag_lab.web_api.CrossEncoderReranker.default_model_available",
+        lambda: True,
+    )
+
+    status = TestClient(create_app(tmp_path)).get("/api/models/reranker/status")
+
+    assert status.status_code == 200
+    assert status.json() == {
+        "ready": True,
+        "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "revision": "c5ee24cb16019beea0893ab7796b1df96625c6b8",
+    }
+
+
+def test_web_reranking_keeps_candidate_pool_separate_from_final_evidence(tmp_path, monkeypatch):
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr(
+        "tiny_rag_lab.web_api.CrossEncoderReranker",
+        lambda **_kwargs: FakeReranker(name="cross-encoder"),
+    )
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[
+            ("files", ("alpha.md", b"alpha evidence", "text/markdown")),
+            ("files", ("beta.md", b"beta evidence", "text/markdown")),
+        ],
+    ).json()
+    job = client.post("/api/indexes", json={"corpus_id": corpus["id"]}).json()
+    index_id = client.get(f"/api/jobs/{job['id']}").json()["index_id"]
+
+    response = client.post("/api/runs/retrieve", json={
+        "index_id": index_id,
+        "query": "alpha",
+        "retriever": "dense",
+        "top_k": 1,
+        "reranker": "cross-encoder",
+        "rerank_top_n": 2,
+        "explain": True,
+    })
+
+    assert response.status_code == 201
+    run = response.json()
+    assert len(run["evidence"]) == 1
+    assert len(run["candidates"]) == 2
+    assert run["explanations"]["reranking"]["candidate_count"] == 2
+    assert run["trace"]["chunks"][0]["pre_rerank_rank"] == 1
+    assert run["config"]["reranker"] == "cross-encoder"
+    assert run["config"]["rerank_top_n"] == 2
+    assert run["trace"]["reranker"] == "cross-encoder"
+    assert run["trace"]["rerank_top_n"] == 2
+
+
+def test_web_reranking_rejects_candidate_depth_below_final_top_k(tmp_path, monkeypatch):
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    client = _seeded_client(tmp_path, monkeypatch)
+    _write_catalog_index(tmp_path, index_id="rerank-index")
+
+    response = client.post("/api/runs/retrieve", json={
+        "index_id": "rerank-index",
+        "query": "alpha",
+        "top_k": 5,
+        "reranker": "cross-encoder",
+        "rerank_top_n": 2,
+    })
+
+    assert response.status_code == 422
+    assert "rerank_top_n" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("generation_fails", [False, True])
+def test_reranked_ask_preserves_pre_rerank_trace_on_success_and_failure(
+    tmp_path, monkeypatch, generation_fails,
+):
+    class _Generator:
+        def __init__(self, **_kwargs):
+            pass
+
+        def generate(self, _prompt):
+            if generation_fails:
+                raise RuntimeError("provider failed")
+            return "Grounded answer"
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr("tiny_rag_lab.web_api.OpenAIGenerator", _Generator)
+    monkeypatch.setattr(
+        "tiny_rag_lab.web_api.CrossEncoderReranker",
+        lambda **_kwargs: FakeReranker(name="cross-encoder"),
+    )
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[
+            ("files", ("alpha.md", b"alpha evidence", "text/markdown")),
+            ("files", ("beta.md", b"beta evidence", "text/markdown")),
+        ],
+    ).json()
+    job = client.post("/api/indexes", json={"corpus_id": corpus["id"]}).json()
+    index_id = client.get(f"/api/jobs/{job['id']}").json()["index_id"]
+
+    response = client.post("/api/runs/ask", json={
+        "index_id": index_id,
+        "query": "alpha",
+        "top_k": 1,
+        "reranker": "cross-encoder",
+        "rerank_top_n": 2,
+        "provider": {"base_url": "http://local-provider/v1"},
+    })
+
+    assert response.status_code == 201
+    run = response.json()
+    assert run["trace"]["chunks"][0]["pre_rerank_rank"] == 1
+    assert run["trace"]["chunks"][0]["pre_rerank_score"] is not None
+    assert run["trace"]["reranker"] == "cross-encoder"
+    assert run["trace"]["rerank_top_n"] == 2
+    assert bool(run["error"]) is generation_fails
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_status", "expected_text"),
+    [
+        (OSError("not cached"), 409, "Download the default reranker model"),
+        (RuntimeError("inference exploded"), 500, "Cross-encoder reranking failed"),
+    ],
+)
+def test_web_reranker_distinguishes_missing_model_from_runtime_failure(
+    tmp_path, monkeypatch, failure, expected_status, expected_text,
+):
+    class _FailingReranker:
+        def __init__(self, **_kwargs):
+            pass
+
+        def rerank(self, _query, _candidates):
+            raise failure
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr("tiny_rag_lab.web_api.CrossEncoderReranker", _FailingReranker)
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("alpha.md", b"alpha evidence", "text/markdown"))],
+    ).json()
+    job = client.post("/api/indexes", json={"corpus_id": corpus["id"]}).json()
+    index_id = client.get(f"/api/jobs/{job['id']}").json()["index_id"]
+
+    response = client.post("/api/runs/retrieve", json={
+        "index_id": index_id,
+        "query": "alpha",
+        "top_k": 1,
+        "reranker": "cross-encoder",
+        "rerank_top_n": 1,
+    })
+
+    assert response.status_code == expected_status
+    assert expected_text in response.json()["detail"]
+
+
 def test_slim_model_gate_keeps_bm25_available_but_blocks_dense_and_hybrid(tmp_path, monkeypatch):
     class _MissingEmbedder:
         def __init__(self, **_kwargs):
@@ -198,6 +567,28 @@ def test_restart_marks_inflight_job_failed_and_retryable(tmp_path):
     job = client.get("/api/jobs/index-stale").json()
     assert job["status"] == "failed"
     assert "restarted" in job["error"]
+
+
+def test_job_api_discovers_cancels_and_reads_only_complete_results(tmp_path):
+    client = TestClient(create_app(tmp_path))
+    store = LocalJobStore(tmp_path / "jobs")
+    job = store.admit("evaluation", preset="dense-vs-hybrid")
+    store.start(job["id"], total=16)
+
+    active = client.get("/api/jobs/active", params={"kind": "evaluation"})
+    cancelled = client.post(f"/api/jobs/{job['id']}/cancel")
+
+    assert active.status_code == 200
+    assert [item["id"] for item in active.json()["items"]] == [job["id"]]
+    assert cancelled.status_code == 202
+    assert cancelled.json()["status"] == "cancel_requested"
+    assert client.get(f"/api/jobs/{job['id']}/result").status_code == 404
+
+    assert store.progress(job["id"], 1, total=16, message="Checkpoint") is False
+    complete_job = store.admit("evaluation")
+    store.start(complete_job["id"], total=1)
+    store.complete(complete_job["id"], result={"questions": []})
+    assert client.get(f"/api/jobs/{complete_job['id']}/result").json() == {"questions": []}
 
 
 def test_live_ask_requires_an_effective_provider_not_an_empty_override(tmp_path):
@@ -270,6 +661,46 @@ def test_job_admission_rejects_a_visible_queued_job(tmp_path, monkeypatch):
     assert "already-queued" in response.json()["detail"]
 
 
+def test_reranker_download_verifies_exact_snapshot_before_ready(tmp_path, monkeypatch):
+    readiness = iter([False, True])
+    calls = []
+    monkeypatch.setattr(
+        "tiny_rag_lab.web_api.CrossEncoderReranker.default_model_available",
+        lambda: next(readiness),
+    )
+    monkeypatch.setattr(
+        "tiny_rag_lab.web_api.CrossEncoderReranker.ensure_default_model",
+        lambda *, local_files_only: calls.append(local_files_only) or "/cached/model",
+    )
+    client = TestClient(create_app(tmp_path))
+
+    queued = client.post("/api/models/reranker/download")
+    state = client.get(f"/api/jobs/{queued.json()['id']}").json()
+
+    assert queued.status_code == 202
+    assert calls == [False]
+    assert state["status"] == "complete"
+
+
+def test_reranker_download_never_reports_partial_snapshot_ready(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "tiny_rag_lab.web_api.CrossEncoderReranker.default_model_available",
+        lambda: False,
+    )
+    monkeypatch.setattr(
+        "tiny_rag_lab.web_api.CrossEncoderReranker.ensure_default_model",
+        lambda *, local_files_only: "/partial/model",
+    )
+    client = TestClient(create_app(tmp_path))
+
+    queued = client.post("/api/models/reranker/download")
+    state = client.get(f"/api/jobs/{queued.json()['id']}").json()
+
+    assert state["status"] == "failed"
+    assert "network" in state["error"]
+    assert client.get("/api/models/reranker/status").json()["ready"] is False
+
+
 def test_index_and_retrieve_persist_a_replayable_run(tmp_path, monkeypatch):
     monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
     client = TestClient(create_app(tmp_path))
@@ -292,6 +723,152 @@ def test_index_and_retrieve_persist_a_replayable_run(tmp_path, monkeypatch):
     inspection = client.get(f"/api/indexes/{completed['index_id']}").json()
     assert inspection["document_count"] == 1
     assert inspection["chunk_count"] == 1
+
+
+def test_index_job_honors_cancellation_after_inflight_embedding_call(tmp_path, monkeypatch):
+    store = LocalJobStore(tmp_path / "jobs")
+
+    class _CancellingEmbedder(_Embedder):
+        def embed(self, texts):
+            job = store.active(kind="index")[0]
+            store.request_cancel(job["id"])
+            return super().embed(texts)
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _CancellingEmbedder)
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("alpha.md", b"alpha evidence", "text/markdown"))],
+    ).json()
+
+    queued = client.post("/api/indexes", json={"corpus_id": corpus["id"]}).json()
+    job = client.get(f"/api/jobs/{queued['id']}").json()
+
+    assert job["status"] == "cancelled"
+    assert list((tmp_path / "indexes").iterdir()) == []
+
+
+def test_index_job_does_not_publish_when_cancel_arrives_after_final_checkpoint(tmp_path, monkeypatch):
+    original_progress = LocalJobStore.progress
+
+    def cancel_after_checkpoint(self, job_id, current, **kwargs):
+        accepted = original_progress(self, job_id, current, **kwargs)
+        if accepted and current == 5:
+            self.request_cancel(job_id)
+        return accepted
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr(LocalJobStore, "progress", cancel_after_checkpoint)
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("alpha.md", b"alpha evidence", "text/markdown"))],
+    ).json()
+
+    queued = client.post("/api/indexes", json={"corpus_id": corpus["id"]}).json()
+    job = client.get(f"/api/jobs/{queued['id']}").json()
+
+    assert job["status"] == "cancelled"
+    assert list((tmp_path / "indexes").iterdir()) == []
+
+
+def test_qdrant_index_failure_after_build_deletes_unpublished_collection(tmp_path, monkeypatch):
+    built = []
+    deleted = []
+
+    class _Backend:
+        def build(self, collection, _index):
+            built.append(collection)
+
+        def delete(self, collection):
+            deleted.append(collection)
+
+    original_progress = LocalJobStore.progress
+
+    def fail_after_build(self, job_id, current, **kwargs):
+        if current == 5:
+            raise RuntimeError("publication checkpoint failed")
+        return original_progress(self, job_id, current, **kwargs)
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr("tiny_rag_lab.web_api.qdrant_is_available", lambda _url: True)
+    monkeypatch.setattr("tiny_rag_lab.web_api.backend_from_manifest", lambda *_args, **_kwargs: _Backend())
+    monkeypatch.setattr(LocalJobStore, "progress", fail_after_build)
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("alpha.md", b"alpha evidence", "text/markdown"))],
+    ).json()
+
+    queued = client.post("/api/indexes", json={
+        "corpus_id": corpus["id"], "index_backend": "qdrant",
+    }).json()
+    job = client.get(f"/api/jobs/{queued['id']}").json()
+
+    assert job["status"] == "failed"
+    assert deleted == built and len(deleted) == 1
+    assert list((tmp_path / "indexes").iterdir()) == []
+
+
+def test_partial_qdrant_build_failure_still_deletes_owned_collection(tmp_path, monkeypatch):
+    built = []
+    deleted = []
+
+    class _Backend:
+        def build(self, collection, _index):
+            built.append(collection)
+            raise RuntimeError("failed after remote collection creation")
+
+        def delete(self, collection):
+            deleted.append(collection)
+
+    monkeypatch.setattr("tiny_rag_lab.web_api.SentenceTransformerEmbedder", _Embedder)
+    monkeypatch.setattr("tiny_rag_lab.web_api.qdrant_is_available", lambda _url: True)
+    monkeypatch.setattr("tiny_rag_lab.web_api.backend_from_manifest", lambda *_args, **_kwargs: _Backend())
+    client = TestClient(create_app(tmp_path))
+    corpus = client.post(
+        "/api/corpora/upload",
+        files=[("files", ("alpha.md", b"alpha evidence", "text/markdown"))],
+    ).json()
+
+    queued = client.post("/api/indexes", json={
+        "corpus_id": corpus["id"], "index_backend": "qdrant",
+    }).json()
+    job = client.get(f"/api/jobs/{queued['id']}").json()
+
+    assert job["status"] == "failed"
+    assert deleted == built and len(deleted) == 1
+
+
+def test_restart_recovers_published_artifact_and_cleans_unpublished_ownership(tmp_path, monkeypatch):
+    jobs = tmp_path / "jobs"
+    jobs.mkdir(parents=True)
+    (tmp_path / "indexes" / ".dead.staging").mkdir(parents=True)
+    (tmp_path / "corpora" / ".watsonxdocsqa.staging").mkdir(parents=True)
+    (tmp_path / "indexes" / "published-index").mkdir(parents=True)
+    (jobs / "index-dead.json").write_text(json.dumps({
+        "id": "index-dead", "kind": "index", "status": "running",
+        "artifact": {"kind": "index", "id": "missing-index", "staging_name": ".dead.staging", "qdrant_collection": "orphan"},
+    }))
+    (jobs / "index-published.json").write_text(json.dumps({
+        "id": "index-published", "kind": "index", "status": "publishing",
+        "artifact": {"kind": "index", "id": "published-index", "staging_name": ".published.staging", "qdrant_collection": "owned"},
+    }))
+    deleted = []
+    monkeypatch.setattr("tiny_rag_lab.web_api.qdrant_is_available", lambda _url: True)
+    monkeypatch.setattr(
+        "tiny_rag_lab.web_api.QdrantIndexBackend",
+        lambda _url: type("Backend", (), {"delete": lambda _self, collection: deleted.append(collection)})(),
+    )
+
+    client = TestClient(create_app(tmp_path))
+
+    assert client.get("/api/jobs/index-dead").json()["status"] == "failed"
+    assert client.get("/api/jobs/index-dead").json()["cleanup_pending"] is False
+    assert client.get("/api/jobs/index-published").json()["status"] == "complete"
+    assert deleted == ["orphan"]
+    assert not (tmp_path / "indexes" / ".dead.staging").exists()
+    assert not (tmp_path / "corpora" / ".watsonxdocsqa.staging").exists()
 
 
 def test_qdrant_search_failure_is_a_non_secret_service_error(tmp_path, monkeypatch):

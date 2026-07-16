@@ -1,8 +1,10 @@
 """Tests for T08 — embedding interface and fake embedder."""
+import sys
+from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from tiny_rag_lab.embeddings import Embedder, FakeEmbedder
+from tiny_rag_lab.embeddings import Embedder, FakeEmbedder, SentenceTransformerEmbedder
 
 
 # ---------------------------------------------------------------------------
@@ -113,3 +115,21 @@ def test_fake_embedder_enables_fixture_retrieval():
     scores = corpus_vecs @ query_vec[0]    # dot product = cosine (unit vecs)
     top = int(np.argmax(scores))
     assert top == 0  # exact match should score highest
+
+
+def test_default_sentence_transformer_snapshot_is_revision_pinned(monkeypatch):
+    calls = []
+
+    class Model:
+        def __init__(self, model_name, **options):
+            calls.append((model_name, options))
+
+    monkeypatch.setitem(sys.modules, "sentence_transformers", SimpleNamespace(SentenceTransformer=Model))
+
+    embedder = SentenceTransformerEmbedder(local_files_only=True)
+
+    assert embedder.revision == SentenceTransformerEmbedder.DEFAULT_REVISION
+    assert calls == [(SentenceTransformerEmbedder.DEFAULT_MODEL, {
+        "local_files_only": True,
+        "revision": SentenceTransformerEmbedder.DEFAULT_REVISION,
+    })]

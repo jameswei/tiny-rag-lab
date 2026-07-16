@@ -5,9 +5,11 @@ set -eu
 # images use the mounted data volume so an explicit user download survives a
 # container recreation.
 if [ "${LAB_IMAGE_VARIANT:-full}" = "slim" ]; then
-  export SENTENCE_TRANSFORMERS_HOME=/data/models
+  export HF_HOME=/data/models
+  export HF_HUB_CACHE=/data/models/hub
 else
-  export SENTENCE_TRANSFORMERS_HOME=/opt/tiny-rag-models
+  export HF_HOME=/opt/tiny-rag-models
+  export HF_HUB_CACHE=/opt/tiny-rag-models/hub
 fi
 
 exec "$@"

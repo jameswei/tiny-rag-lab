@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from pathlib import Path
 
 import pytest
 
 from tiny_rag_lab.models import Chunk, RetrievalResult
 from tiny_rag_lab.reranker import (
+    CrossEncoderReranker,
     FakeReranker,
     RerankResult,
     apply_reranker,
@@ -293,3 +295,84 @@ def test_chunk_traces_text_preview_truncates_to_120_chars():
     results = [RetrievalResult(chunk=chunk, score=0.5, rank=1)]
     traces = chunk_traces_from_rerank(results, None)
     assert len(traces[0].text_preview) == 120
+
+
+def test_cross_encoder_pins_only_the_default_model(monkeypatch):
+    calls = []
+
+    class _Model:
+        def __init__(self, model_name, **kwargs):
+            calls.append((model_name, kwargs))
+
+        def predict(self, _pairs):
+            return [0.5]
+
+    monkeypatch.setattr("sentence_transformers.CrossEncoder", _Model)
+    candidate = _result("a", rank=1, score=0.1)
+
+    CrossEncoderReranker(local_files_only=True).rerank("query", [candidate])
+    CrossEncoderReranker(model_name="custom/model", local_files_only=True).rerank(
+        "query", [candidate],
+    )
+
+    assert calls[0] == (
+        CrossEncoderReranker.DEFAULT_MODEL,
+        {
+            "local_files_only": True,
+            "revision": CrossEncoderReranker.DEFAULT_REVISION,
+        },
+    )
+    assert calls[1] == ("custom/model", {"local_files_only": True})
+
+
+def _fake_complete_reranker_snapshot(root: Path) -> Path:
+    root.mkdir(parents=True)
+    for name in ("config.json", "tokenizer_config.json", "model.safetensors", "tokenizer.json"):
+        (root / name).write_text("{}", encoding="utf-8")
+    return root
+
+
+def test_default_reranker_readiness_checks_pinned_snapshot_without_network(monkeypatch, tmp_path):
+    calls = []
+    snapshot = _fake_complete_reranker_snapshot(tmp_path / "model")
+    monkeypatch.setattr(
+        "huggingface_hub.snapshot_download",
+        lambda **kwargs: calls.append(kwargs) or str(snapshot),
+    )
+
+    assert CrossEncoderReranker.default_model_available() is True
+    assert calls == [{
+        "repo_id": CrossEncoderReranker.DEFAULT_MODEL,
+        "revision": CrossEncoderReranker.DEFAULT_REVISION,
+        "local_files_only": True,
+    }]
+
+
+def test_default_reranker_download_requests_exact_snapshot(monkeypatch, tmp_path):
+    calls = []
+    snapshot = _fake_complete_reranker_snapshot(tmp_path / "model")
+    monkeypatch.setattr(
+        "huggingface_hub.snapshot_download",
+        lambda **kwargs: calls.append(kwargs) or str(snapshot),
+    )
+
+    assert CrossEncoderReranker.ensure_default_model(local_files_only=False) == str(snapshot)
+    assert calls == [{
+        "repo_id": CrossEncoderReranker.DEFAULT_MODEL,
+        "revision": CrossEncoderReranker.DEFAULT_REVISION,
+        "local_files_only": False,
+    }]
+
+
+def test_default_reranker_rejects_an_incomplete_cached_snapshot(monkeypatch, tmp_path):
+    snapshot = tmp_path / "partial-model"
+    snapshot.mkdir()
+    (snapshot / "config.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        "huggingface_hub.snapshot_download",
+        lambda **_kwargs: str(snapshot),
+    )
+
+    assert CrossEncoderReranker.default_model_available() is False
+    with pytest.raises(RuntimeError, match="snapshot is incomplete"):
+        CrossEncoderReranker.ensure_default_model(local_files_only=False)

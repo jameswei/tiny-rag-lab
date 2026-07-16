@@ -13,6 +13,10 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 
+DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+DEFAULT_EMBEDDING_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+
+
 class Embedder(ABC):
     """Interface contract for all embedding backends.
 
@@ -67,12 +71,23 @@ class SentenceTransformerEmbedder(Embedder):
     FakeEmbedder and with cosine retrieval via dot product.
     """
 
-    DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+    DEFAULT_MODEL = DEFAULT_EMBEDDING_MODEL
+    DEFAULT_REVISION = DEFAULT_EMBEDDING_REVISION
 
-    def __init__(self, model_name: str = DEFAULT_MODEL, local_files_only: bool = False) -> None:
+    def __init__(
+        self, model_name: str = DEFAULT_MODEL, *, revision: str | None = None,
+        local_files_only: bool = False,
+    ) -> None:
         from sentence_transformers import SentenceTransformer  # deferred import
         self.model_name = model_name
-        self._model = SentenceTransformer(model_name, local_files_only=local_files_only)
+        self.revision = (
+            revision if revision is not None
+            else self.DEFAULT_REVISION if model_name == self.DEFAULT_MODEL else None
+        )
+        options = {"local_files_only": local_files_only}
+        if self.revision is not None:
+            options["revision"] = self.revision
+        self._model = SentenceTransformer(model_name, **options)
 
     @property
     def dim(self) -> int:

@@ -59,7 +59,9 @@ function IndexInspection({ detail, t }: { detail: any; t: Copy }) {
       <div><dt>{t.documents}</dt><dd>{detail.document_count ?? manifest.document_count ?? "—"}</dd></div>
       <div><dt>{t.chunks}</dt><dd>{detail.chunk_count ?? manifest.chunk_count ?? detail.chunks?.length ?? "—"}</dd></div>
       <div><dt>{t.embeddingModel}</dt><dd>{String(manifest.embedding_model || "—")}</dd></div>
+      {detail.capabilities && <div><dt>{t.payloadFilters}</dt><dd>{detail.capabilities.payload_filters ? t.filtersAvailable : t.filtersUnavailable}</dd></div>}
     </dl>
+    {detail.capabilities && !detail.capabilities.payload_filters && <p className="status-panel status-caution">{t.legacyFiltersUnavailable}</p>}
     <h3>{t.chunks}</h3>
     <div className="chunk-grid">{(detail.chunks || []).slice(0, 8).map((chunk: any, index: number) => <article className="chunk-card" key={chunk.chunk_id}><span>#{String(index + 1).padStart(2, "0")}</span><strong>{chunk.metadata?.title || chunk.doc_id}</strong><small className="chunk-source-path">{t.source}: {chunk.doc_id}</small><ExpandableText text={chunk.text} t={t} /><VectorPreview vector={chunk.vector || []} t={t} /></article>)}</div>
     <RawArtifact label={t.raw} value={manifest} />
