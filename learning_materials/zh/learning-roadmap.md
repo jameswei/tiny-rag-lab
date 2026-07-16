@@ -12,13 +12,14 @@
 | 2 | [索引平面](the-indexing-plane.md) | 文档如何变成可搜索的向量 |
 | 3 | [检索与生成](retrieval-and-generation.md) | 查询如何找到相关片段并生成答案 |
 | 4 | [持久化与测试](persistence-and-testing.md) | 索引的磁盘格式、往返完整性以及假后端测试模式 |
-| 5 | [检索机制](retrieval-mechanics.md) | BM25 关键词检索、混合搜索与 Reciprocal Rank Fusion |
-| 6 | [评估检索质量](evaluating-retrieval.md) | 用指标回答"检索器到底好不好用" |
-| 7 | [可观测性与调试](observability-and-debugging.md) | 用单次运行 trace 解释一次 retrieve 或 ask 命令 |
-| 8 | [RAG 失败实验室](rag-failure-lab.md) | 用策划好的失败案例比较 baseline 和 intervention 检索 |
-| 9 | [答案质量评判](answer-quality-judging.md) | 用可替换的 judge 衡量生成答案和答案侧失败 |
-| 10 | [上下文预算与结构化答案](context-budget-and-structured-answers.md) | Token 预算打包、结构化 JSON 输出 |
-| 11 | [结构化与语义分块](structural-and-semantic-chunking.md) | 三层结构化分块、基于嵌入的语义分块与策略分发 |
+| 5 | [检索机制](retrieval-mechanics.md) | BM25、稠密相似度、本地向量、Qdrant 对比与混合 RRF |
+| 6 | [重排序](reranking.md) | 交叉编码器如何把较大的候选池重排为最终证据 |
+| 7 | [评估检索质量](evaluating-retrieval.md) | 用指标与浏览器 A/B 对比判断检索是否真的改善 |
+| 8 | [可观测性与调试](observability-and-debugging.md) | 用单次运行 trace 解释一次 retrieve 或 ask 命令 |
+| 9 | [RAG 失败实验室](rag-failure-lab.md) | 用策划好的失败案例比较 baseline 和 intervention 检索 |
+| 10 | [答案质量评判](answer-quality-judging.md) | 用可替换的 judge 衡量生成答案和答案侧失败 |
+| 11 | [上下文预算与结构化答案](context-budget-and-structured-answers.md) | Token 预算打包、结构化 JSON 输出 |
+| 12 | [结构化与语义分块](structural-and-semantic-chunking.md) | 三层结构化分块、基于嵌入的语义分块与策略分发 |
 
 ---
 
@@ -156,6 +157,7 @@ rag diagnose --cases-file tests/fixtures/failure/cases.jsonl --index-dir .tiny-r
 | 检索与生成 | 余弦搜索、提示词组装、LLM 调用 | `retrieval.py`, `prompting.py`, `generation.py` |
 | 持久化与测试 | 索引读写、往返完整性、假后端模式 | `index_writer.py`, `index_loader.py`, 测试套件 |
 | 检索机制 | BM25 关键词检索、混合搜索、RRF 融合 | `bm25.py`, `hybrid.py`, `retrieval.py` |
+| 重排序 | 候选生成、交叉编码器评分与排名移动 | `reranker.py`, `retrieval.py`, `trace.py` |
 | 评估检索质量 | 检索质量指标 | `eval.py` |
 | 可观测性与调试 | 单次运行 trace 记录和 JSON 产物 | `trace.py`, `cli.py` |
 | RAG 失败实验室 | 失败案例诊断 | `failure.py`, `cli.py` |

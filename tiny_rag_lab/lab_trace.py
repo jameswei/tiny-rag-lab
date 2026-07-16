@@ -16,7 +16,7 @@ from uuid import uuid4
 
 from tiny_rag_lab.trace import AskTrace, RetrieveTrace, trace_to_dict
 
-LAB_TRACE_SCHEMA_VERSION = "1.0"
+LAB_TRACE_SCHEMA_VERSION = "1.1"
 
 
 @dataclass
@@ -51,6 +51,12 @@ class LabRun:
     index: IndexSnapshot
     trace: dict[str, Any]
     evidence: list[EvidenceSnapshot]
+    # Optional Phase 3.4 pre-rerank pool. `evidence` retains its established
+    # meaning: final retrieval order before context packing.
+    candidates: list[EvidenceSnapshot] | None = None
+    # Calculation-level artifacts. Older 1.0 runs omit this rather than being
+    # recomputed with a potentially different model or index.
+    explanations: dict[str, Any] | None = None
     query_vector: list[float] | None = None
     config: dict[str, Any] = field(default_factory=dict)
     # Present only for a catalog-backed run.  Keeping this server-produced
@@ -75,6 +81,8 @@ def build_lab_run(
     manifest: dict[str, Any],
     document_count: int,
     evidence: list[EvidenceSnapshot],
+    candidates: list[EvidenceSnapshot] | None = None,
+    explanations: dict[str, Any] | None = None,
     query_vector: list[float] | None = None,
     config: dict[str, Any] | None = None,
     catalog_check: dict[str, Any] | None = None,
@@ -92,6 +100,8 @@ def build_lab_run(
         ),
         trace=trace_to_dict(trace),
         evidence=evidence,
+        candidates=candidates,
+        explanations=explanations,
         query_vector=query_vector,
         config=config or {},
         catalog_check=catalog_check,

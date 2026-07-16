@@ -1,7 +1,8 @@
 export type Lang = "en" | "zh";
-export type Area = "home" | "learn" | "build" | "explore" | "failure" | "settings";
+export type Area = "home" | "learn" | "retrieval" | "build" | "explore" | "failure" | "settings";
 export type BuildView = "build" | "inspect";
 export type Stage = 0 | 1 | 2 | 3 | 4 | 5;
+export type RetrievalModule = "lexical" | "dense" | "vector-db" | "hybrid" | "reranking" | "evaluation";
 
 export type Corpus = { id: string; name: string; kind: string; file_count: number };
 export type BackendAvailability = { id: "numpy" | "qdrant"; available: boolean };
@@ -21,6 +22,8 @@ export type Evidence = {
 export type LabRun = {
   trace: Record<string, any>;
   evidence: Evidence[];
+  candidates?: Evidence[] | null;
+  explanations?: Record<string, any> | null;
   index: { index_id?: string; manifest: Record<string, any>; document_count?: number; chunk_count?: number };
   query_vector?: number[] | null;
   run_id: string;
@@ -29,6 +32,14 @@ export type LabRun = {
   config?: Record<string, any>;
   catalog_check?: { question_id: string; expected_document_ids: string[]; retrieved_document_ids: string[]; hit: boolean } | null;
   source_snapshot?: Record<string, string> | null;
+};
+export type RetrievalMaterial = {
+  question_id: string;
+  category: "lexical" | "dense" | "hybrid" | "reranking";
+  question: string;
+  gold_doc_ids: string[];
+  teaching_note?: { en: string; zh: string };
+  expected_observation?: { en: string; zh: string };
 };
 export type GuidedLessonSummary = { id: string; package_id: string; order: number; title: string; question: string; focus: string };
 export type GuidedLesson = { lesson: GuidedLessonSummary & { answer_provenance: string; source_snapshot: Record<string, string> }; run: LabRun };

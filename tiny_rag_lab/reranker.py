@@ -17,7 +17,8 @@ T01.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from pathlib import Path
+from typing import Literal, Protocol
 
 from tiny_rag_lab.models import RetrievalResult
 from tiny_rag_lab.trace import ChunkTrace
@@ -44,6 +45,17 @@ class RerankResult:
     post_rank: int
     pre_score: float
     post_score: float
+
+
+@dataclass(frozen=True)
+class RerankCandidateExplanation:
+    chunk_id: str
+    pre_rank: int
+    final_rank: int | None
+    pre_score: float
+    reranker_score: float
+    rank_delta: int | None
+    outcome: Literal["moved_up", "moved_down", "stayed", "dropped"]
 
 
 class Reranker(Protocol):
@@ -154,12 +166,73 @@ class CrossEncoderReranker:
     """
 
     DEFAULT_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    DEFAULT_REVISION = "c5ee24cb16019beea0893ab7796b1df96625c6b8"
     name: str
 
-    def __init__(self, model_name: str | None = None) -> None:
+    def __init__(
+        self,
+        model_name: str | None = None,
+        *,
+        revision: str | None = None,
+        local_files_only: bool = False,
+    ) -> None:
         self._model_name = model_name or self.DEFAULT_MODEL
+        self._revision = (
+            revision
+            if revision is not None
+            else self.DEFAULT_REVISION if self._model_name == self.DEFAULT_MODEL else None
+        )
+        self._local_files_only = local_files_only
         self._model = None  # lazy — no I/O in __init__
         self.name = "cross-encoder"
+
+    @classmethod
+    def ensure_default_model(cls, *, local_files_only: bool) -> str:
+        """Resolve and validate the exact default snapshot.
+
+        ``snapshot_download`` may return an interrupted or otherwise partial
+        cache directory.  Treating that directory as ready makes the Settings
+        status lie and defers the real failure until a learner tries to
+        rerank.  Check the small set of files CrossEncoder needs before
+        publishing readiness.
+        """
+        from huggingface_hub import snapshot_download
+
+        snapshot = snapshot_download(
+            repo_id=cls.DEFAULT_MODEL,
+            revision=cls.DEFAULT_REVISION,
+            local_files_only=local_files_only,
+        )
+        cls._validate_default_snapshot(Path(snapshot))
+        return snapshot
+
+    @staticmethod
+    def _validate_default_snapshot(snapshot: Path) -> None:
+        required = (snapshot / "config.json", snapshot / "tokenizer_config.json")
+        weight_candidates = (snapshot / "model.safetensors", snapshot / "pytorch_model.bin")
+        tokenizer_candidates = (
+            snapshot / "tokenizer.json",
+            snapshot / "vocab.txt",
+            snapshot / "sentencepiece.bpe.model",
+        )
+        missing = [path.name for path in required if not path.is_file()]
+        if not any(path.is_file() for path in weight_candidates):
+            missing.append("model weights")
+        if not any(path.is_file() for path in tokenizer_candidates):
+            missing.append("tokenizer vocabulary")
+        if missing:
+            raise RuntimeError(
+                "Pinned reranker snapshot is incomplete; missing " + ", ".join(missing)
+            )
+
+    @classmethod
+    def default_model_available(cls) -> bool:
+        """Check the pinned local snapshot without downloading or loading it."""
+        try:
+            cls.ensure_default_model(local_files_only=True)
+        except Exception:
+            return False
+        return True
 
     def rerank(
         self,
@@ -172,7 +245,10 @@ class CrossEncoderReranker:
         if self._model is None:
             from sentence_transformers import CrossEncoder
 
-            self._model = CrossEncoder(self._model_name)
+            model_options = {"local_files_only": self._local_files_only}
+            if self._revision is not None:
+                model_options["revision"] = self._revision
+            self._model = CrossEncoder(self._model_name, **model_options)
 
         pairs = [(query, c.chunk.text) for c in candidates]
         scores = self._model.predict(pairs)
@@ -251,6 +327,39 @@ def apply_reranker(
         )
 
     return reordered, audit
+
+
+def explain_rerank(
+    audit: list[RerankResult], final_top_k: int,
+) -> list[RerankCandidateExplanation]:
+    """Turn the full reranker audit into learner-facing rank movements."""
+    if final_top_k < 0:
+        raise ValueError("final_top_k must be non-negative")
+    explanations: list[RerankCandidateExplanation] = []
+    for result in sorted(audit, key=lambda item: item.pre_rank):
+        if result.post_rank > final_top_k:
+            final_rank = None
+            rank_delta = None
+            outcome: Literal["moved_up", "moved_down", "stayed", "dropped"] = "dropped"
+        else:
+            final_rank = result.post_rank
+            rank_delta = result.pre_rank - result.post_rank
+            if rank_delta > 0:
+                outcome = "moved_up"
+            elif rank_delta < 0:
+                outcome = "moved_down"
+            else:
+                outcome = "stayed"
+        explanations.append(RerankCandidateExplanation(
+            chunk_id=result.chunk_id,
+            pre_rank=result.pre_rank,
+            final_rank=final_rank,
+            pre_score=result.pre_score,
+            reranker_score=result.post_score,
+            rank_delta=rank_delta,
+            outcome=outcome,
+        ))
+    return explanations
 
 
 def chunk_traces_from_rerank(

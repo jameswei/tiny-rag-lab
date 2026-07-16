@@ -3,12 +3,16 @@
 [English](README.md) · [项目主页](https://jameswei.github.io/tiny-rag-lab/)
 
 > 一个以学习为先、可检查的经典 RAG 实验室：通过易读 Python、丰富的浏览器 Studio、
-> 直接的 CLI 实验、真实语料 trace 与中英双语学习指南理解 RAG。
+> 交互式检索课程、直接的 CLI 实验、真实语料 trace 与中英双语学习指南理解 RAG。
 
 `tiny-rag-lab` 让用户问题、文档语料、检索证据、打包后的上下文与带引用答案之间的
 完整路径清晰可见、可以检查。易读的 Python 直接呈现 RAG 机制；丰富的浏览器 Studio
 将中间产物转化为引导回放和动手实验；直接的 CLI 支持可重复检查。当某个概念需要更
 安静、深入的阅读时，可搜索的中英双语学习指南会在实验旁打开。
+
+Studio 还把检索栈变成一套实时课程：检查 BM25 逐词贡献、稠密余弦计算、NumPy 与
+可选 Qdrant 中的同一组向量、混合 RRF 融合、交叉编码器排名移动，以及在 16 道已
+审核真实语料问题上的双配置评估。整个过程不需要 LLM 服务商。
 
 它是学习工具，而不是生产级 RAG 平台。项目优先选择可见的机制，而非框架魔法；先评估再优化；先分析失败再引入高级特性。
 
@@ -61,18 +65,24 @@ http://127.0.0.1:8000/docs/，也可以从实验室中的相关阶段直接打�
 
 1. **Home → Start guided lesson：** 从固定的 40 篇 Cloudflare State & Coordination 文档中，选择四个已保存课程之一进行回放。
 2. **Learn：** 逐步查看语料、文本块、查询嵌入向量、检索候选、选入上下文的证据、基于证据的答案和引用。
-3. **Explore：** 提出题库问题或自由问题，比较稠密检索、BM25 和混合检索，并检查返回的 trace。只有希望进行 Live Ask 生成时，才需要配置并测试 OpenAI 兼容的 LLM 服务商。
-4. **Build & Inspect：** 使用内置语料或小型 Markdown/纯文本上传构建索引，然后检查文档、文本块、向量和来源信息。
-5. **Failure Lab：** 对比精心设计的失败场景及其改进方案。
+3. **Retrieval：** 通过六个实时模块，从词法与稠密检索机制一路学习 NumPy/Qdrant
+   对比、混合融合、重排序，以及在 16 道已审核问题上的浏览器 A/B 评估。
+4. **Explore：** 提出题库问题或自由问题，比较稠密检索、BM25 和混合检索，可选地
+   重排更大的候选池，并检查返回的 trace。只有希望进行 Live Ask 生成时，才需要
+   配置并测试 OpenAI 兼容的 LLM 服务商。
+5. **Build & Inspect：** 使用内置语料或小型 Markdown/纯文本上传构建索引，然后检查文档、文本块、向量和来源信息。
+6. **Failure Lab：** 对比精心设计的失败场景及其改进方案。
 
-当你希望在更安静的阅读环境中理解相应概念时，可以从 Learn、Explore 或 Failure Lab
-打开**阅读学习指南**。它会在新标签页打开，并保留当前实验状态。
+当你希望在更安静的阅读环境中理解相应概念时，可以从 Learn、Retrieval、Explore 或
+Failure Lab 打开**阅读学习指南**。它会在新标签页打开，并保留当前实验状态。
 
 界面提供英文和简体中文。内置语料内容、问题、已记录答案和引用会保留其原始语言。
 
 ### 实验室包含什么
 
 - 四个不依赖 LLM 服务商、带完整已保存产物的 Guided Learn 回放课程。
+- 六个实时 Retrieval 模块，覆盖词法与稠密评分、本地向量与可选 Qdrant、混合融合、
+  交叉编码器重排序，以及对 16 道已审核 Cloudflare 问题的 A/B 评估。
 - 固定的 Cloudflare 学习语料，以及可直接使用的结构化分块和固定字符分块 NumPy 索引。
 - 内置 watsonxDocsQA 源数据；完成显式的后台索引构建后，可以使用全部 75 个题库问题。
 - 不配置 LLM 服务商也可以进行纯检索探索；通过连接测试后，可使用任何 OpenAI 兼容 Chat Completions 服务进行 Live Ask。
@@ -80,13 +90,16 @@ http://127.0.0.1:8000/docs/，也可以从实验室中的相关阶段直接打�
 - 默认使用 NumPy/文件索引；可选的本地 Qdrant 后端只改变存储和向量搜索的执行方式，不改变本项目要讲解的文本块、嵌入、检索、上下文、引用和 trace 概念。
 - 精心设计的失败课程、原始产物检查、来源溯源、候选证据与上下文选择的对比，以及支持减少动画偏好的回放体验。
 
-默认的 `full` 镜像包含本地嵌入模型，只使用 CPU，不需要 GPU 或 CUDA 运行时。若想体验更小的镜像：
+默认的 `full` 镜像包含固定版本的本地嵌入模型和交叉编码器重排序模型，只使用 CPU，
+不需要 GPU 或 CUDA 运行时。若想体验更小的镜像：
 
 ```bash
 LAB_IMAGE_VARIANT=slim docker compose up --build
 ```
 
-在 slim 镜像中，Guided Learn 回放和 BM25 检索仍然可用。设置页会明确提示下载嵌入模型；下载完成后才会解锁稠密/混合检索和索引构建。
+在 slim 镜像中，Guided Learn 回放和 BM25 检索仍然可用。设置页分别提供嵌入模型与
+重排序模型的显式下载。稠密/混合检索和索引构建需要嵌入模型；交叉编码器实验需要
+重排序模型。
 
 如需使用可选的 Qdrant 对比后端：
 
@@ -121,6 +134,7 @@ rag index --corpus PATH --index-dir .tiny-rag/index --chunking-strategy semantic
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever dense
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever bm25
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
+rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever hybrid --reranker cross-encoder --rerank-top-n 20
 
 rag ask "question text" --index-dir .tiny-rag/index --top-k 5
 rag ask "question text" --index-dir .tiny-rag/index --context-budget 8192 --output-format json

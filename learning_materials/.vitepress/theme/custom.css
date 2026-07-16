@@ -34,9 +34,9 @@ body {
 .vp-doc h3,
 .language-entry h1 {
   color: #183242;
-  font-family: ui-serif, Georgia, serif;
-  font-weight: 500;
-  letter-spacing: -.035em;
+  font-family: var(--vp-font-family-base);
+  font-weight: 650;
+  letter-spacing: -.025em;
 }
 
 .vp-doc p,

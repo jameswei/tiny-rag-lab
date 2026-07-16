@@ -30,6 +30,7 @@ def write_index(
     corpus_root: Path,
     embedding_backend: str,
     embedding_model: str,
+    embedding_revision: str | None = None,
     embedding_dim: int,
     chunk_size: int,
     chunk_overlap: int,
@@ -65,6 +66,7 @@ def write_index(
         corpus_root=corpus_root,
         embedding_backend=embedding_backend,
         embedding_model=embedding_model,
+        embedding_revision=embedding_revision,
         embedding_dim=embedding_dim,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -87,6 +89,7 @@ def _write_manifest(
     corpus_root: Path,
     embedding_backend: str,
     embedding_model: str,
+    embedding_revision: str | None = None,
     embedding_dim: int,
     chunk_size: int,
     chunk_overlap: int,
@@ -120,6 +123,8 @@ def _write_manifest(
         "embedding_dim": embedding_dim,
         "corpus_files": corpus_files,
     }
+    if embedding_revision is not None:
+        manifest["embedding_revision"] = embedding_revision
     manifest_path = index_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 

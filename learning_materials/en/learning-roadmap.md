@@ -13,13 +13,14 @@ directory. Start at the top and work down.
 | 2 | [The Indexing Plane](the-indexing-plane.md) | How documents become searchable vectors |
 | 3 | [Retrieval and Generation](retrieval-and-generation.md) | How queries find chunks and become answers |
 | 4 | [Persistence and Testing](persistence-and-testing.md) | The on-disk format, round-trip integrity, and fake backends |
-| 5 | [Retrieval Mechanics](retrieval-mechanics.md) | BM25 keyword retrieval, hybrid search, and Reciprocal Rank Fusion |
-| 6 | [Evaluating Retrieval](evaluating-retrieval.md) | Metrics that tell you whether the retriever works |
-| 7 | [Observability and Debugging](observability-and-debugging.md) | Per-run traces that explain one retrieve or ask command |
-| 8 | [RAG Failure Lab](rag-failure-lab.md) | Curated failure cases that compare baseline and intervention retrieval |
-| 9 | [Answer Quality Judging](answer-quality-judging.md) | Measuring generated answers and answer-side failures with a fakeable judge |
-| 10 | [Context Budget and Structured Answers](context-budget-and-structured-answers.md) | Token-budget context packing, inspectable omitted chunks, and JSON answer output |
-| 11 | [Structural and Semantic Chunking](structural-and-semantic-chunking.md) | Three-tier structural chunking, embedding-based semantic chunking, and strategy dispatch |
+| 5 | [Retrieval Mechanics](retrieval-mechanics.md) | BM25, dense similarity, local vectors, Qdrant comparison, and hybrid RRF |
+| 6 | [Reranking](reranking.md) | How a cross-encoder reorders a larger candidate pool into final evidence |
+| 7 | [Evaluating Retrieval](evaluating-retrieval.md) | Metrics and browser A/B comparisons that test whether retrieval improved |
+| 8 | [Observability and Debugging](observability-and-debugging.md) | Per-run traces that explain one retrieve or ask command |
+| 9 | [RAG Failure Lab](rag-failure-lab.md) | Curated failure cases that compare baseline and intervention retrieval |
+| 10 | [Answer Quality Judging](answer-quality-judging.md) | Measuring generated answers and answer-side failures with a fakeable judge |
+| 11 | [Context Budget and Structured Answers](context-budget-and-structured-answers.md) | Token-budget context packing, inspectable omitted chunks, and JSON answer output |
+| 12 | [Structural and Semantic Chunking](structural-and-semantic-chunking.md) | Three-tier structural chunking, embedding-based semantic chunking, and strategy dispatch |
 
 ---
 
@@ -164,6 +165,7 @@ quality. `diagnose` studies curated failure cases.
 | Retrieval and Generation | Cosine search, prompt assembly, LLM call | `retrieval.py`, `prompting.py`, `generation.py` |
 | Persistence and Testing | Save/load index, round-trip integrity, fake backends | `index_writer.py`, `index_loader.py`, test suite |
 | Retrieval Mechanics | BM25 keyword retrieval, hybrid search, RRF fusion | `bm25.py`, `hybrid.py`, `retrieval.py` |
+| Reranking | Candidate generation, cross-encoder scoring, rank movement | `reranker.py`, `retrieval.py`, `trace.py` |
 | Evaluating Retrieval | Retrieval quality metrics | `eval.py` |
 | Observability and Debugging | Per-run trace records and JSON artifacts | `trace.py`, `cli.py` |
 | RAG Failure Lab | Failure case diagnosis | `failure.py`, `cli.py` |

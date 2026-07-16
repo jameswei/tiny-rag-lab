@@ -93,22 +93,37 @@ def seed_bundled_assets(data_root: Path, seed_root: Path | None) -> list[SeedRes
         if not target.exists():
             _promote(source, target, asset, staging_root)
             state.setdefault("assets", {})[asset["id"]] = _state_entry(manifest, asset)
+            _write_state(state_path, state)
             results.append(SeedResult(asset["id"], "seeded"))
+            continue
+
+        # A process can stop after the verified directory is published but
+        # before its ownership state is replaced.  Only recover a target that
+        # was already managed and exactly matches the incoming manifest; an
+        # unmanaged lookalike remains a conflict by design.
+        if prior and _files_status(target, asset["files"]) == "matches":
+            incoming = _state_entry(manifest, asset)
+            if prior == incoming:
+                results.append(SeedResult(asset["id"], "ready"))
+            else:
+                state.setdefault("assets", {})[asset["id"]] = incoming
+                _write_state(state_path, state)
+                shutil.rmtree(target.with_name(f".{target.name}.seed-backup"), ignore_errors=True)
+                results.append(SeedResult(asset["id"], "recovered"))
             continue
 
         local_status = _managed_status(target, prior)
         if local_status == "matches":
-            if prior.get("files") == asset["files"] and prior.get("seed_version") == manifest["seed_version"]:
-                results.append(SeedResult(asset["id"], "ready"))
-            else:
-                _promote(source, target, asset, staging_root)
-                state.setdefault("assets", {})[asset["id"]] = _state_entry(manifest, asset)
-                results.append(SeedResult(asset["id"], "upgraded"))
+            _promote(source, target, asset, staging_root)
+            state.setdefault("assets", {})[asset["id"]] = _state_entry(manifest, asset)
+            _write_state(state_path, state)
+            results.append(SeedResult(asset["id"], "upgraded"))
             continue
 
         if local_status == "missing_files":
             _promote(source, target, asset, staging_root)
             state.setdefault("assets", {})[asset["id"]] = _state_entry(manifest, asset)
+            _write_state(state_path, state)
             results.append(SeedResult(asset["id"], "repaired"))
             continue
 
@@ -132,7 +147,11 @@ def _validate_asset(asset: dict[str, Any]) -> None:
 def _managed_status(target: Path, prior: dict[str, Any] | None) -> str:
     if not prior:
         return "unmanaged_target"
-    expected = prior.get("files", [])
+    return _files_status(target, prior.get("files", []))
+
+
+def _files_status(target: Path, expected: list[dict[str, Any]]) -> str:
+    """Compare one directory with an explicit manifest file set."""
     expected_paths = {entry["path"] for entry in expected}
     actual_paths = {
         path.relative_to(target).as_posix()

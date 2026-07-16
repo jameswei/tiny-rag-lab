@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tiny-rag-lab — An Inspectable Classic RAG Learning Lab</title>
-  <meta name="description" content="A learning-first, inspectable RAG lab: see classic RAG actually run over real documents, real retrieval, and real citations." />
+  <meta name="description" content="A learning-first, inspectable RAG lab with a visual Studio, live retrieval course, direct CLI, and bilingual guides." />
 
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="alternate icon" href="favicon.ico" />
@@ -13,11 +13,11 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://jameswei.github.io/tiny-rag-lab/" />
   <meta property="og:title" content="tiny-rag-lab — An Inspectable Classic RAG Learning Lab" />
-  <meta property="og:description" content="A learning-first, inspectable RAG lab: see classic RAG actually run over real documents, real retrieval, and real citations." />
+  <meta property="og:description" content="A learning-first, inspectable RAG lab with a visual Studio, live retrieval course, direct CLI, and bilingual guides." />
   <meta property="og:image" content="https://jameswei.github.io/tiny-rag-lab/assets/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="tiny-rag-lab — An Inspectable Classic RAG Learning Lab" />
-  <meta name="twitter:description" content="A learning-first, inspectable RAG lab: see classic RAG actually run over real documents, real retrieval, and real citations." />
+  <meta name="twitter:description" content="A learning-first, inspectable RAG lab with a visual Studio, live retrieval course, direct CLI, and bilingual guides." />
   <meta name="twitter:image" content="https://jameswei.github.io/tiny-rag-lab/assets/og-image.png" />
 
   <link rel="stylesheet" href="css/styles.css" />
@@ -53,7 +53,7 @@
           <p class="hero-label" data-i18n="hero.kicker">A LEARNING-FIRST RAG LAB</p>
           <h1 class="hero-title">tiny-rag-lab</h1>
           <p class="hero-tagline" data-i18n="hero.tagline">See classic RAG actually run — real documents, real retrieval, real citations.</p>
-          <p class="hero-why" data-i18n="hero.why">RAG is the backbone of most AI assistants and agents today. Most tutorials hide it behind a framework call — this one builds it by hand, so you understand it completely before you reach for agentic RAG.</p>
+          <p class="hero-why" data-i18n="hero.why">Most tutorials hide retrieval behind a framework call. This lab keeps the calculations, candidate movement, evidence, and generation boundary visible so you can reason about each result.</p>
           <div class="hero-actions">
             <a href="#studio" class="btn btn-primary" data-i18n="hero.cta.studio">Run the local lab ↓</a>
             <a href="https://github.com/jameswei/tiny-rag-lab" target="_blank" rel="noopener" class="btn btn-secondary" data-i18n="hero.cta.github">View source on GitHub</a>
@@ -105,7 +105,7 @@
           <article class="entrypoint-card entrypoint-web">
             <p class="entrypoint-label" data-i18n="about.web.label">START HERE</p>
             <h3 data-i18n="about.web.title">Visual workspace</h3>
-            <p data-i18n="about.web.body">Replay real-corpus lessons, inspect every decision, and run your own retrieval, index, and provider experiments.</p>
+            <p data-i18n="about.web.body">Replay real-corpus lessons, follow a live retrieval course, and run your own index, reranking, evaluation, and provider experiments.</p>
             <a href="#studio" class="text-link" data-i18n="about.web.cta">Explore the learning workspace →</a>
           </article>
           <article class="entrypoint-card entrypoint-cli">
@@ -125,8 +125,8 @@
             <span class="stat-label" data-i18n="stat.entrypoints">Local Learning Entrypoints</span>
           </div>
           <div class="stat-card">
-            <span class="stat-number">3</span>
-            <span class="stat-label" data-i18n="stat.retrievers">Retrieval Strategies</span>
+            <span class="stat-number">6</span>
+            <span class="stat-label" data-i18n="stat.retrievers">Interactive Retrieval Modules</span>
           </div>
           <div class="stat-card">
             <span class="stat-number">3</span>
@@ -137,7 +137,7 @@
         <div class="diff-grid">
           <div class="diff-item">
             <p class="diff-statement" data-i18n="diff.1.title">Real evidence, not a toy demo</p>
-            <p class="diff-proof" data-i18n="diff.1.proof">Four guided lessons replay real retrieval over 40 real Cloudflare docs — not a synthetic one-file example.</p>
+            <p class="diff-proof" data-i18n="diff.1.proof">Four guided replays and six live retrieval modules use 40 real Cloudflare docs — not a synthetic one-file example.</p>
           </div>
           <div class="diff-item">
             <p class="diff-statement" data-i18n="diff.2.title">One core, two ways in</p>
@@ -281,7 +281,7 @@
     <section id="studio" class="section">
       <div class="container">
         <h2 class="section-title" data-i18n="studio.title">A rich local workspace for learning RAG</h2>
-        <p class="section-subtitle" data-i18n="studio.subtitle">Learn through real documents: start with four guided replays, inspect every artifact, then run retrieval experiments of your own.</p>
+        <p class="section-subtitle" data-i18n="studio.subtitle">Learn through real documents: start with guided replays, inspect retrieval math live, then run experiments of your own.</p>
         <div class="cards-grid">
           <div class="card">
             <div class="card-icon">↺</div>
@@ -290,13 +290,13 @@
           </div>
           <div class="card">
             <div class="card-icon">◌</div>
-            <h3 class="card-title" data-i18n="studio.inspect.title">Inspect the mechanics</h3>
-            <p class="card-desc" data-i18n="studio.inspect.desc">Examine chunks, embedding components, ranked evidence, context packing, prompts, citations, and stage timings.</p>
+            <h3 class="card-title" data-i18n="studio.inspect.title">Make retrieval visible</h3>
+            <p class="card-desc" data-i18n="studio.inspect.desc">Follow six live modules through BM25 math, cosine similarity, NumPy and Qdrant, hybrid fusion, reranking, and evaluation.</p>
           </div>
           <div class="card">
             <div class="card-icon">⇄</div>
             <h3 class="card-title" data-i18n="studio.compare.title">Learn from comparisons</h3>
-            <p class="card-desc" data-i18n="studio.compare.desc">Start with bundled Cloudflare lessons, then build watsonxDocsQA or a small upload, compare NumPy with optional Qdrant, and study curated failures.</p>
+            <p class="card-desc" data-i18n="studio.compare.desc">Compare two retrieval configurations over 16 reviewed questions, inspect every result, then carry reranking into free-form Explore.</p>
           </div>
         </div>
         <div class="lab-gallery" aria-label="Screens from the local visual lab">
@@ -327,7 +327,7 @@
       <div class="container">
         <p class="section-label" data-i18n="cap.label">WHAT IT COVERS</p>
         <h2 class="section-title" data-i18n="cap.title">Four planes, one inspectable pipeline</h2>
-        <p class="section-subtitle" data-i18n="cap.subtitle">Everything a classic RAG pipeline needs, built phase-by-phase and mapped to the same architecture the code implements.</p>
+        <p class="section-subtitle" data-i18n="cap.subtitle">Everything maps to one visible architecture and the same project-owned artifacts.</p>
 
         <div class="cap-planes">
 
@@ -343,9 +343,9 @@
           <article class="cap-plane">
             <h3 class="cap-plane-title" data-i18n="cap.retrieval.title">Retrieval</h3>
             <ul class="cap-plane-points" data-i18n-html="cap.retrieval.points">
-              <li>Dense cosine search, BM25 keyword search, and hybrid RRF fusion</li>
-              <li>Optional second-pass reranking (fake or cross-encoder)</li>
-              <li>Configurable and comparable with a single CLI flag or UI toggle</li>
+              <li>Live BM25, cosine, and hybrid RRF explanations</li>
+              <li>The same vectors through inspectable NumPy and optional Qdrant</li>
+              <li>Cross-encoder candidate-to-final reranking</li>
             </ul>
           </article>
 
@@ -361,7 +361,7 @@
           <article class="cap-plane">
             <h3 class="cap-plane-title" data-i18n="cap.eval.title">Evaluation &amp; Observability</h3>
             <ul class="cap-plane-points" data-i18n-html="cap.eval.points">
-              <li>Retrieval metrics: hit rate, MRR, context precision/recall</li>
+              <li>Browser A/B retrieval evaluation over 16 reviewed questions</li>
               <li>Answer metrics via LLM-as-judge: faithfulness, relevance, correctness</li>
               <li>Per-query traces and a curated Failure Lab</li>
             </ul>

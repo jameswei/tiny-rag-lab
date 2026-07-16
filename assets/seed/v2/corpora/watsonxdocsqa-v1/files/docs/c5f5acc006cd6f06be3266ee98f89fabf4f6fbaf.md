@@ -1,0 +1,7 @@
+# Troubleshooting information for SPSS Modeler
+
+# Troubleshooting  SPSS Modeler #
+
+The information in this section provides troubleshooting details for issues you may encounter in  SPSS Modeler\.
+
+<!-- </article "role="article" "> -->

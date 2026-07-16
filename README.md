@@ -3,8 +3,8 @@
 [简体中文](README.zh-CN.md) · [Project site](https://jameswei.github.io/tiny-rag-lab/)
 
 > A learning-first, inspectable classic RAG lab with readable Python, a rich
-> browser Studio, direct CLI experiments, real-corpus traces, and bilingual
-> Learning Guides.
+> browser Studio, an interactive retrieval course, direct CLI experiments,
+> real-corpus traces, and bilingual Learning Guides.
 
 `tiny-rag-lab` makes the path between a question, a document corpus, retrieved
 evidence, packed context, and a cited answer visible and inspectable. Readable
@@ -12,6 +12,12 @@ Python keeps the RAG mechanics explicit; a rich browser Studio turns their
 artifacts into guided replays and hands-on experiments; a direct CLI supports
 repeatable inspection. Searchable English and Simplified Chinese Learning
 Guides open beside the lab when a concept deserves quieter, deeper reading.
+
+The Studio also teaches the retrieval stack as a live course: inspect BM25
+term contributions, dense cosine math, the same vectors in NumPy and optional
+Qdrant, hybrid RRF fusion, cross-encoder rank movement, and
+two-configuration evaluation over 16 reviewed real-corpus questions. None of
+this requires an LLM provider.
 
 It is a learning tool, not a production RAG platform. The project favors
 visible mechanics over framework magic, evaluation before optimization, and
@@ -103,17 +109,21 @@ A useful first visit follows this path:
    pinned 40-document Cloudflare State & Coordination corpus.
 2. **Learn:** step through corpus, chunks, embedding vector, retrieved
    candidates, selected context, grounded answer, and citations.
-3. **Explore:** ask a catalog or free-form question, compare Dense, BM25, and
-   Hybrid retrieval, then inspect the returned trace. Add a tested
+3. **Retrieval:** follow six live modules from lexical and dense mechanics
+   through NumPy/Qdrant comparison, hybrid fusion, reranking, and browser A/B
+   evaluation over 16 reviewed questions.
+4. **Explore:** ask a catalog or free-form question, compare Dense, BM25, and
+   Hybrid retrieval, optionally rerank a larger candidate pool, then inspect
+   the returned trace. Add a tested
    OpenAI-compatible provider only when you want Live Ask generation.
-4. **Build & Inspect:** build an index from a bundled corpus or a small
+5. **Build & Inspect:** build an index from a bundled corpus or a small
    Markdown/plain-text upload, then inspect documents, chunks, vectors, and
    provenance.
-5. **Failure Lab:** compare curated failure scenarios with their interventions.
+6. **Failure Lab:** compare curated failure scenarios with their interventions.
 
-Open **Read the learning guide** from Learn, Explore, or Failure Lab whenever
-you want the corresponding concept in a quieter reading format. It opens in a
-new tab, preserving the current experiment.
+Open **Read the learning guide** from Learn, Retrieval, Explore, or Failure Lab
+whenever you want the corresponding concept in a quieter reading format. It
+opens in a new tab, preserving the current experiment.
 
 The interface is available in English and Simplified Chinese. Bundled corpus
 content, questions, recorded answers, and citations keep their original
@@ -122,6 +132,9 @@ language.
 ### What the lab includes
 
 - Four provider-free Guided Learn replays with complete, saved artifacts.
+- Six live Retrieval modules covering lexical and dense scoring, local vectors
+  versus optional Qdrant, hybrid fusion, cross-encoder reranking, and A/B
+  evaluation over 16 reviewed Cloudflare questions.
 - A pinned Cloudflare learning corpus with ready structural and
   fixed-character NumPy indexes.
 - Bundled watsonxDocsQA source data and all 75 catalog questions after its
@@ -136,16 +149,18 @@ language.
 - Curated failure lessons, raw-artifact inspection, source provenance,
   candidate-versus-context selection, and reduced-motion-safe playback.
 
-The default `full` image includes the local embedding model. It runs on CPU;
-no GPU or CUDA runtime is required. To try the smaller image:
+The default `full` image includes pinned local embedding and cross-encoder
+reranker snapshots. It runs on CPU; no GPU or CUDA runtime is required. To try
+the smaller image:
 
 ```bash
 LAB_IMAGE_VARIANT=slim docker compose up --build
 ```
 
 Guided Learn replay and BM25 retrieval remain available in the slim image. The
-Settings page makes the embedding-model download explicit before it enables
-Dense/Hybrid retrieval or index building.
+Settings page provides separate explicit downloads for the embedding model and
+reranker. Dense/Hybrid retrieval and index building require the embedding
+model; cross-encoder experiments require the reranker.
 
 To use the optional Qdrant comparison backend:
 
@@ -186,6 +201,7 @@ rag index --corpus PATH --index-dir .tiny-rag/index --chunking-strategy semantic
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever dense
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever bm25
 rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever hybrid
+rag retrieve "question text" --index-dir .tiny-rag/index --top-k 5 --retriever hybrid --reranker cross-encoder --rerank-top-n 20
 
 rag ask "question text" --index-dir .tiny-rag/index --top-k 5
 rag ask "question text" --index-dir .tiny-rag/index --context-budget 8192 --output-format json

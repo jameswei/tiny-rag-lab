@@ -1,9 +1,10 @@
-# Retrieval Mechanics — Dense, BM25, and Hybrid Search
+# Retrieval Mechanics — Lexical, Dense, Vector, and Hybrid Search
 
-Phase 1 delivered one retriever: dense cosine-similarity search. Phase 1.5 adds
-two more — keyword-based BM25 and a hybrid that fuses dense + BM25 via
-Reciprocal Rank Fusion. Two new modules do this work: `bm25.py` (keyword
-retrieval) and `hybrid.py` (fusion logic).
+The lab owns three first-stage retrieval strategies: BM25 keyword search,
+dense cosine-similarity search, and a hybrid that fuses both lists with
+Reciprocal Rank Fusion. The Studio exposes the calculations behind each one,
+then uses the same stored vectors to compare the local NumPy index with optional
+Qdrant.
 
 ---
 
@@ -20,6 +21,25 @@ has no understanding of synonyms or paraphrases.
 
 Hybrid retrieval combines both: dense catches the semantics, BM25 catches the
 exact terms, and Reciprocal Rank Fusion merges their ranked lists into one.
+
+## Follow the live retrieval course
+
+Open **Retrieval** in the Studio to move through six directly selectable
+modules:
+
+1. **Lexical Search** — query tokens, document frequency, BM25 term
+   contributions, and final score.
+2. **Dense Retrieval** — vector previews, norms, dot products, cosine
+   similarity, and ordering.
+3. **From local vectors to a vector database** — exact same chunks and vectors
+   through NumPy and optional Qdrant.
+4. **Hybrid Retrieval** — dense and BM25 ranks plus each RRF contribution.
+5. **Reranking** — first-stage candidates, cross-encoder scores, and rank
+   movement.
+6. **Evaluation** — two configurations compared over 16 reviewed questions.
+
+These are live experiments over the bundled Cloudflare corpus, not saved
+replays. No LLM provider is needed.
 
 ---
 
@@ -187,13 +207,45 @@ This function:
    from `retrieval.py`.
 3. **Runs BM25 retrieval**: calls `bm25_retriever.retrieve(query, top_k=top_k)`.
 4. **Fuses results**: calls `reciprocal_rank_fusion([dense_results, bm25_results], top_k=top_k)`.
-5. **Returns** exactly `top_k` results with fused RRF scores and re-assigned
-   1-indexed ranks.
+5. **Returns** up to `top_k` results with fused RRF scores and re-assigned
+   1-indexed ranks. A small or empty corpus can produce fewer.
 
 The returned `RetrievalResult.score` is the fused RRF score — a small positive
 number, not a cosine similarity.
 
 ---
+
+## From local vectors to a vector database
+
+The NumPy index is the canonical teaching path because every vector, chunk ID,
+and cosine calculation remains easy to inspect. Qdrant is a second storage and
+search backend—not a different embedding concept.
+
+The Studio's vector-database module deliberately copies the structural
+index's exact chunks and vectors. It does not re-chunk or re-embed. An exact
+Qdrant query and the local NumPy query should therefore return equivalent
+unfiltered results, allowing for tiny floating-point differences and ties.
+
+When Qdrant is running, inspect:
+
+- the common source fingerprint that identifies the ordered chunk/vector set;
+- point payloads such as chunk ID, document path, title, and source group;
+- the NumPy and Qdrant result lists side by side; and
+- a separate metadata-filter demonstration for Durable Objects, Queues, KV,
+  R2, or Workflows.
+
+The filter result is not a parity test because it intentionally searches a
+subset. The unfiltered comparison is the one that asks whether both backends
+searched the same vectors equivalently.
+
+Qdrant remains optional:
+
+```bash
+docker compose --profile qdrant up -d
+```
+
+If it is absent, lexical, dense, hybrid, reranking, evaluation, Explore, and
+the local NumPy index continue to work.
 
 ## CLI Usage
 
@@ -216,7 +268,7 @@ entirely — BM25 does not use embeddings.
 ### `rag eval` with retriever selection
 
 ```bash
-rag eval --qa-file qa.jsonl --retriever dense   # Phase 1 baseline
+rag eval --qa-file qa.jsonl --retriever dense   # semantic baseline
 rag eval --qa-file qa.jsonl --retriever bm25    # keyword-only
 rag eval --qa-file qa.jsonl --retriever hybrid  # combined
 ```
@@ -249,9 +301,9 @@ case-by-case within a single diagnosis run.
 | `tiny_rag_lab/hybrid.py` | `reciprocal_rank_fusion()`, `retrieve_hybrid()` |
 | `tiny_rag_lab/retrieval.py` | `retrieve()`, `retrieve_by_vector()` — dense path used by hybrid |
 
-No changes were needed to `models.py`, `index_loader.py`, or `index_writer.py`
-— the `RetrievalResult` and `Chunk` dataclasses already support all three
-retrievers without modification.
+All three retrievers return the shared `RetrievalResult` and `Chunk` contracts.
+The current index reader/writer also carries the model and backend provenance
+needed by the Studio's live explanations and vector-backend comparison.
 
 ---
 
@@ -265,9 +317,10 @@ After reading this document, the most useful experiments are:
 2. **Check the eval numbers.** Run `rag eval` with all three retrievers on the
    same QA set. Look at which questions each retriever gets right — it tells you
    which types of queries benefit from keyword vs. semantic search.
-3. **Trace a hybrid run.** Add `--retriever hybrid` to `rag retrieve` and
-   inspect the trace output. The dense and BM25 scores are visible separately
-   in the trace before RRF fuses them.
+3. **Explain a hybrid run.** Add `--retriever hybrid` to `rag retrieve` to
+   inspect the final fused chunks and RRF scores. Then open **Retrieval →
+   Hybrid Retrieval** in the Studio to see the separate dense/BM25 rankings
+   and each contribution before fusion.
 
 ---
 
@@ -277,3 +330,5 @@ After reading this document, the most useful experiments are:
   retrieval path explained in detail.
 - [Evaluating Retrieval](evaluating-retrieval.md) — how to measure which
   retriever works best.
+- [Reranking](reranking.md) — how a cross-encoder turns first-stage candidates
+  into final evidence.

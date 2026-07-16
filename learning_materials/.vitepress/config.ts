@@ -8,6 +8,7 @@ const englishGuides: Guide[] = [
   { text: "Retrieval and Generation", slug: "retrieval-and-generation" },
   { text: "Persistence and Testing", slug: "persistence-and-testing" },
   { text: "Retrieval Mechanics", slug: "retrieval-mechanics" },
+  { text: "Reranking", slug: "reranking" },
   { text: "Evaluating Retrieval", slug: "evaluating-retrieval" },
   { text: "Observability and Debugging", slug: "observability-and-debugging" },
   { text: "RAG Failure Lab", slug: "rag-failure-lab" },
@@ -22,6 +23,7 @@ const chineseGuides: Guide[] = [
   { text: "检索与生成", slug: "retrieval-and-generation" },
   { text: "持久化与测试", slug: "persistence-and-testing" },
   { text: "检索机制", slug: "retrieval-mechanics" },
+  { text: "重排序", slug: "reranking" },
   { text: "评估检索质量", slug: "evaluating-retrieval" },
   { text: "可观测性与调试", slug: "observability-and-debugging" },
   { text: "RAG 失败实验室", slug: "rag-failure-lab" },
@@ -48,6 +50,7 @@ export default defineConfig({
   cleanUrls: false,
   title: "tiny-rag-lab Learning Guides",
   description: "Concept-focused guides for understanding the inspectable classic RAG pipeline.",
+  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/docs/favicon.svg" }]],
   locales: {
     en: {
       label: "English",
