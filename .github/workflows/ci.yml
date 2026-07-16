@@ -35,6 +35,7 @@ jobs:
           uv pip install
           --index https://download.pytorch.org/whl/cpu
           --default-index https://pypi.org/simple
+          --index-strategy unsafe-best-match
           'torch==2.7.1+cpu'
           '.[qdrant]'
           'pytest>=8.0'
