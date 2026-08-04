@@ -263,7 +263,10 @@ def create_app(data_root: Path | None = None, static_dir: Path | None = None) ->
             "configured": provider_is_usable(config),
             "base_url_configured": bool(os.environ.get("OPENAI_BASE_URL")),
             "model_configured": bool(os.environ.get("OPENAI_MODEL")),
+            "api_key_configured": bool(os.environ.get("OPENAI_API_KEY")),
             "default_model": getattr(OpenAIGenerator, "DEFAULT_MODEL", "gpt-4o-mini"),
+            "base_url": os.environ.get("OPENAI_BASE_URL"),
+            "model": os.environ.get("OPENAI_MODEL"),
         }
 
     def run_config(request: RunRequest) -> dict:

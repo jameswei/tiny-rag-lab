@@ -108,6 +108,19 @@ def test_health_and_provider_status_are_non_secret(tmp_path):
     assert "api_key" not in status
 
 
+def test_provider_status_reports_env_base_url_and_model_without_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://provider.example/v1")
+    monkeypatch.setenv("OPENAI_MODEL", "test-model")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-should-never-appear")
+    client = TestClient(create_app(tmp_path))
+    status = client.get("/api/provider-status").json()
+    assert status["base_url"] == "https://provider.example/v1"
+    assert status["model"] == "test-model"
+    assert status["api_key_configured"] is True
+    assert "api_key" not in status
+    assert "sk-should-never-appear" not in json.dumps(status)
+
+
 def test_backend_status_reports_numpy_and_optional_qdrant_readiness(tmp_path, monkeypatch):
     monkeypatch.setattr("tiny_rag_lab.web_api.qdrant_is_available", lambda _url: True)
 
