@@ -2,169 +2,122 @@
 
 [简体中文](README.zh-CN.md) · [Project site](https://jameswei.github.io/tiny-rag-lab/)
 
-> A learning-first, inspectable classic RAG lab with readable Python, a rich
-> browser Studio, an interactive retrieval course, direct CLI experiments,
-> real-corpus traces, and bilingual Learning Guides.
+> A learning-first, inspectable classic RAG lab — readable Python, a browser
+> Studio with a live retrieval course, a direct CLI, real-corpus traces, and
+> bilingual Learning Guides.
 
-`tiny-rag-lab` makes the path between a question, a document corpus, retrieved
-evidence, packed context, and a cited answer visible and inspectable. Readable
-Python keeps the RAG mechanics explicit; a rich browser Studio turns their
-artifacts into guided replays and hands-on experiments; a direct CLI supports
-repeatable inspection. Searchable English and Simplified Chinese Learning
-Guides open beside the lab when a concept deserves quieter, deeper reading.
+`tiny-rag-lab` makes the full path from question to cited answer visible and
+inspectable — document corpus, retrieved evidence, packed context, and a
+grounded answer. Readable Python keeps the mechanics explicit; a browser
+Studio turns them into guided replays and a live retrieval course covering
+BM25 term scores, dense cosine math, hybrid RRF fusion, cross-encoder
+reranking, and the same vectors in NumPy versus optional Qdrant; a direct CLI
+supports repeatable inspection. Searchable bilingual Learning Guides open
+beside the lab for deeper reading, and none of this requires an LLM provider
+— a tested OpenAI-compatible provider is only needed for Live Ask generation.
 
-The Studio also teaches the retrieval stack as a live course: inspect BM25
-term contributions, dense cosine math, the same vectors in NumPy and optional
-Qdrant, hybrid RRF fusion, cross-encoder rank movement, and
-two-configuration evaluation over 16 reviewed real-corpus questions. None of
-this requires an LLM provider.
-
-It is a learning tool, not a production RAG platform. The project favors
-visible mechanics over framework magic, evaluation before optimization, and
-failure analysis before advanced features.
+It's a learning tool, not a production RAG platform: visible mechanics over
+framework magic, evaluation before optimization, failure analysis before
+advanced features.
 
 ![Guided Learn replay showing real retrieved evidence](website/assets/screenshots/guided-retrieval.jpg)
 
-## Learn through real evidence, not a toy demo
+## Two ways to learn, one core
 
-The local visual workspace is a first-class learning environment, not a
-dashboard around the CLI. It gives learners a complete local path for
-understanding classic RAG on real technical documentation.
+The web Studio and the CLI are complementary views of the same project-owned
+RAG core — not separate products with separate mechanics. Both work from the
+same documents, chunks, embeddings, retrieval results, context, prompts,
+citations, and traces.
 
-Instead of a synthetic one-document replay, learners begin with four saved,
-provider-free lessons over a pinned 40-document Cloudflare corpus. Every
-lesson preserves the real artifacts that connect one RAG stage to the next:
-source documents, chunks, query vectors, ranked candidates, selected and
-omitted context, prompts, answers, and citations. From that guided baseline,
-learners can run their own retrievals, build indexes, bring a small corpus,
-compare the inspectable NumPy index with optional Qdrant, and use Live Ask
-only when a tested provider is available.
+- **Studio (recommended start):** guided real-corpus replays with every
+  intermediate artifact inspectable, plus hands-on retrieval, indexing,
+  failure, and provider experiments.
+- **CLI:** the direct, scriptable entrypoint — repeat a configuration,
+  compare results, inspect raw output, follow the mechanics command by
+  command.
 
-This makes the project useful in two complementary ways: readable source code
-and a direct CLI for studying the mechanics, plus an interactive experimental
-web application for seeing those mechanics operate on real evidence.
+Learners start from four saved, provider-free lessons over a pinned
+40-document Cloudflare corpus rather than a synthetic one-document demo —
+every lesson keeps the real source documents, chunks, vectors, ranked
+candidates, selected and omitted context, prompts, answers, and citations
+that connect one RAG stage to the next. From there, run your own retrievals,
+build indexes, bring a small corpus, compare the NumPy index with optional
+Qdrant, or connect a tested provider for Live Ask. When a stage needs deeper
+explanation, bilingual **Learning Guides** open beside the experiment without
+leaving for GitHub.
 
-When a stage needs a deeper conceptual explanation, the local Studio also
-ships bilingual **Learning Guides**: searchable, long-form reading that opens
-beside the experiment without sending the learner to GitHub. The guides support
-the two entry points rather than introducing a separate RAG experience.
+Classic RAG here means one visible path — retrieve evidence, pack context,
+generate a cited answer. A tested OpenAI-compatible provider completes
+generation for Live Ask; it does not turn the project into agentic or
+multi-step RAG.
 
-Here, **classic RAG** means one visible, inspectable path: retrieve evidence
-from a corpus, select and pack it into context, then generate a grounded answer
-with citations. A tested OpenAI-compatible provider completes that generation
-step for Live Ask; it does not change the project into agentic or multi-step
-RAG.
+## What makes it different
 
-## One inspectable core, two learning entry points
+Most RAG examples stop at a framework call or a single happy-path answer.
+`tiny-rag-lab` keeps the concepts connected:
 
-The web application and CLI are complementary ways to learn the same
-project-owned RAG core—not separate products with separate mechanics. Both work
-with the same documents, chunks, embeddings, retrieval results, selected
-context, prompts, citations, and traces.
-
-- **Local visual workspace:** the recommended starting point. It guides a
-  learner through real-corpus replays, makes intermediate artifacts easy to
-  inspect, and supports hands-on retrieval, indexing, failure, and provider
-  experiments.
-- **CLI:** the direct, compact, and scriptable entrypoint. It is suited to
-  repeating a configuration, comparing results, inspecting raw output, and
-  following the mechanics command by command.
-
-## What makes this lab different
-
-Many RAG examples stop at a framework call, a chatbot screen, or a single
-happy-path answer. `tiny-rag-lab` connects the concepts a learner needs to
-reason about:
-
-- **The implementation and experience stay connected.** The CLI and web
-  workspace render artifacts from the same project-owned RAG core instead of
-  teaching an abstract diagram disconnected from executable code.
-- **Real artifacts are the lesson.** Guided replay shows the actual source
-  documents, chunks, vectors, ranked candidates, selected and omitted context,
-  prompt, answer, citations, and timing behind a result.
-- **Guidance leads to experimentation.** A learner can start with a stable,
-  provider-free real-corpus replay, then change retrieval, build an index,
-  upload a small corpus, or connect a provider for Live Ask.
+- **Implementation and experience stay connected.** The CLI and Studio
+  render artifacts from the same RAG core, not an abstract diagram
+  disconnected from runnable code.
+- **Real artifacts are the lesson.** Guided replay shows the actual
+  documents, chunks, vectors, ranked candidates, selected and omitted
+  context, prompt, answer, citations, and timing behind a result.
+- **Guidance leads to experimentation.** Start from a stable, provider-free
+  replay, then change retrieval, build an index, upload a corpus, or connect
+  a provider for Live Ask.
 - **Failure is part of learning.** Evaluation, trace inspection, and curated
-  failure scenarios make it possible to ask why a result happened—not only
-  whether an answer was returned.
+  failure scenarios explain *why* a result happened, not just whether an
+  answer came back.
 
-## Start with the local visual lab
-
-The fastest way to learn is to run the bundled local studio:
+## Quick start
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Open http://127.0.0.1:8000 in your browser. The Learning Guides are available
-at http://127.0.0.1:8000/docs/ and are also linked from relevant lab stages.
-The interactive Studio runs locally; no public deployment or account is
-required. Live Ask contacts only the provider you configure. The Learning
-Guides are also published from the [project site](https://jameswei.github.io/tiny-rag-lab/)
-for reading without running the lab.
+Docker Compose serves the Studio at `http://127.0.0.1:8000` by default
+(override with `TINY_RAG_LAB_PORT`). The Learning Guides are linked from
+every lab stage and are also published at the
+[project site](https://jameswei.github.io/tiny-rag-lab/) for reading without
+running the lab. The Studio itself stays local-only — no account, no public
+deployment — and Live Ask contacts only the provider you configure.
 
-A useful first visit follows this path:
+First visit:
 
-1. **Home → Start guided lesson:** replay one of four saved lessons over a
-   pinned 40-document Cloudflare State & Coordination corpus.
-2. **Learn:** step through corpus, chunks, embedding vector, retrieved
-   candidates, selected context, grounded answer, and citations.
-3. **Retrieval:** follow six live modules from lexical and dense mechanics
-   through NumPy/Qdrant comparison, hybrid fusion, reranking, and browser A/B
-   evaluation over 16 reviewed questions.
-4. **Explore:** ask a catalog or free-form question, compare Dense, BM25, and
-   Hybrid retrieval, optionally rerank a larger candidate pool, then inspect
-   the returned trace. Add a tested
-   OpenAI-compatible provider only when you want Live Ask generation.
-5. **Build & Inspect:** build an index from a bundled corpus or a small
-   Markdown/plain-text upload, then inspect documents, chunks, vectors, and
-   provenance.
-6. **Failure Lab:** compare curated failure scenarios with their interventions.
+1. **Home → Start guided lesson** — replay one of four saved lessons over the
+   pinned Cloudflare State & Coordination corpus.
+2. **Learn** — step through corpus, chunks, embedding vector, retrieved
+   candidates, selected context, answer, and citations.
+3. **Retrieval** — six live modules: lexical and dense mechanics, NumPy vs.
+   Qdrant, hybrid fusion, reranking, and a 16-question browser A/B
+   evaluation.
+4. **Explore** — ask from the 75-question watsonxDocsQA catalog or a
+   free-form question, compare Dense/BM25/Hybrid retrieval, optionally
+   rerank, then inspect the trace. Add a tested OpenAI-compatible provider
+   only for Live Ask.
+5. **Build & Inspect** — build an index from a bundled corpus or a small
+   Markdown/plain-text upload (up to 100 files, 100 MiB), then inspect
+   chunks, vectors, and provenance.
+6. **Failure Lab** — compare curated failure scenarios against their fixes.
 
-Open **Read the learning guide** from Learn, Retrieval, Explore, or Failure Lab
-whenever you want the corresponding concept in a quieter reading format. It
-opens in a new tab, preserving the current experiment.
+Every stage links **Read the learning guide**, opening the matching guide in
+a new tab without losing your place. The interface is bilingual
+(English/简体中文); bundled corpus content and recorded answers keep their
+original language.
 
-The interface is available in English and Simplified Chinese. Bundled corpus
-content, questions, recorded answers, and citations keep their original
-language.
-
-### What the lab includes
-
-- Four provider-free Guided Learn replays with complete, saved artifacts.
-- Six live Retrieval modules covering lexical and dense scoring, local vectors
-  versus optional Qdrant, hybrid fusion, cross-encoder reranking, and A/B
-  evaluation over 16 reviewed Cloudflare questions.
-- A pinned Cloudflare learning corpus with ready structural and
-  fixed-character NumPy indexes.
-- Bundled watsonxDocsQA source data and all 75 catalog questions after its
-  explicit background index build.
-- Retrieval-only exploration without an LLM provider; Live Ask with any
-  OpenAI-compatible Chat Completions provider after a connection test.
-- Small custom corpus uploads: up to 100 Markdown or plain-text files,
-  totalling 100 MiB.
-- NumPy/file indexes by default, with an optional local Qdrant backend that
-  changes storage/search execution—not the chunks, embeddings, retrieval,
-  context, citations, or trace vocabulary being taught.
-- Curated failure lessons, raw-artifact inspection, source provenance,
-  candidate-versus-context selection, and reduced-motion-safe playback.
-
-The default `full` image includes pinned local embedding and cross-encoder
-reranker snapshots. It runs on CPU; no GPU or CUDA runtime is required. To try
-the smaller image:
+Runs on CPU by default — the `full` image ships pinned embedding and
+cross-encoder snapshots, no GPU required. For a smaller image:
 
 ```bash
 LAB_IMAGE_VARIANT=slim docker compose up --build
 ```
 
-Guided Learn replay and BM25 retrieval remain available in the slim image. The
-Settings page provides separate explicit downloads for the embedding model and
-reranker. Dense/Hybrid retrieval and index building require the embedding
-model; cross-encoder experiments require the reranker.
+Guided Learn and BM25 retrieval work out of the box in `slim`; the Settings
+page adds the embedding model and reranker as separate downloads when you
+need Dense/Hybrid retrieval or cross-encoder reranking.
 
-To use the optional Qdrant comparison backend:
+For the optional Qdrant comparison backend:
 
 ```bash
 docker compose --profile qdrant up --build
@@ -190,10 +143,10 @@ The project makes each stage inspectable:
 - **Evaluation and observability:** retrieval metrics, LLM-as-judge answer
   metrics, replayable traces, and curated failure diagnosis.
 
-## CLI: the direct interface
+## CLI
 
-The CLI is the direct, repeatable companion to the visual workspace. Use it
-when you want the same mechanics in compact commands:
+The direct, repeatable companion to the Studio — same mechanics, compact
+commands:
 
 ```bash
 rag index --corpus PATH --index-dir .tiny-rag/index --chunk-size 800 --chunk-overlap 120
@@ -242,8 +195,9 @@ npm --prefix web install
 npm --prefix web run dev
 ```
 
-The React development server proxies `/docs` to the VitePress server on
-`127.0.0.1:4173`, matching the packaged same-origin route.
+The React development server proxies `/docs` requests to the VitePress dev
+server started by `npm --prefix learning_materials run dev`, matching the
+packaged same-origin route.
 
 Prepare the watsonxDocsQA corpus for the standalone CLI when needed:
 
@@ -259,7 +213,7 @@ corpus/
 .tiny-rag/
 ```
 
-## Technical choices
+## Tech stack
 
 - Python · `argparse` CLI · FastAPI · React + TypeScript · VitePress · Docker Compose
 - Local embeddings: `sentence-transformers/all-MiniLM-L6-v2`
@@ -272,7 +226,8 @@ corpus/
 ## Docs
 
 - [Learning Guides](learning_materials/en/learning-roadmap.md): conceptual
-  companion to the CLI and visual lab (served locally at `/docs/` by Studio)
+  companion to the CLI and visual lab — served locally by Studio and also
+  published at the project site
 - [Proposal](docs/proposal.md): project purpose, philosophy, and non-goals
 - [Architecture](docs/architecture.md): conceptual RAG planes and boundaries
 - [File structure](docs/file-structure.md): repository map
