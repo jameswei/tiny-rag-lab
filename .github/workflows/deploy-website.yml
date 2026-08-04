@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'website/**'
+      - 'learning_materials/**'
       - '.github/workflows/deploy-website.yml'
   workflow_dispatch:
 
@@ -28,13 +29,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: learning_materials/package-lock.json
+
+      - name: Install learning guides dependencies
+        working-directory: learning_materials
+        run: npm ci
+
+      - name: Build learning guides
+        working-directory: learning_materials
+        run: npm run build
+        env:
+          DOCS_BASE_PATH: /${{ github.event.repository.name }}/docs/
+
+      - name: Assemble Pages site
+        run: |
+          mkdir -p _site
+          cp -r website/. _site/
+          mkdir -p _site/docs
+          cp -r learning_materials/.vitepress/dist/. _site/docs/
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: website
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

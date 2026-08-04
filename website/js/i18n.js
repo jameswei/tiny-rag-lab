@@ -8,6 +8,7 @@ const translations = {
     'nav.capabilities': 'Capabilities',
     'nav.stack':        'Stack',
     'nav.cli':          'CLI',
+    'nav.guides':       'Learning Guides',
     'nav.github':       'GitHub →',
 
     // Hero
@@ -157,6 +158,7 @@ const translations = {
 
     // Footer
     'footer.built': 'Built by',
+    'footer.guides': 'Learning Guides',
   },
 
   zh: {
@@ -168,6 +170,7 @@ const translations = {
     'nav.capabilities': '功能',
     'nav.stack':        '技术栈',
     'nav.cli':          'CLI',
+    'nav.guides':       '学习指南',
     'nav.github':       'GitHub →',
 
     // Hero
@@ -317,6 +320,7 @@ const translations = {
 
     // Footer
     'footer.built': '作者',
+    'footer.guides': '学习指南',
   }
 };
 

@@ -101,5 +101,6 @@ website/
     i18n.js               language switching (EN / 简体中文), translations object, localStorage preference
 .github/
   workflows/
-    deploy-website.yml    GitHub Actions: deploy website/ to github-pages on push to main
+    deploy-website.yml    GitHub Actions: builds website/ and learning_materials/, deploys the
+                           combined site (guides under /docs/) to github-pages on push to main
 ```

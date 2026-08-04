@@ -100,8 +100,10 @@ docker compose up --build
 
 Open http://127.0.0.1:8000 in your browser. The Learning Guides are available
 at http://127.0.0.1:8000/docs/ and are also linked from relevant lab stages.
-The Studio and guides run locally; no public deployment or account is required.
-Live Ask contacts only the provider you configure.
+The interactive Studio runs locally; no public deployment or account is
+required. Live Ask contacts only the provider you configure. The Learning
+Guides are also published from the [project site](https://jameswei.github.io/tiny-rag-lab/)
+for reading without running the lab.
 
 A useful first visit follows this path:
 

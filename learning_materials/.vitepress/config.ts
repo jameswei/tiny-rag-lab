@@ -44,13 +44,15 @@ function sidebar(language: "en" | "zh", title: string, guides: Guide[]) {
   ];
 }
 
+const docsBasePath = process.env.DOCS_BASE_PATH ?? "/docs/";
+
 export default defineConfig({
-  base: "/docs/",
+  base: docsBasePath,
   appearance: false,
   cleanUrls: false,
   title: "tiny-rag-lab Learning Guides",
   description: "Concept-focused guides for understanding the inspectable classic RAG pipeline.",
-  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/docs/favicon.svg" }]],
+  head: [["link", { rel: "icon", type: "image/svg+xml", href: `${docsBasePath}favicon.svg` }]],
   locales: {
     en: {
       label: "English",
