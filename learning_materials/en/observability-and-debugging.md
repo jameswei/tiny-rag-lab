@@ -1,6 +1,6 @@
 # Observability and Debugging — Making One RAG Run Explainable
 
-Phase 1.7 adds an observability layer for single `retrieve` and `ask` runs.
+This project adds an observability layer for single `retrieve` and `ask` runs.
 The goal is not a dashboard or an evaluation report. The goal is a trustworthy
 record of one run: what query was used, which chunks were returned, what prompt
 was sent to the generator, what answer came back, and how long each stage took.
@@ -20,8 +20,8 @@ A RAG answer can be wrong for several different reasons:
 Without a trace, these failures collapse into one vague symptom: "the answer is
 bad." With a trace, you can inspect the pipeline stage by stage.
 
-Phase 1.6 evaluation answers a batch question: "How good is retrieval across a
-dataset?" Phase 1.7 tracing answers an interactive question: "What happened in
+Evaluation answers a batch question: "How good is retrieval across a
+dataset?" Tracing answers an interactive question: "What happened in
 this one run?"
 
 ---
@@ -166,8 +166,8 @@ prompting or generation.
 
 ## How This Connects To The Failure Lab
 
-Phase 1.8 adds a failure lab for curated retrieval failures. The trace schema
-from Phase 1.7 remains the durable per-run record: query, chunks, scores,
+This project also includes a failure lab for curated retrieval failures. The
+trace schema remains the durable per-run record: query, chunks, scores,
 prompt, answer, citations, and latency. The failure lab focuses on repeatable
 baseline vs. intervention retrieval cases, while traces explain individual runs.
 

@@ -1,6 +1,6 @@
 # Answer Quality Judging — Measuring The Generated Answer
 
-Phase 2.0 adds answer-quality judging. Retrieval metrics answer "did we fetch
+This project adds answer-quality judging. Retrieval metrics answer "did we fetch
 the right evidence?" Answer judging answers "did the final answer use that
 evidence correctly?"
 
@@ -18,8 +18,8 @@ A retriever can find the right chunk and the answer can still be bad:
 - it may cite a source that does not support the sentence
 - it may be factually wrong compared with a reference answer
 
-Phase 1.6 measures retrieval. Phase 2.0 measures the generated answer after
-retrieval and generation have already happened.
+Retrieval evaluation measures retrieval. Answer judging measures the generated
+answer after retrieval and generation have already happened.
 
 ---
 
@@ -136,14 +136,14 @@ see the chunks, prompt, answer, citations, latency, and judge verdict together.
 
 ## Answer-Side Failure Diagnosis
 
-Phase 1.8 documented two failures that retrieval IDs cannot detect:
+The failure lab documents two failures that retrieval IDs cannot detect:
 
 | Label | Meaning |
 |---|---|
 | `unsupported_answer` | The answer makes a claim not grounded in context |
 | `citation_mismatch` | A citation does not support the claim it is attached to |
 
-Phase 2.0 implements them with the judge:
+The judge implements them:
 
 ```python
 detect_answer_failure_label(verdict, thresholds)
@@ -181,6 +181,6 @@ A production RAG system needs at least two measurement layers:
 | Retrieval evaluation | Did we retrieve the right evidence? |
 | Answer judging | Did the answer use the evidence correctly? |
 
-Phase 2.0 keeps both visible. Retrieval metrics, answer metrics, traces, and
+Both stay visible by design. Retrieval metrics, answer metrics, traces, and
 failure cases remain separate objects so the reason for a regression stays
 inspectable.

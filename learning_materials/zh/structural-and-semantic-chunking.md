@@ -1,6 +1,6 @@
 # 结构化与语义分块
 
-Phase 2.2 在现有的固定字符基准策略之外，新增了两种分块方式。分块策略是一个
+本项目在现有的固定字符基准策略之外，新增了两种分块方式。分块策略是一个
 **索引时的决策**——在运行 `rag index` 时选择，所有下游命令（`retrieve`、`ask`、
 `eval`、`diagnose`）直接使用已在磁盘上的分块，不需要任何修改。
 
@@ -44,7 +44,7 @@ chunk_document(doc, chunk_size=800, chunk_overlap=120)
 chunk_document_structural(doc, chunk_size=800, chunk_overlap=120)
 ```
 
-三层打包（详见 Phase 2.2 规范中的设计决策 2）：
+三层打包：
 
 1. **第一层——整块（block）。** 在空行边界处切分 `normalized_text`
    （`_split_blocks`）。如果某个块只包含一行 ATX 标题（`# …`），则与下一个

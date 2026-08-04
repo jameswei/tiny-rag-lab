@@ -1,6 +1,6 @@
 # RAG Failure Lab — Turning Retrieval Mistakes Into Test Cases
 
-Phase 1.8 adds a small failure lab. The goal is to stop treating bad answers as
+This project includes a small failure lab. The goal is to stop treating bad answers as
 one vague problem and instead classify common retrieval-side failures with
 repeatable cases.
 
@@ -33,7 +33,7 @@ compare a baseline retrieval setup with a specific intervention.
 
 ## The Five Heuristic Labels
 
-Phase 1.8 only labels failures that can be detected from retrieval results:
+The failure lab only labels failures that can be detected from retrieval results:
 
 | Label | Meaning |
 |---|---|

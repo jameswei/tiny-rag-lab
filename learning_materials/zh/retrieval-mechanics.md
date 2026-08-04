@@ -104,7 +104,7 @@ BM25 在查询包含精确、独特词汇时表现优异：
 | "`ValueError: chunk_size must be positive`" | 检索通用错误处理 | 找到具体的错误消息 |
 | "`ibm cloud api key rotation`" | 分散到多个主题 | 聚焦于 "rotation" + "key" |
 
-Phase 1.6 的评估工具可以用数字验证这些直觉——在同一个 QA 集上运行
+评估工具可以用数字验证这些直觉——在同一个 QA 集上运行
 `rag eval --retriever dense` 和 `rag eval --retriever bm25`，比较命中率。
 
 ---

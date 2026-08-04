@@ -1,6 +1,6 @@
 # Evaluating Retrieval — Measuring Before You Optimize
 
-Phase 1.6 adds a measurement layer to the RAG pipeline. Before you tune chunk
+This project adds a measurement layer to the RAG pipeline. Before you tune chunk
 size, swap embedding models, or add BM25, you need a number to improve. This
 document explains what that number is, how it's computed, and what it tells you.
 
@@ -8,12 +8,12 @@ document explains what that number is, how it's computed, and what it tells you.
 
 ## Why Measure First?
 
-After Phase 1, you can ask questions and get answers. But you have no way to
+You can already ask questions and get answers. But you have no way to
 know whether the retriever found the right chunks. Maybe it always retrieves
 the correct document — or maybe it misses 40% of the time and the LLM is
 covering up for it with hallucinations.
 
-The `qa.jsonl` file was prepared in Phase 1 (`P1-T02`) specifically for this
+The `qa.jsonl` file was prepared specifically for this
 moment. It contains questions whose correct source documents are known in
 advance. This is the evaluation set: a ground truth you can compare retrieved
 results against.
@@ -346,7 +346,7 @@ evidence rather than wonder whether the underlying assets changed.
 
 ## What This Teaches
 
-Evaluation answers the question your Phase 1 pipeline left open: **is the
+Evaluation answers the question the baseline pipeline left open: **is the
 retriever actually working?**
 
 The key insight: retrieval quality and answer quality are separate. A bad

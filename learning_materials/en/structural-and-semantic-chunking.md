@@ -1,6 +1,6 @@
 # Structural And Semantic Chunking
 
-Phase 2.2 adds two chunking strategies alongside the existing fixed-character
+This project adds two chunking strategies alongside the existing fixed-character
 baseline. Chunking strategy is an **indexing-time decision** — you choose it
 when running `rag index`, and every downstream command (`retrieve`, `ask`,
 `eval`, `diagnose`) works with whatever chunks are already on disk.
@@ -48,7 +48,7 @@ when documents have no structure (plain prose, unformatted logs).
 chunk_document_structural(doc, chunk_size=800, chunk_overlap=120)
 ```
 
-Three-tier packing (Design Decision 2 in the Phase 2.2 spec):
+Three-tier packing:
 
 1. **Tier 1 — whole blocks.** Split `normalized_text` at blank-line
    boundaries (`_split_blocks`). A block that is a single ATX heading line

@@ -150,7 +150,7 @@ test should always run, even on a fresh clone with zero setup.
 
 ## The Fake Backend Pattern
 
-Phase 1 uses two fake backends: `FakeEmbedder` and `FakeGenerator`. Together
+The test suite uses two fake backends: `FakeEmbedder` and `FakeGenerator`. Together
 they let the broad deterministic test suite run without network, API keys, or
 an embedding-model download.
 

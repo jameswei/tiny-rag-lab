@@ -168,9 +168,9 @@ the CLI extracts them with a regex to build the citation list in `AskTrace`.
 
 ### Ask trace output
 
-Phase 1.7 replaced the old ad-hoc `rag ask` terminal prints with
-`format_ask_trace`. The terminal output now shows the query, latency, retrieved
-chunks, answer, and citations in one trace view:
+`format_ask_trace` replaced the old ad-hoc `rag ask` terminal prints. The
+terminal output now shows the query, latency, retrieved chunks, answer, and
+citations in one trace view:
 
 ```
 Ask trace

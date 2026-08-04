@@ -120,7 +120,7 @@ BM25 excels when the query contains precise, distinctive terms:
 | "`ValueError: chunk_size must be positive`" | Retrieve generic error handling | Find the specific error message |
 | "`ibm cloud api key rotation`" | Spread across topics | Focus on "rotation" + "key" |
 
-The Phase 1.6 evaluation harness can confirm these intuitions with numbers —
+The evaluation harness can confirm these intuitions with numbers —
 run `rag eval` with `--retriever dense` and `--retriever bm25` on the same QA
 set and compare hit rates.
 

@@ -136,7 +136,7 @@ Markdown 和纯文本文件。没有 `watsonxDocsQA` 下载，没有真实嵌入
 
 ## 假后端模式
 
-Phase 1 使用两个假后端：`FakeEmbedder` 和 `FakeGenerator`。它们让覆盖面广泛的
+测试套件使用两个假后端：`FakeEmbedder` 和 `FakeGenerator`。它们让覆盖面广泛的
 确定性测试套件可以在没有网络、API 密钥或嵌入模型下载的情况下运行。
 
 ### 这个模式为什么有效

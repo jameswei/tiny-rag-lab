@@ -157,7 +157,7 @@ To authenticate with the watsonx API, you need an API key...
 
 ### Ask trace 输出
 
-Phase 1.7 用 `format_ask_trace` 替换了旧的 `rag ask` 终端打印。终端输出现在
+`format_ask_trace` 替换了旧的 `rag ask` 终端打印。终端输出现在
 在一个 trace 视图中展示 query、latency、检索块、答案和引用：
 
 ```

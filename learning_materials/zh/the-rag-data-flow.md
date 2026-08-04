@@ -67,7 +67,7 @@ if stripped.startswith("# "):
 ```
 
 如果没有 H1（或文件是纯文本），标题回退到**文件名主干** —— `faq.md` 变成
-`"faq"`。这很简单，但是有意为之：Phase 1 不需要花哨的标题提取。关键点是每个
+`"faq"`。这很简单，但是有意为之：本项目不需要花哨的标题提取。关键点是每个
 文档都有一个人类可读的标签，用于 trace 输出。
 
 ---
@@ -160,7 +160,7 @@ class RetrievalResult:
 
 ## RetrieveTrace 和 AskTrace —— 一次运行的记录
 
-Phase 1.7 将可观测性类型移动到了 `tiny_rag_lab/trace.py`。`rag retrieve`
+可观测性类型位于 `tiny_rag_lab/trace.py`。`rag retrieve`
 构建 `RetrieveTrace`，`rag ask` 构建 `AskTrace`。两个命令都会打印由 formatter
 生成的 trace 输出，也都可以通过 `--trace-out` 写出 JSON。
 
@@ -225,7 +225,7 @@ Ask trace:
 latency   : load=0.006s  embed=0.012s  retrieve=0.001s  prompt_assembly=0.000s  generate=1.234s
 ```
 
-这立刻告诉你流水线在哪里花费时间。在 Phase 1 中使用本地嵌入器和 API 生成器时，
+这立刻告诉你流水线在哪里花费时间。使用本地嵌入器和 API 生成器时，
 `generate` 会以数量级优势占据主导。
 
 ---

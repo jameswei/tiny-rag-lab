@@ -294,5 +294,5 @@ what happens to one file.
 The design choice to keep the embedder behind an ABC means the same retrieval
 code works with a small hash function in deterministic tests and a local
 transformer model for semantic retrieval. This pattern — a narrow interface
-plus a deterministic fake — recurs throughout Phase 1 and makes the pipeline
-testable without network access.
+plus a deterministic fake — recurs throughout the codebase and makes the
+pipeline testable without network access.

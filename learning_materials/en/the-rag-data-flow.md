@@ -74,7 +74,7 @@ if stripped.startswith("# "):
 
 If no H1 exists (or the file is plain text), the title falls back to the
 **filename stem** — `faq.md` becomes `"faq"`. This is simple but intentional:
-Phase 1 doesn't need fancy title extraction. The point is that every document
+This project doesn't need fancy title extraction. The point is that every document
 has *some* human-readable label for trace output.
 
 ---
@@ -174,7 +174,7 @@ covered in the retrieval deep-dive.
 
 ## RetrieveTrace and AskTrace — Records Of One Run
 
-Phase 1.7 moved observability types into `tiny_rag_lab/trace.py`.
+Observability types live in `tiny_rag_lab/trace.py`.
 `rag retrieve` builds a `RetrieveTrace`, and `rag ask` builds an `AskTrace`.
 Both commands print formatter-backed trace output, and both can write JSON with
 `--trace-out`.
@@ -241,7 +241,7 @@ Ask trace:
 latency   : load=0.006s  embed=0.012s  retrieve=0.001s  prompt_assembly=0.000s  generate=1.234s
 ```
 
-This tells you immediately where the pipeline spends time. In Phase 1 with a
+This tells you immediately where the pipeline spends time. With a
 local embedder and an API generator, `generate` will dominate by orders of
 magnitude.
 

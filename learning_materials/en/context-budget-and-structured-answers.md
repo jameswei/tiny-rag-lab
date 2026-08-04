@@ -1,6 +1,6 @@
 # Context Budget And Structured Answers — Controlling What Reaches The Prompt
 
-Phase 2.1 adds generation-side mechanics that were previously invisible:
+This project adds generation-side mechanics that were previously invisible:
 which retrieved chunks actually enter the prompt, and why some are left out.
 It also adds a machine-readable JSON output mode for `rag ask`.
 
@@ -8,15 +8,15 @@ It also adds a machine-readable JSON output mode for `rag ask`.
 
 ## The Gap Between Retrieval and Prompt
 
-After retrieval, you have a list of ranked chunks. Until Phase 2.1, all of
-them entered the prompt unchanged. That works when `top_k` is small and
+After retrieval, you have a list of ranked chunks. Without context packing,
+all of them enter the prompt unchanged. That works when `top_k` is small and
 chunks are short. It breaks when context windows are finite:
 
 - a 4 096-token window cannot hold ten 600-token chunks
 - a reranker may return many candidates but only the top few matter
 - you cannot tell from the output *which* chunks were included
 
-Phase 2.1 makes the selection step explicit and inspectable.
+Context packing makes the selection step explicit and inspectable.
 
 ---
 
@@ -95,14 +95,14 @@ Context packing  (budget=8192, counter=tiktoken-gpt-4o-mini)
 ```
 
 When `--context-budget 0` (the default), `context_pack` is `null` and the
-block is absent. Phase 2.0 output is preserved exactly.
+block is absent — everything else in the output is unchanged.
 
 ---
 
 ## CLI Usage
 
 ```bash
-# Default: no budget, identical to Phase 2.0
+# Default: no budget, output unchanged
 rag ask "question" --index-dir .tiny-rag/index
 
 # With budget: packing block appears in trace
@@ -142,7 +142,7 @@ rag ask "question" --index-dir .tiny-rag/index \
 
 Three things become visible that were previously hidden:
 
-| Before Phase 2.1 | After Phase 2.1 |
+| Without context budgeting | With context budgeting |
 |---|---|
 | All retrieved chunks enter the prompt | Budget selects chunks greedily in rank order |
 | No record of what was included or excluded | `context_pack.selected` and `omitted` lists |
@@ -151,4 +151,4 @@ Three things become visible that were previously hidden:
 A tight budget forces you to see that ranked-first does not mean
 fits-in-context. A chunk can rank highly but still be omitted if earlier
 chunks consumed the remaining budget. That is a production reality that
-Phase 2.1 makes observable.
+context packing makes observable.
